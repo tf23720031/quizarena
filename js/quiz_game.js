@@ -126,6 +126,162 @@ function avatarHtml(p, size = 48) {
 }
 
 /* ══════════════════════════════════════
+   語言 / 即時翻譯
+   ══════════════════════════════════════ */
+const LANG_DICT = {
+  zh: {
+    role_host: '🎓 房主', role_player: '🎮 玩家', role_spectator: '💀 觀戰',
+    progress: (cur, total) => `第 ${cur} / ${total} 題`,
+    leaderboard: '🏅 排行榜', no_data: '尚無資料',
+    players_panel: '玩家', single: '單選題', multiple: '多選題', tf: '是非題',
+    submit: '提交答案', leave: '離開',
+    waiting_host: '等待房主...',
+    correct_badge: '🎉 答對了！', wrong_badge: '😢 答錯了',
+    eliminated_badge: '💀 淘汰！', timeout_badge: '⏰ 時間到！',
+    pts_zeroed: '積分歸零', next_q: '繼續觀戰',
+    explanation_wait: '等待房主進入下一題。',
+    host_next: '進入下一題', all_answered: '所有人已作答，結束本題',
+    spectator_hint: '你已被淘汰，目前為觀戰模式',
+    finish_title: '🎉 遊戲結束！', finish_sub: '感謝參與，最終結果請見結算頁面。',
+    finish_score: '你的總分：', podium_title: '🏆 遊戲結束！最終排名',
+    scoreboard_title: '📊 完整結算', back_home: '回首頁',
+    correct_answer: '正解：', rank_prefix: '你目前第', rank_suffix: '名',
+    score_prefix: '目前總分：', earned_prefix: '本題得分：',
+    eliminated_notice: '你已被淘汰！積分歸零，進入觀戰模式。',
+    breakdown_title: '本題各選項統計', answer_status_title: '玩家答題狀況',
+    correct_mark: '✓ 正確', wrong_mark: '✗ 錯誤', waiting_mark: '等待中', eliminated_mark: '💀 已淘汰',
+    top5_title: '目前前五名', host_result_title: '📊 本題結果',
+    host_eliminated_title: '💀 本題淘汰玩家',
+  },
+  en: {
+    role_host: '🎓 Host', role_player: '🎮 Player', role_spectator: '💀 Spectator',
+    progress: (cur, total) => `Q ${cur} / ${total}`,
+    leaderboard: '🏅 Leaderboard', no_data: 'No data yet',
+    players_panel: 'Players', single: 'Single Choice', multiple: 'Multiple Choice', tf: 'True/False',
+    submit: 'Submit Answer', leave: 'Leave',
+    waiting_host: 'Waiting for host...',
+    correct_badge: '🎉 Correct!', wrong_badge: '😢 Wrong!',
+    eliminated_badge: '💀 Eliminated!', timeout_badge: '⏰ Time Up!',
+    pts_zeroed: 'Score reset to 0', next_q: 'Keep Watching',
+    explanation_wait: 'Waiting for host to advance.',
+    host_next: 'Next Question', all_answered: 'All answered — end question',
+    spectator_hint: 'You are eliminated. Spectating now.',
+    finish_title: '🎉 Game Over!', finish_sub: 'Thanks for playing!',
+    finish_score: 'Your score: ', podium_title: '🏆 Final Rankings',
+    scoreboard_title: '📊 Full Scoreboard', back_home: 'Home',
+    correct_answer: 'Answer: ', rank_prefix: 'You are #', rank_suffix: '',
+    score_prefix: 'Score: ', earned_prefix: 'Points: ',
+    eliminated_notice: 'You are eliminated! Score reset to 0.',
+    breakdown_title: 'Option Stats', answer_status_title: 'Player Status',
+    correct_mark: '✓ Correct', wrong_mark: '✗ Wrong', waiting_mark: 'Waiting', eliminated_mark: '💀 Out',
+    top5_title: 'Top 5', host_result_title: '📊 Result',
+    host_eliminated_title: '💀 Eliminated this round',
+  },
+  ja: {
+    role_host: '🎓 ホスト', role_player: '🎮 プレイヤー', role_spectator: '💀 観戦中',
+    progress: (cur, total) => `第 ${cur} / ${total} 問`,
+    leaderboard: '🏅 ランキング', no_data: 'データなし',
+    players_panel: 'プレイヤー', single: '単一選択', multiple: '複数選択', tf: '○×問題',
+    submit: '回答する', leave: '退出',
+    waiting_host: 'ホストを待っています...',
+    correct_badge: '🎉 正解！', wrong_badge: '😢 不正解',
+    eliminated_badge: '💀 脱落！', timeout_badge: '⏰ 時間切れ！',
+    pts_zeroed: 'スコアリセット', next_q: '観戦を続ける',
+    explanation_wait: '次の問題をお待ちください。',
+    host_next: '次の問題へ', all_answered: '全員回答済み — 終了',
+    spectator_hint: '脱落しました。観戦モードです。',
+    finish_title: '🎉 ゲーム終了！', finish_sub: 'ご参加ありがとうございました！',
+    finish_score: '合計スコア：', podium_title: '🏆 最終順位',
+    scoreboard_title: '📊 全スコア', back_home: 'ホームへ',
+    correct_answer: '正解：', rank_prefix: '現在', rank_suffix: '位',
+    score_prefix: '現在スコア：', earned_prefix: '獲得ポイント：',
+    eliminated_notice: '脱落！スコアがリセットされました。',
+    breakdown_title: '選択肢の統計', answer_status_title: 'プレイヤーの状況',
+    correct_mark: '✓ 正解', wrong_mark: '✗ 不正解', waiting_mark: '待機中', eliminated_mark: '💀 脱落',
+    top5_title: 'トップ5', host_result_title: '📊 結果',
+    host_eliminated_title: '💀 今回の脱落者',
+  },
+  ko: {
+    role_host: '🎓 호스트', role_player: '🎮 플레이어', role_spectator: '💀 관전 중',
+    progress: (cur, total) => `${cur} / ${total} 문제`,
+    leaderboard: '🏅 순위표', no_data: '데이터 없음',
+    players_panel: '플레이어', single: '단일 선택', multiple: '다중 선택', tf: '참/거짓',
+    submit: '제출', leave: '나가기',
+    waiting_host: '호스트를 기다리는 중...',
+    correct_badge: '🎉 정답!', wrong_badge: '😢 오답',
+    eliminated_badge: '💀 탈락!', timeout_badge: '⏰ 시간 초과!',
+    pts_zeroed: '점수 초기화', next_q: '계속 관전',
+    explanation_wait: '호스트가 다음 문제로 넘어갈 때까지 기다려 주세요.',
+    host_next: '다음 문제', all_answered: '모두 답변 완료 — 종료',
+    spectator_hint: '탈락했습니다. 관전 모드입니다.',
+    finish_title: '🎉 게임 종료!', finish_sub: '참여해 주셔서 감사합니다!',
+    finish_score: '총점: ', podium_title: '🏆 최종 순위',
+    scoreboard_title: '📊 전체 점수', back_home: '홈으로',
+    correct_answer: '정답: ', rank_prefix: '현재 ', rank_suffix: '위',
+    score_prefix: '현재 점수: ', earned_prefix: '획득 점수: ',
+    eliminated_notice: '탈락했습니다! 점수가 초기화되었습니다.',
+    breakdown_title: '선택지 통계', answer_status_title: '플레이어 현황',
+    correct_mark: '✓ 정답', wrong_mark: '✗ 오답', waiting_mark: '대기 중', eliminated_mark: '💀 탈락',
+    top5_title: '상위 5명', host_result_title: '📊 결과',
+    host_eliminated_title: '💀 이번 라운드 탈락자',
+  },
+  es: {
+    role_host: '🎓 Anfitrión', role_player: '🎮 Jugador', role_spectator: '💀 Espectador',
+    progress: (cur, total) => `Pregunta ${cur} / ${total}`,
+    leaderboard: '🏅 Clasificación', no_data: 'Sin datos',
+    players_panel: 'Jugadores', single: 'Selección única', multiple: 'Selección múltiple', tf: 'V/F',
+    submit: 'Enviar', leave: 'Salir',
+    waiting_host: 'Esperando al anfitrión...',
+    correct_badge: '🎉 ¡Correcto!', wrong_badge: '😢 Incorrecto',
+    eliminated_badge: '💀 ¡Eliminado!', timeout_badge: '⏰ ¡Tiempo!',
+    pts_zeroed: 'Puntos a 0', next_q: 'Seguir viendo',
+    explanation_wait: 'Esperando al anfitrión.',
+    host_next: 'Siguiente', all_answered: 'Todos respondieron — finalizar',
+    spectator_hint: 'Estás eliminado. Modo espectador.',
+    finish_title: '🎉 ¡Fin del juego!', finish_sub: '¡Gracias por jugar!',
+    finish_score: 'Tu puntuación: ', podium_title: '🏆 Clasificación final',
+    scoreboard_title: '📊 Puntuación completa', back_home: 'Inicio',
+    correct_answer: 'Respuesta: ', rank_prefix: 'Posición ', rank_suffix: '',
+    score_prefix: 'Puntuación: ', earned_prefix: 'Puntos: ',
+    eliminated_notice: '¡Eliminado! Puntos a cero.',
+    breakdown_title: 'Estadísticas', answer_status_title: 'Estado jugadores',
+    correct_mark: '✓ Correcto', wrong_mark: '✗ Incorrecto', waiting_mark: 'Esperando', eliminated_mark: '💀 Eliminado',
+    top5_title: 'Top 5', host_result_title: '📊 Resultado',
+    host_eliminated_title: '💀 Eliminados esta ronda',
+  }
+};
+
+let currentLang = localStorage.getItem('quizLang') || 'zh';
+const t = (key, ...args) => {
+  const d = LANG_DICT[currentLang] || LANG_DICT.zh;
+  const val = d[key] ?? LANG_DICT.zh[key] ?? key;
+  return typeof val === 'function' ? val(...args) : val;
+};
+
+function applyLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('quizLang', lang);
+  // 更新靜態 DOM 文字
+  const el = (id) => document.getElementById(id);
+  if (submitAnswerBtn) submitAnswerBtn.textContent = t('submit');
+  const leave = el('leaveGameBtn');
+  if (leave) leave.innerHTML = `<i class="fa-solid fa-right-from-bracket"></i> ${t('leave')}`;
+  const pspTitle = document.querySelector('.psp-title');
+  if (pspTitle) pspTitle.innerHTML = `<i class="fa-solid fa-users"></i> ${t('players_panel')}`;
+  const ldTitle = document.querySelector('.leaderboard-title');
+  if (ldTitle) ldTitle.textContent = t('leaderboard');
+  if (hostAllDoneSkipBtn) hostAllDoneSkipBtn.innerHTML = `<i class="fa-solid fa-forward-step"></i> ${t('all_answered')}`;
+  if (hostSkipExplanationBtn) hostSkipExplanationBtn.innerHTML = `<i class="fa-solid fa-forward"></i> ${t('host_next')}`;
+  const backBtn = el('backHomeBtn');
+  if (backBtn) backBtn.innerHTML = `<i class="fa-solid fa-house"></i> ${t('back_home')}`;
+  if (roleText) roleText.textContent = isHost ? t('role_host') : (isEliminated ? t('role_spectator') : t('role_player'));
+}
+
+const langSelect = document.getElementById('langSelect');
+langSelect?.addEventListener('change', () => { applyLang(langSelect.value); });
+if (langSelect) langSelect.value = currentLang;
+
+/* ══════════════════════════════════════
    深色模式
    ══════════════════════════════════════ */
 const darkBtn  = document.getElementById('darkModeBtn');
@@ -141,6 +297,21 @@ function applyDark(on) {
 
 darkBtn?.addEventListener('click', () => applyDark(!document.body.classList.contains('dark-mode')));
 applyDark(localStorage.getItem('quizDarkMode') === '1');
+
+/* ── 靜音按鈕 ── */
+const muteBtn  = document.getElementById('muteBtn');
+const muteIcon = document.getElementById('muteIcon');
+function applyMute(muted) {
+  AudioManager?.setMute(muted);
+  if (muteIcon) muteIcon.className = muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+  localStorage.setItem('quizMuted', muted ? '1' : '0');
+}
+muteBtn?.addEventListener('click', () => {
+  const nowMuted = !AudioManager?.isMuted();
+  applyMute(nowMuted);
+  AudioManager?.click();
+});
+applyMute(localStorage.getItem('quizMuted') === '1');
 
 /* ══════════════════════════════════════
    選項亂序（防作弊）
@@ -178,6 +349,9 @@ function startTimer(seconds, onEnd) {
   timerInterval = setInterval(() => {
     remainSeconds = Math.max(0, remainSeconds - 1);
     countdownText.textContent = remainSeconds;
+    if (remainSeconds > 0 && remainSeconds <= 5 && !isHost && !isEliminated) {
+      AudioManager?.tick(remainSeconds <= 2);
+    }
     if (remainSeconds <= 0) { stopTimer(); onEnd?.(); }
   }, 1000);
 }
@@ -316,6 +490,7 @@ function openHostExplanation({ correctText, explanation, top5, eliminatedNames =
     }
   }
   hostExplanationOverlay?.classList.add('show');
+  AudioManager?.reveal();
 }
 
 const closeHostExplanation = () => hostExplanationOverlay?.classList.remove('show');
@@ -415,6 +590,7 @@ function openPlayerResult({ badge, points, answerText, explanation, top5, myRank
   if (eliminatedNotice) eliminatedNotice.style.display = eliminated ? 'flex' : 'none';
   if (nextQuestionBtn) nextQuestionBtn.style.display = eliminated ? 'inline-block' : 'none';
   resultOverlay.classList.add('show');
+  AudioManager?.reveal();
 }
 
 const closePlayerResult = () => resultOverlay?.classList.remove('show');
@@ -467,9 +643,13 @@ async function submitAnswer(isTimeout = false) {
       eliminated:   !!data.eliminated
     });
 
-    if (data.isCorrect) window.quizAudio?.success?.();
-    else if (data.eliminated) window.quizAudio?.fail?.();
-    else window.quizAudio?.fail?.();
+    if (data.eliminated) {
+      AudioManager?.eliminated();
+    } else if (data.isCorrect) {
+      AudioManager?.correct();
+    } else {
+      AudioManager?.wrong();
+    }
 
   } catch (e) {
     hasSubmitted = false;
@@ -538,6 +718,7 @@ function handleState(data) {
         renderSpectatorQuestion(q, data.answeredCount, data.totalQuestions);
       } else {
         renderPlayerQuestion(q, data.answeredCount, data.totalQuestions);
+        AudioManager?.questionStart();
         if (phase === 'question') {
           startTimer(parseInt(q.time) || 20, () => submitAnswer(true));
         }
@@ -727,6 +908,11 @@ async function showFinishScreen(data) {
   }
 
   if (podiumOverlay) podiumOverlay.style.display = 'flex';
+  AudioManager?.stopBgMusic();
+  setTimeout(() => AudioManager?.scoreboard(), 400);
+  // 若玩家是第一名，額外特效
+  const myFinalRank = (data.leaderboard || []).findIndex(p => p.player_name === getPlayerName());
+  if (myFinalRank === 0 && !isEliminated) setTimeout(() => AudioManager?.firstPlace(), 1200);
 }
 
 /* ── heartbeat / leave ── */
@@ -790,6 +976,16 @@ document.getElementById('leaveGameBtn')?.addEventListener('click', leaveRoom);
 window.addEventListener('beforeunload', leaveRoomOnUnload);
 
 /* ── 初始化 ── */
+// 使用者第一次互動後啟動背景音樂（瀏覽器限制需要 user gesture）
+let bgStarted = false;
+function tryStartBg() {
+  if (bgStarted || AudioManager?.isMuted()) return;
+  bgStarted = true;
+  AudioManager?.startBgMusic();
+}
+document.addEventListener('click', tryStartBg, { once: true });
+document.addEventListener('keydown', tryStartBg, { once: true });
+
 loadState(true);
 sendHeartbeat();
 setInterval(sendHeartbeat, 5000);
