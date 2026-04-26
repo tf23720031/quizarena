@@ -10,6 +10,8 @@
 </head>
 <body>
   <main class="game-shell">
+
+    <!-- 頂部資訊列 -->
     <header class="game-topbar">
       <img src="images/LOGO.png" alt="logo" class="game-logo">
       <div class="game-badges">
@@ -21,7 +23,10 @@
       </div>
     </header>
 
+    <!-- 主要佈局：左側欄 ＋ 主區域 ＋ 右側玩家欄 -->
     <section class="game-layout">
+
+      <!-- 左側：進度 ＋ 排行榜 -->
       <aside class="side-board glass-card">
         <h3>進度</h3>
         <div class="progress-copy" id="progressText">第 1 / 10 題</div>
@@ -29,14 +34,24 @@
         <div id="leaderboardList" class="leaderboard-list"></div>
       </aside>
 
+      <!-- 中央：題目區 -->
       <section class="main-board glass-card">
+
+        <!-- 房主監控 -->
+        <div id="hostMonitorBox" class="host-monitor-box" style="display:none;">
+          <div class="host-monitor-title">玩家答題狀況</div>
+          <div id="hostAnswerStatus" class="host-answer-status"></div>
+
+          <!-- 所有人答完時才顯示的快速跳過按鈕 -->
+          <button id="hostAllDoneSkipBtn" class="submit-btn host-skip-early-btn" style="display:none;">
+            <i class="fa-solid fa-forward-step"></i> 所有人已作答，結束本題
+          </button>
+
+          <div class="host-breakdown-title">本題選項統計</div>
+          <div id="hostAnswerBreakdown" class="host-answer-breakdown"></div>
+        </div>
+
         <div id="questionWrap">
-          <div id="hostMonitorBox" class="host-monitor-box" style="display:none;">
-            <div class="host-monitor-title">玩家答題狀況</div>
-            <div id="hostAnswerStatus" class="host-answer-status"></div>
-            <div class="host-breakdown-title">本題選項統計</div>
-            <div id="hostAnswerBreakdown" class="host-answer-breakdown"></div>
-          </div>
           <div class="question-kicker" id="questionKicker">Question</div>
           <h1 class="question-title" id="questionTitle">載入中...</h1>
           <p class="question-content" id="questionContent"></p>
@@ -44,6 +59,7 @@
           <div id="optionsList" class="options-list"></div>
           <button id="submitAnswerBtn" class="submit-btn">提交答案</button>
         </div>
+
         <div id="finishWrap" class="finish-wrap" style="display:none;">
           <h2>遊戲完成</h2>
           <p>你已經答完全部題目。</p>
@@ -51,34 +67,74 @@
           <a href="index.html" class="submit-btn back-home-btn">回首頁</a>
         </div>
       </section>
+
+      <!-- 右側：玩家頭像列表 -->
+      <aside class="player-side-panel glass-card">
+        <div class="psp-title"><i class="fa-solid fa-users"></i> 玩家</div>
+        <div id="playerSideList" class="player-side-list"></div>
+      </aside>
+
     </section>
   </main>
 
+  <!-- ══ 答題結果 Overlay ══ -->
   <div class="result-overlay" id="resultOverlay">
-  <div class="result-card">
-    <div class="result-badge" id="resultBadge">答對了！</div>
-    <div class="result-score">本題得分：<strong id="earnedScoreText">0</strong></div>
-    <div class="result-answer">正解：<span id="correctAnswerText">A</span></div>
+    <div class="result-card">
+      <div class="result-badge" id="resultBadge">答對了！</div>
+      <div class="result-score">本題得分：<strong id="earnedScoreText">0</strong></div>
+      <div class="result-answer">正解：<span id="correctAnswerText">A</span></div>
 
-    <div class="result-my-score">
-      我的目前總分：<strong id="myLiveScoreText">0</strong>
-    </div>
+      <div class="result-my-score">
+        我的目前總分：<strong id="myLiveScoreText">0</strong>
+      </div>
 
-    <div class="result-rank-box" id="myRankBox" style="display:none;">
-      <strong id="myRankText">你目前第 1 名</strong>
-    </div>
+      <div class="result-rank-box" id="myRankBox" style="display:none;">
+        <strong id="myRankText">你目前第 1 名</strong>
+      </div>
 
-    <div class="result-top5-title">目前前五名</div>
-    <div id="resultTop5List" class="result-top5-list"></div>
+      <div class="result-top5-title">目前前五名</div>
+      <div id="resultTop5List" class="result-top5-list"></div>
 
-    <div class="result-explanation" id="resultExplanation">解析</div>
+      <div class="result-explanation" id="resultExplanation">解析</div>
 
-    <div class="result-actions">
-      <button class="submit-btn" id="skipExplanationBtn">跳過解析，進入下一題</button>
-      <button class="submit-btn" id="nextQuestionBtn" style="display:none;">下一題</button>
+      <div class="result-actions">
+        <!-- 只有房主才看到此按鈕 -->
+        <button class="submit-btn" id="skipExplanationBtn" style="display:none;">
+          <i class="fa-solid fa-forward"></i> 跳過解析，進入下一題
+        </button>
+        <button class="submit-btn" id="nextQuestionBtn" style="display:none;">下一題</button>
+      </div>
     </div>
   </div>
-</div>
+
+  <!-- ══ 頒獎台 Overlay ══ -->
+  <div class="podium-overlay" id="podiumOverlay" style="display:none;">
+    <div class="podium-card">
+      <div class="podium-title">🏆 遊戲結束！最終排名</div>
+      <div id="podiumInner" class="podium-inner"></div>
+      <button class="submit-btn podium-continue-btn" id="podiumContinueBtn">
+        查看完整結算 <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ 結算 Overlay ══ -->
+  <div class="scoreboard-overlay" id="scoreboardOverlay" style="display:none;">
+    <div class="scoreboard-card">
+      <div class="podium-title">📊 完整結算</div>
+      <div id="scoreboardWrap"></div>
+
+      <!-- 房主明細（只有房主看得到） -->
+      <div id="hostDetailSection" style="display:none; margin-top:24px;">
+        <div class="host-detail-title">📋 每人每題明細（房主限定）</div>
+        <div id="hostDetailWrap" class="host-detail-wrap"></div>
+      </div>
+
+      <button class="submit-btn" id="backHomeBtn" style="margin-top:24px;">
+        <i class="fa-solid fa-house"></i> 回首頁
+      </button>
+    </div>
+  </div>
 
   <div class="toast-qa" id="toast"></div>
   <script src="js/audio.js"></script>
