@@ -296,9 +296,6 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 #hostExplanationOverlay {
   /* 完全同 resultOverlay，CSS 已有 .result-overlay */
 }
-.host-badge-label {
-  background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
-}
 
 /* 離開遊戲按鈕 */
 .leave-game-btn {
