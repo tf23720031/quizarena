@@ -1,1252 +1,355 @@
-from flask import Flask, send_from_directory, request, jsonify
-import os, sqlite3, json, hashlib, random, time, threading
-from contextlib import closing
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = BASE_DIR
-USERS_DB_PATH = os.path.join(BASE_DIR, 'quizarena.db')
-ROOMS_DB_PATH = os.path.join(BASE_DIR, 'rooms.db')
-QUIZ_BANKS_PATH = os.path.join(BASE_DIR, 'quiz_banks.json')
-
-app = Flask(__name__, static_folder=PROJECT_DIR, static_url_path='')
-
-DEFAULT_FACE = 'images/face/face.png'
-DEFAULT_HAIR = 'images/hair/hair01.png'
-DEFAULT_EYES = 'images/face/eyes01.png'
-
-_quiz_lock = threading.Lock()
-
-
-def now_ts():
-    return int(time.time())
-
-
-def host_alive_cutoff(seconds=80):
-    return now_ts() - seconds
-
-
-def uid(prefix='id'):
-    return f"{prefix}_{now_ts()}_{random.randint(1000,9999)}"
-
-
-def hash_text(text: str) -> str:
-    return hashlib.sha256(text.encode('utf-8')).hexdigest()
-
-
-def dict_factory(cursor, row):
-    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
-
-
-def get_conn(path=ROOMS_DB_PATH):
-    conn = sqlite3.connect(path)
-    conn.row_factory = dict_factory
-    conn.execute('PRAGMA foreign_keys = ON')
-    conn.execute('PRAGMA journal_mode = WAL')
-    return conn
-
-
-def ensure_file(path, default_obj):
-    if not os.path.exists(path):
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(default_obj, f, ensure_ascii=False, indent=2)
-
-
-def load_quiz_store():
-    ensure_file(QUIZ_BANKS_PATH, {'users': {}})
-    with open(QUIZ_BANKS_PATH, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    if not isinstance(data, dict) or not isinstance(data.get('users'), dict):
-        data = {'users': {}}
-    return data
-
-
-def save_quiz_store(data):
-    with open(QUIZ_BANKS_PATH, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def load_quiz_banks_for_user(username):
-    with _quiz_lock:
-        return load_quiz_store()['users'].get(username, [])
-
-
-def save_quiz_banks_for_user(username, banks):
-    with _quiz_lock:
-        data = load_quiz_store()
-        data['users'][username] = banks
-        save_quiz_store(data)
-
-
-def validate_pin(pin):
-    return bool(pin and len(pin) == 6 and pin.isdigit())
-
-
-def room_exists(pin):
-    with closing(get_conn()) as conn:
-        return conn.execute('SELECT 1 FROM rooms WHERE pin = ?', (pin,)).fetchone() is not None
-
-
-def fetch_room(pin):
-    with closing(get_conn()) as conn:
-        return conn.execute('SELECT * FROM rooms WHERE pin = ?', (pin,)).fetchone()
-
-
-def generate_unique_pin(length=6):
-    while True:
-        pin = str(random.randint(10 ** (length - 1), (10 ** length) - 1))
-        if not room_exists(pin):
-            return pin
-
-
-def serialize_room(room):
-    if not room:
-        return None
-    room = dict(room)
-    for key in ['is_private', 'team_mode', 'allow_lobby_join']:
-        room[key] = bool(room.get(key, 0))
-    return room
-
-
-def delete_room_fully(conn, pin):
-    conn.execute('DELETE FROM room_results WHERE room_pin = ?', (pin,))
-    conn.execute('DELETE FROM room_questions WHERE room_pin = ?', (pin,))
-    conn.execute('DELETE FROM room_messages WHERE room_pin = ?', (pin,))
-    conn.execute('DELETE FROM room_players WHERE room_pin = ?', (pin,))
-    conn.execute('DELETE FROM room_teams WHERE room_pin = ?', (pin,))
-    conn.execute('DELETE FROM rooms WHERE pin = ?', (pin,))
-
-
-def get_player_payload(raw_player):
-    p = raw_player or {}
-    return {
-        'name': str(p.get('name', '')).strip(),
-        'face': str(p.get('face', DEFAULT_FACE)).strip() or DEFAULT_FACE,
-        'hair': str(p.get('hair', DEFAULT_HAIR)).strip() or DEFAULT_HAIR,
-        'eyes': str(p.get('eyes', DEFAULT_EYES)).strip() or DEFAULT_EYES,
-        'eyes_offset_y': int(p.get('eyesOffsetY', 0) or 0),
-        'is_host': 1 if bool(p.get('isHost', False)) else 0,
-    }
-
-
-def calc_kahoot_score(base_score, time_limit_sec, remain_sec, answer_order):
-    if base_score <= 0:
-        return 0
-    time_ratio = max(0.5, remain_sec / max(time_limit_sec, 1))
-    order_ratio = max(0.6, 1.0 - (answer_order - 1) * 0.05)
-    raw = base_score * time_ratio * order_ratio
-    return int(round(raw / 10) * 10)
-
-
-def init_users_db():
-    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                created_at INTEGER DEFAULT (strftime('%s','now'))
-            )
-        ''')
-        conn.commit()
-
-
-def init_rooms_db():
-    with closing(sqlite3.connect(ROOMS_DB_PATH)) as conn:
-        c = conn.cursor()
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS rooms (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pin TEXT UNIQUE NOT NULL,
-                room_name TEXT, bank_id TEXT, bank_title TEXT, created_by TEXT,
-                is_private INTEGER DEFAULT 0, room_key_hash TEXT,
-                status TEXT DEFAULT 'waiting',
-                max_players INTEGER DEFAULT 8,
-                team_mode INTEGER DEFAULT 0,
-                team_count INTEGER DEFAULT 2,
-                team_size INTEGER DEFAULT 4,
-                allow_lobby_join INTEGER DEFAULT 1,
-                current_question_index INTEGER DEFAULT 0,
-                game_start_ts INTEGER DEFAULT 0,
-                created_at INTEGER
-            )
-        ''')
-        c.execute('PRAGMA table_info(rooms)')
-        existing = {row[1] for row in c.fetchall()}
-        needed = {
-            'room_name': 'TEXT', 'bank_id': 'TEXT', 'bank_title': 'TEXT', 'created_by': 'TEXT',
-            'is_private': 'INTEGER DEFAULT 0', 'room_key_hash': 'TEXT',
-            'status': "TEXT DEFAULT 'waiting'", 'max_players': 'INTEGER DEFAULT 8',
-            'team_mode': 'INTEGER DEFAULT 0', 'team_count': 'INTEGER DEFAULT 2',
-            'team_size': 'INTEGER DEFAULT 4', 'allow_lobby_join': 'INTEGER DEFAULT 1',
-            'current_question_index': 'INTEGER DEFAULT 0',
-            'phase': "TEXT DEFAULT 'question'",
-            'game_start_ts': 'INTEGER DEFAULT 0', 'created_at': 'INTEGER'
-        }
-        for col, typ in needed.items():
-            if col not in existing:
-                c.execute(f'ALTER TABLE rooms ADD COLUMN {col} {typ}')
-
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS room_teams (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_pin TEXT NOT NULL, team_id INTEGER NOT NULL, team_name TEXT,
-                UNIQUE(room_pin, team_id)
-            )
-        ''')
-
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS room_players (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_pin TEXT NOT NULL, player_name TEXT NOT NULL,
-                face TEXT, hair TEXT, eyes TEXT, eyes_offset_y INTEGER DEFAULT 0,
-                is_host INTEGER DEFAULT 0, team_id INTEGER DEFAULT 0,
-                joined_at INTEGER, last_seen INTEGER,
-                UNIQUE(room_pin, player_name)
-            )
-        ''')
-        c.execute('PRAGMA table_info(room_players)')
-        pcols = {row[1] for row in c.fetchall()}
-        for col, typ in [('last_seen', 'INTEGER'), ('team_id', 'INTEGER DEFAULT 0')]:
-            if col not in pcols:
-                c.execute(f'ALTER TABLE room_players ADD COLUMN {col} {typ}')
-
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS room_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_pin TEXT NOT NULL, sender_name TEXT NOT NULL, message TEXT NOT NULL,
-                face TEXT, hair TEXT, eyes TEXT, eyes_offset_y INTEGER DEFAULT 0,
-                team_id INTEGER DEFAULT -1, created_at INTEGER
-            )
-        ''')
-        c.execute('PRAGMA table_info(room_messages)')
-        mcols = {row[1] for row in c.fetchall()}
-        if 'team_id' not in mcols:
-            c.execute('ALTER TABLE room_messages ADD COLUMN team_id INTEGER DEFAULT -1')
-
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS room_questions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_pin TEXT NOT NULL, question_id TEXT NOT NULL, seq INTEGER NOT NULL,
-                title TEXT, content TEXT, type TEXT, options_json TEXT, answer_json TEXT,
-                explanation TEXT, time_label TEXT, score INTEGER DEFAULT 1000,
-                fake_answer INTEGER DEFAULT 0, mode TEXT, image TEXT,
-                origin_bank_id TEXT, origin_question_id TEXT,
-                UNIQUE(room_pin, question_id)
-            )
-        ''')
-
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS room_results (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_pin TEXT NOT NULL, player_name TEXT NOT NULL, question_id TEXT NOT NULL,
-                selected_json TEXT, is_correct INTEGER DEFAULT 0,
-                points_earned INTEGER DEFAULT 0, answer_order INTEGER DEFAULT 0,
-                remain_sec INTEGER DEFAULT 0, answered_at INTEGER,
-                UNIQUE(room_pin, player_name, question_id)
-            )
-        ''')
-        c.execute('PRAGMA table_info(room_results)')
-        rcols = {row[1] for row in c.fetchall()}
-        for col, typ in [('answer_order', 'INTEGER DEFAULT 0'), ('remain_sec', 'INTEGER DEFAULT 0')]:
-            if col not in rcols:
-                c.execute(f'ALTER TABLE room_results ADD COLUMN {col} {typ}')
-
-        conn.commit()
-
-
-init_users_db()
-init_rooms_db()
-ensure_file(QUIZ_BANKS_PATH, {'users': {}})
-
-
-@app.route('/')
-def home():
-    return send_from_directory(PROJECT_DIR, 'index.html')
-
-
-for page in ['create_home.html', 'player_join.html', 'waiting_room.html',
-             'house_waiting_room.html', 'quiz_game.html']:
-    app.add_url_rule('/' + page, page,
-                     lambda page=page: send_from_directory(PROJECT_DIR, page))
-
-
-@app.route('/register', methods=['POST'])
-def register():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        email = str(data.get('email', '')).strip()
-        password = str(data.get('password', '')).strip()
-        if len(username) < 3:
-            return jsonify(success=False, message='帳號至少需要 3 個字元'), 400
-        if '@' not in email or '.' not in email.split('@')[-1]:
-            return jsonify(success=False, message='Email 格式不正確'), 400
-        if len(password) < 6:
-            return jsonify(success=False, message='密碼至少需要 6 個字元'), 400
-        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
-            conn.execute('INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-                         (username, email, hash_text(password)))
-            conn.commit()
-        return jsonify(success=True, message='註冊成功')
-    except sqlite3.IntegrityError as e:
-        text = str(e).lower()
-        msg = '帳號已存在' if 'username' in text else ('Email 已存在' if 'email' in text else '帳號或 Email 已存在')
-        return jsonify(success=False, message=msg), 400
-    except Exception as e:
-        return jsonify(success=False, message=f'伺服器錯誤：{e}'), 500
-
-
-@app.route('/login', methods=['POST'])
-def login():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        password = str(data.get('password', '')).strip()
-        with closing(get_conn(USERS_DB_PATH)) as conn:
-            user = conn.execute(
-                'SELECT username, email FROM users WHERE username = ? AND password = ?',
-                (username, hash_text(password))
-            ).fetchone()
-        if not user:
-            return jsonify(success=False, message='帳號或密碼錯誤'), 401
-        return jsonify(success=True, username=user['username'], email=user['email'], message='登入成功')
-    except Exception as e:
-        return jsonify(success=False, message=f'伺服器錯誤：{e}'), 500
-
-
-@app.route('/load_quiz_banks')
-def load_quiz_banks_api():
-    username = request.args.get('username', '').strip()
-    if not username:
-        return jsonify(success=False, message='缺少使用者帳號'), 400
-    return jsonify(success=True, quizBanks=load_quiz_banks_for_user(username))
-
-
-@app.route('/save_quiz_banks', methods=['POST'])
-def save_quiz_banks_api():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        banks = data.get('quizBanks', [])
-        if not username or not isinstance(banks, list):
-            return jsonify(success=False, message='題庫格式錯誤'), 400
-        save_quiz_banks_for_user(username, banks)
-        return jsonify(success=True, message='題庫已儲存')
-    except Exception as e:
-        return jsonify(success=False, message=f'儲存失敗：{e}'), 500
-
-
-@app.route('/copy_quiz_bank', methods=['POST'])
-def copy_quiz_bank():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        bank_id = str(data.get('bankId', '')).strip()
-        new_title = str(data.get('newTitle', '')).strip()
-        banks = load_quiz_banks_for_user(username)
-        target = next((b for b in banks if str(b.get('id')) == bank_id), None)
-        if not target:
-            return jsonify(success=False, message='找不到題庫'), 404
-        copied = json.loads(json.dumps(target))
-        copied['id'] = uid('bank')
-        copied['title'] = new_title or f"{target.get('title', '未命名題庫')}（副本）"
-        copied['updatedAt'] = now_ts()
-        banks.insert(0, copied)
-        save_quiz_banks_for_user(username, banks)
-        return jsonify(success=True, quizBanks=banks, message='題庫已複製')
-    except Exception as e:
-        return jsonify(success=False, message=f'複製失敗：{e}'), 500
-
-
-@app.route('/rename_quiz_bank', methods=['POST'])
-def rename_quiz_bank():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        bank_id = str(data.get('bankId', '')).strip()
-        new_title = str(data.get('newTitle', '')).strip()
-        banks = load_quiz_banks_for_user(username)
-        for bank in banks:
-            if str(bank.get('id')) == bank_id:
-                bank['title'] = new_title
-                bank['updatedAt'] = now_ts()
-                save_quiz_banks_for_user(username, banks)
-                return jsonify(success=True, quizBanks=banks, message='題庫已重新命名')
-        return jsonify(success=False, message='找不到題庫'), 404
-    except Exception as e:
-        return jsonify(success=False, message=f'重新命名失敗：{e}'), 500
-
-
-@app.route('/delete_quiz_bank', methods=['POST'])
-def delete_quiz_bank():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        bank_id = str(data.get('bankId', '')).strip()
-        banks = load_quiz_banks_for_user(username)
-        new_banks = [b for b in banks if str(b.get('id')) != bank_id]
-        if len(new_banks) == len(banks):
-            return jsonify(success=False, message='找不到題庫'), 404
-        save_quiz_banks_for_user(username, new_banks)
-        return jsonify(success=True, quizBanks=new_banks, message='題庫已刪除')
-    except Exception as e:
-        return jsonify(success=False, message=f'刪除失敗：{e}'), 500
-
-
-@app.route('/lobby_rooms')
-def lobby_rooms():
-    try:
-        with closing(get_conn()) as conn:
-            stale = conn.execute('''
-                SELECT DISTINCT r.pin FROM rooms r
-                LEFT JOIN room_players hp ON hp.room_pin=r.pin AND hp.is_host=1
-                WHERE hp.id IS NULL OR COALESCE(hp.last_seen,hp.joined_at,0) < ?
-            ''', (host_alive_cutoff(),)).fetchall()
-            for s in stale:
-                delete_room_fully(conn, s['pin'])
-            if stale:
-                conn.commit()
-            rows = conn.execute('''
-                SELECT r.*, COUNT(p.id) AS player_count,
-                       GROUP_CONCAT(p.player_name,'||') AS player_names
-                FROM rooms r LEFT JOIN room_players p ON p.room_pin=r.pin
-                WHERE r.status!='closed' AND r.allow_lobby_join=1
-                  AND EXISTS(SELECT 1 FROM room_players hp WHERE hp.room_pin=r.pin
-                             AND hp.is_host=1 AND COALESCE(hp.last_seen,hp.joined_at,0)>=?)
-                GROUP BY r.pin ORDER BY r.created_at DESC,r.id DESC
-            ''', (host_alive_cutoff(),)).fetchall()
-        result = []
-        for row in rows:
-            room = serialize_room(row)
-            room['player_count'] = int(room.get('player_count', 0) or 0)
-            room['player_names'] = [n for n in str(room.get('player_names') or '').split('||') if n]
-            room['joinable'] = (room['status'] == 'waiting'
-                                and room['player_count'] < int(room.get('max_players', 8) or 8))
-            room['display_name'] = room.get('room_name') or room.get('bank_title') or f"房間 {room['pin']}"
-            result.append(room)
-        return jsonify(success=True, rooms=result)
-    except Exception as e:
-        return jsonify(success=False, message=f'讀取大廳失敗：{e}'), 500
-
-
-@app.route('/check_pin', methods=['POST'])
-def check_pin():
-    data = request.get_json() or {}
-    pin = str(data.get('pin', '')).strip()
-    if not validate_pin(pin):
-        return jsonify(success=False, message='PIN 必須是 6 位數字'), 400
-    room = fetch_room(pin)
-    if not room:
-        return jsonify(success=False, message='房間不存在'), 404
-    with closing(get_conn()) as conn:
-        host_exists = conn.execute(
-            'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
-            (pin, host_alive_cutoff())
-        ).fetchone()
-        if not host_exists:
-            delete_room_fully(conn, pin)
-            conn.commit()
-            return jsonify(success=False, message='房間不存在'), 404
-    room = serialize_room(room)
-    return jsonify(success=True, room=room, requiresKey=room['is_private'])
-
-
-@app.route('/verify_room_key', methods=['POST'])
-def verify_room_key():
-    data = request.get_json() or {}
-    pin = str(data.get('pin', '')).strip()
-    room_key = str(data.get('roomKey', '')).strip()
-    room = serialize_room(fetch_room(pin))
-    if not room:
-        return jsonify(success=False, message='房間不存在'), 404
-    with closing(get_conn()) as conn:
-        host_exists = conn.execute(
-            'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
-            (pin, host_alive_cutoff())
-        ).fetchone()
-        if not host_exists:
-            delete_room_fully(conn, pin)
-            conn.commit()
-            return jsonify(success=False, message='房間不存在'), 404
-    if not room['is_private']:
-        return jsonify(success=True, message='公開房間')
-    if not room_key:
-        return jsonify(success=False, message='請輸入房間密鑰'), 400
-    if hash_text(room_key) != (room.get('room_key_hash') or ''):
-        return jsonify(success=False, message='密鑰錯誤'), 401
-    return jsonify(success=True, message='密鑰正確')
-
-
-@app.route('/create_room', methods=['POST'])
-def create_room():
-    try:
-        data = request.get_json() or {}
-        bank_id = str(data.get('bankId', '')).strip()
-        bank_title = str(data.get('bankTitle', '')).strip()
-        created_by = str(data.get('createdBy', '')).strip()
-        room_name = str(data.get('roomName', '')).strip() or bank_title or 'QuizArena Room'
-        is_private = 1 if bool(data.get('isPrivate', False)) else 0
-        room_key = str(data.get('roomKey', '')).strip()
-        allow_lobby_join = 1 if bool(data.get('allowLobbyJoin', True)) else 0
-        team_mode = 1 if bool(data.get('teamMode', False)) else 0
-        team_count = max(2, int(data.get('teamCount', 2) or 2))
-        team_size = max(1, int(data.get('teamSize', 4) or 4))
-        max_players = int(data.get('maxPlayers', 8) or 8)
-        room_questions = data.get('roomQuestions', [])
-
-        if not created_by:
-            return jsonify(success=False, message='請先登入再建立房間'), 400
-        if not bank_id:
-            return jsonify(success=False, message='請先選擇題庫'), 400
-        if is_private and not room_key:
-            return jsonify(success=False, message='私人房必須設定密鑰'), 400
-        if not isinstance(room_questions, list) or not room_questions:
-            return jsonify(success=False, message='建立房間前請先選擇至少一題'), 400
-
-        pin = generate_unique_pin()
-
-        with closing(get_conn()) as conn:
-            old_rooms = conn.execute('SELECT pin FROM rooms WHERE created_by=?', (created_by,)).fetchall()
-            for old in old_rooms:
-                delete_room_fully(conn, old['pin'])
-
-            conn.execute('''
-                INSERT INTO rooms
-                (pin,room_name,bank_id,bank_title,created_by,is_private,room_key_hash,
-                 status,max_players,team_mode,team_count,team_size,allow_lobby_join,
-                 current_question_index,game_start_ts,created_at)
-                VALUES (?,?,?,?,?,?,?,'waiting',?,?,?,?,?,0,0,?)
-            ''', (pin, room_name, bank_id, bank_title, created_by, is_private,
-                  hash_text(room_key) if is_private else '', max_players,
-                  team_mode, team_count, team_size, allow_lobby_join, now_ts()))
-
-            if team_mode:
-                team_names = data.get('teamNames', [])
-                for i in range(team_count):
-                    name = (team_names[i] if i < len(team_names) else None) or f'隊伍 {i+1}'
-                    conn.execute(
-                        'INSERT OR IGNORE INTO room_teams (room_pin,team_id,team_name) VALUES (?,?,?)',
-                        (pin, i+1, name))
-
-            for idx, q in enumerate(room_questions):
-                options = q.get('options', [])
-                answer_indexes = sorted([i for i, opt in enumerate(options) if opt.get('correct')])
-                conn.execute('''
-                    INSERT INTO room_questions
-                    (room_pin,question_id,seq,title,content,type,options_json,answer_json,
-                     explanation,time_label,score,fake_answer,mode,image,origin_bank_id,origin_question_id)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                ''', (pin, str(q.get('roomQuestionId') or uid('rq')), idx,
-                      q.get('title',''), q.get('content',''), q.get('type','single'),
-                      json.dumps(options, ensure_ascii=False),
-                      json.dumps(answer_indexes, ensure_ascii=False),
-                      q.get('explanation',''), q.get('time','20 秒'),
-                      int(q.get('score',1000) or 1000), 1 if q.get('fakeAnswer') else 0,
-                      q.get('mode','個人賽'), q.get('image',''), bank_id, str(q.get('id',''))))
-
-            # 建房時插入佔位房主，防止選頭像期間房間被系統刪除
-            # player_join 完成後 join_room 會用 ON CONFLICT DO UPDATE 覆蓋
-            conn.execute('''
-                INSERT OR IGNORE INTO room_players
-                (room_pin, player_name, face, hair, eyes, eyes_offset_y, is_host, team_id, joined_at, last_seen)
-                VALUES (?, '__PENDING_HOST__', 'images/face/face.png', 'images/hair/hair01.png', 'images/face/eyes01.png', 0, 1, 0, ?, ?)
-            ''', (pin, now_ts(), now_ts()))
-            conn.commit()
-
-        return jsonify(success=True, message='房間建立成功', room=serialize_room(fetch_room(pin)))
-    except Exception as e:
-        return jsonify(success=False, message=f'建立房間失敗：{e}'), 500
-
-
-@app.route('/join_room', methods=['POST'])
-def join_room():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        room_key = str(data.get('roomKey', '')).strip()
-        player = get_player_payload(data.get('player', {}))
-        team_id = int(data.get('teamId', 0) or 0)
-
-        if not validate_pin(pin):
-            return jsonify(success=False, message='PIN 格式錯誤'), 400
-        if not player['name']:
-            return jsonify(success=False, message='請輸入玩家名稱'), 400
-
-        with closing(get_conn()) as conn:
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='房間不存在'), 404
-            room = serialize_room(room)
-
-            if room['status'] not in ['waiting', 'playing']:
-                return jsonify(success=False, message='房間目前不可加入'), 400
-
-            count = conn.execute(
-                'SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?', (pin,)
-            ).fetchone()['total']
-            if count >= int(room.get('max_players', 8) or 8):
-                return jsonify(success=False, message='房間已滿'), 400
-
-            if room['is_private'] and hash_text(room_key) != (room.get('room_key_hash') or ''):
-                return jsonify(success=False, message='密鑰錯誤'), 401
-
-            host_exists = conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
-                (pin, host_alive_cutoff())
-            ).fetchone()
-            if not host_exists and not player['is_host']:
-                delete_room_fully(conn, pin)
-                conn.commit()
-                return jsonify(success=False, message='房間不存在'), 404
-
-            conn.execute('''
-                INSERT INTO room_players
-                (room_pin,player_name,face,hair,eyes,eyes_offset_y,is_host,team_id,joined_at,last_seen)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT(room_pin,player_name) DO UPDATE SET
-                    face=excluded.face,hair=excluded.hair,eyes=excluded.eyes,
-                    eyes_offset_y=excluded.eyes_offset_y,is_host=excluded.is_host,
-                    team_id=excluded.team_id,joined_at=excluded.joined_at,last_seen=excluded.last_seen
-            ''', (pin, player['name'], player['face'], player['hair'], player['eyes'],
-                  player['eyes_offset_y'], player['is_host'], team_id, now_ts(), now_ts()))
-            conn.commit()
-
-        return jsonify(success=True, message='加入房間成功', room=serialize_room(fetch_room(pin)))
-    except Exception as e:
-        return jsonify(success=False, message=f'加入房間失敗：{e}'), 500
-
-
-@app.route('/choose_team', methods=['POST'])
-def choose_team():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        team_id = int(data.get('teamId', 0) or 0)
-        with closing(get_conn()) as conn:
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='房間不存在'), 404
-            if room.get('status') != 'waiting':
-                return jsonify(success=False, message='遊戲已開始，無法換隊'), 400
-            team_size = int(room.get('team_size') or 4)
-            cur_count = conn.execute(
-                'SELECT COUNT(*) AS c FROM room_players WHERE room_pin=? AND team_id=? AND player_name!=?',
-                (pin, team_id, player_name)
-            ).fetchone()['c']
-            if cur_count >= team_size:
-                return jsonify(success=False, message='這隊已滿，請選其他隊'), 400
-            conn.execute('UPDATE room_players SET team_id=? WHERE room_pin=? AND player_name=?',
-                         (team_id, pin, player_name))
-            conn.commit()
-        return jsonify(success=True, message='選隊成功')
-    except Exception as e:
-        return jsonify(success=False, message=f'選隊失敗：{e}'), 500
-
-
-@app.route('/shuffle_teams', methods=['POST'])
-def shuffle_teams():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        with closing(get_conn()) as conn:
-            host = conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
-                (pin, player_name)
-            ).fetchone()
-            if not host:
-                return jsonify(success=False, message='只有房主可以隨機分組'), 403
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='房間不存在'), 404
-            team_count = int(room.get('team_count') or 2)
-            players = conn.execute(
-                'SELECT player_name FROM room_players WHERE room_pin=? AND is_host=0', (pin,)
-            ).fetchall()
-            names = [p['player_name'] for p in players]
-            random.shuffle(names)
-            for i, name in enumerate(names):
-                conn.execute('UPDATE room_players SET team_id=? WHERE room_pin=? AND player_name=?',
-                             ((i % team_count) + 1, pin, name))
-            conn.commit()
-        return jsonify(success=True, message='隨機分組完成')
-    except Exception as e:
-        return jsonify(success=False, message=f'隨機分組失敗：{e}'), 500
-
-
-@app.route('/leave_room', methods=['POST'])
-def leave_room():
-    try:
-        data = request.get_json(silent=True) or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        if not pin or not player_name:
-            return jsonify(success=False, message='缺少必要資料'), 400
-        with closing(get_conn()) as conn:
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=True, message='房間已不存在')
-            leaving = conn.execute(
-                'SELECT * FROM room_players WHERE room_pin=? AND player_name=?', (pin, player_name)
-            ).fetchone()
-            if not leaving:
-                return jsonify(success=True, message='玩家已不在房間內')
-            if int(leaving.get('is_host', 0) or 0) == 1:
-                delete_room_fully(conn, pin)
-                conn.commit()
-                return jsonify(success=True, message='房主已離開，房間已刪除', roomDeleted=True)
-            conn.execute('DELETE FROM room_players WHERE room_pin=? AND player_name=?', (pin, player_name))
-            host_exists = conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
-                (pin, host_alive_cutoff())
-            ).fetchone()
-            if not host_exists:
-                delete_room_fully(conn, pin)
-                conn.commit()
-                return jsonify(success=True, message='房間已無房主，房間已刪除', roomDeleted=True)
-            remaining = conn.execute(
-                'SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?', (pin,)
-            ).fetchone()['total']
-            if remaining == 0:
-                delete_room_fully(conn, pin)
-                conn.commit()
-                return jsonify(success=True, message='房間已無玩家，房間已刪除', roomDeleted=True)
-            conn.commit()
-        return jsonify(success=True, message='已離開房間', roomDeleted=False)
-    except Exception as e:
-        return jsonify(success=False, message=f'離開房間失敗：{e}'), 500
-
-
-@app.route('/room_state/<pin>')
-def room_state(pin):
-    try:
-        with closing(get_conn()) as conn:
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='房間不存在'), 404
-            host_exists = conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
-                (pin, host_alive_cutoff())
-            ).fetchone()
-            if not host_exists:
-                delete_room_fully(conn, pin)
-                conn.commit()
-                return jsonify(success=False, message='房間不存在'), 404
-            conn.execute(
-                'UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
-                (now_ts(), pin, request.args.get('playerName', '').strip() or '__unknown__')
-            )
-            players = conn.execute('''
-                SELECT room_pin,player_name,face,hair,eyes,eyes_offset_y,is_host,team_id,joined_at
-                FROM room_players WHERE room_pin=?
-                ORDER BY is_host DESC,joined_at ASC,id ASC
-            ''', (pin,)).fetchall()
-            teams = conn.execute(
-                'SELECT team_id,team_name FROM room_teams WHERE room_pin=? ORDER BY team_id', (pin,)
-            ).fetchall()
-            messages = conn.execute(
-                'SELECT * FROM room_messages WHERE room_pin=? AND team_id=-1 ORDER BY id ASC', (pin,)
-            ).fetchall()
-            question_total = conn.execute(
-                'SELECT COUNT(*) AS total FROM room_questions WHERE room_pin=?', (pin,)
-            ).fetchone()['total']
-            conn.commit()
-        return jsonify(success=True, room=serialize_room(room), players=players,
-                       teams=teams, messages=messages, questionTotal=question_total)
-    except Exception as e:
-        return jsonify(success=False, message=f'讀取房間狀態失敗：{e}'), 500
-
-
-@app.route('/heartbeat', methods=['POST'])
-def heartbeat():
-    try:
-        data = request.get_json(silent=True) or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        if not pin or not player_name:
-            return jsonify(success=False, message='缺少必要資料'), 400
-        with closing(get_conn()) as conn:
-            if not conn.execute('SELECT 1 FROM rooms WHERE pin=?', (pin,)).fetchone():
-                return jsonify(success=False, message='房間不存在'), 404
-            # 一般玩家/房主的心跳
-            conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
-                         (now_ts(), pin, player_name))
-            # 房主選頭像期間，同時更新佔位記錄（__PENDING_HOST__）
-            if player_name == '__host_pending__':
-                conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND is_host=1',
-                             (now_ts(), pin))
-            conn.commit()
-        return jsonify(success=True)
-    except Exception as e:
-        return jsonify(success=False, message=f'心跳更新失敗：{e}'), 500
-
-
-@app.route('/send_message', methods=['POST'])
-def send_message():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        sender_name = str(data.get('senderName', '')).strip()
-        message = str(data.get('message', '')).strip()
-        team_id = int(data.get('teamId', -1) or -1)
-        avatar = get_player_payload({
-            'name': sender_name,
-            'face': data.get('face', DEFAULT_FACE),
-            'hair': data.get('hair', DEFAULT_HAIR),
-            'eyes': data.get('eyes', DEFAULT_EYES),
-            'eyesOffsetY': data.get('eyesOffsetY', 0)
-        })
-        if not room_exists(pin):
-            return jsonify(success=False, message='房間不存在'), 404
-        if not sender_name or not message:
-            return jsonify(success=False, message='訊息不可空白'), 400
-        with closing(sqlite3.connect(ROOMS_DB_PATH)) as conn:
-            conn.execute('''
-                INSERT INTO room_messages
-                (room_pin,sender_name,message,face,hair,eyes,eyes_offset_y,team_id,created_at)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            ''', (pin, sender_name, message, avatar['face'], avatar['hair'],
-                  avatar['eyes'], avatar['eyes_offset_y'], team_id, now_ts()))
-            conn.commit()
-        return jsonify(success=True, message='訊息已送出')
-    except Exception as e:
-        return jsonify(success=False, message=f'發送訊息失敗：{e}'), 500
-
-
-@app.route('/team_messages')
-def team_messages():
-    try:
-        pin = request.args.get('pin', '').strip()
-        team_id = int(request.args.get('teamId', 0) or 0)
-        with closing(get_conn()) as conn:
-            msgs = conn.execute(
-                'SELECT * FROM room_messages WHERE room_pin=? AND team_id=? ORDER BY id ASC',
-                (pin, team_id)
-            ).fetchall()
-        return jsonify(success=True, messages=msgs)
-    except Exception as e:
-        return jsonify(success=False, message=f'讀取訊息失敗：{e}'), 500
-
-
-@app.route('/start_game', methods=['POST'])
-def start_game():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        with closing(get_conn()) as conn:
-            host = conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=?',
-                (pin, player_name, host_alive_cutoff())
-            ).fetchone()
-            if not host:
-                return jsonify(success=False, message='只有房主可以開始遊戲'), 403
-            total = conn.execute(
-                'SELECT COUNT(*) AS total FROM room_questions WHERE room_pin=?', (pin,)
-            ).fetchone()['total']
-            if total == 0:
-                return jsonify(success=False, message='這個房間沒有題目'), 400
-            conn.execute(
-                "UPDATE rooms SET status='playing',current_question_index=0,phase='question',game_start_ts=? WHERE pin=?",
-                (now_ts(), pin)
-            )
-            conn.commit()
-        return jsonify(success=True, message='遊戲已開始')
-    except Exception as e:
-        return jsonify(success=False, message=f'開始遊戲失敗：{e}'), 500
-
-
-@app.route('/player_game_state')
-def player_game_state():
-    try:
-        pin = request.args.get('pin', '').strip()
-        player_name = request.args.get('playerName', '').strip()
-        if not pin or not player_name:
-            return jsonify(success=False, message='缺少必要資料'), 400
-
-        with closing(get_conn()) as conn:
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='房間不存在'), 404
-            host_exists = conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
-                (pin, host_alive_cutoff())
-            ).fetchone()
-            if not host_exists:
-                delete_room_fully(conn, pin)
-                conn.commit()
-                return jsonify(success=False, message='房間不存在'), 404
-
-            room = serialize_room(room)
-            conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
-                         (now_ts(), pin, player_name))
-
-            is_team_mode = bool(room.get('team_mode'))
-            me = conn.execute(
-                'SELECT team_id FROM room_players WHERE room_pin=? AND player_name=?',
-                (pin, player_name)
-            ).fetchone()
-            my_team_id = int((me or {}).get('team_id') or 0)
-
-            questions = conn.execute(
-                'SELECT * FROM room_questions WHERE room_pin=? ORDER BY seq ASC,id ASC', (pin,)
-            ).fetchall()
-            current_index = int(room.get('current_question_index') or 0)
-            total_questions = len(questions)
-            phase = room.get('phase') or 'question'
-
-            current_q = None
-            finished = False
-            if is_team_mode:
-                finished = (room.get('status') == 'closed') or current_index >= total_questions
-            else:
-                current_q = questions[current_index] if 0 <= current_index < total_questions else None
-                finished = current_q is None
-
-            total_score = conn.execute(
-                'SELECT COALESCE(SUM(points_earned),0) AS total FROM room_results WHERE room_pin=? AND player_name=?',
-                (pin, player_name)
-            ).fetchone()['total']
-
-            all_rank = conn.execute('''
-                SELECT player_name, COALESCE(SUM(points_earned),0) AS total_score
-                FROM room_results WHERE room_pin=?
-                GROUP BY player_name ORDER BY total_score DESC,player_name ASC
-            ''', (pin,)).fetchall()
-            my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
-            leaderboard = all_rank[:10]
-
-            team_scores = []
-            if is_team_mode:
-                teams = conn.execute(
-                    'SELECT team_id,team_name FROM room_teams WHERE room_pin=? ORDER BY team_id', (pin,)
-                ).fetchall()
-                for t in teams:
-                    tid = t['team_id']
-                    score = conn.execute('''
-                        SELECT COALESCE(SUM(rr.points_earned),0) AS total
-                        FROM room_results rr
-                        JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
-                        WHERE rr.room_pin=? AND rp.team_id=?
-                    ''', (pin, tid)).fetchone()['total']
-                    team_scores.append({'team_id': tid, 'team_name': t['team_name'], 'total_score': score})
-
-            my_result = None
-            answer_status = []
-            answer_breakdown = []
-            my_answered = False
-            correct_answer_text = ''
-            explanation_text = ''
-
-            if not is_team_mode and current_q:
-                my_result = conn.execute(
-                    'SELECT * FROM room_results WHERE room_pin=? AND player_name=? AND question_id=?',
-                    (pin, player_name, current_q['question_id'])
-                ).fetchone()
-                my_answered = my_result is not None
-                answer_status = conn.execute('''
-                    SELECT rp.player_name,
-                           CASE WHEN rr.id IS NULL THEN 0 ELSE 1 END AS answered,
-                           rr.selected_json,rr.is_correct,rr.points_earned
-                    FROM room_players rp
-                    LEFT JOIN room_results rr
-                      ON rr.room_pin=rp.room_pin AND rr.player_name=rp.player_name AND rr.question_id=?
-                    WHERE rp.room_pin=? ORDER BY rp.is_host DESC,rp.player_name ASC
-                ''', (current_q['question_id'], pin)).fetchall()
-                options = json.loads(current_q['options_json'] or '[]')
-                all_res = conn.execute(
-                    'SELECT selected_json FROM room_results WHERE room_pin=? AND question_id=?',
-                    (pin, current_q['question_id'])
-                ).fetchall()
-                counts = [0] * len(options)
-                for r in all_res:
-                    try:
-                        for idx in json.loads(r['selected_json'] or '[]'):
-                            if 0 <= idx < len(options):
-                                counts[idx] += 1
-                    except Exception:
-                        pass
-                answer_breakdown = [
-                    {'index': i, 'label': chr(65+i), 'text': opt.get('text',''), 'count': counts[i]}
-                    for i, opt in enumerate(options)
-                ]
-                ai = sorted(json.loads(current_q['answer_json'] or '[]'))
-                correct_answer_text = '、'.join(chr(65+i) for i in ai) or '無'
-                explanation_text = current_q.get('explanation') or ''
-
-            team_question_status = []
-            if is_team_mode:
-                for q in questions:
-                    sub = conn.execute('''
-                        SELECT rr.player_name,rr.is_correct,rr.points_earned
-                        FROM room_results rr
-                        JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
-                        WHERE rr.room_pin=? AND rr.question_id=? AND rp.team_id=? LIMIT 1
-                    ''', (pin, q['question_id'], my_team_id)).fetchone()
-                    team_question_status.append({
-                        'question_id': q['question_id'],
-                        'seq': q['seq'],
-                        'title': q['title'],
-                        'submitted': sub is not None,
-                        'submitter': sub['player_name'] if sub else None,
-                        'is_correct': bool(sub['is_correct']) if sub else None,
-                        'points_earned': sub['points_earned'] if sub else 0
-                    })
-
-            conn.commit()
-
-        def pub_q(q):
-            if not q:
-                return None
-            return {
-                'question_id': q['question_id'], 'seq': q['seq'],
-                'title': q['title'], 'content': q['content'], 'type': q['type'],
-                'options': json.loads(q['options_json'] or '[]'),
-                'time': q['time_label'], 'score': q['score'],
-                'explanation': q.get('explanation') or '', 'image': q.get('image') or ''
-            }
-
-        return jsonify(
-            success=True, room=room,
-            totalQuestions=total_questions, answeredCount=current_index,
-            totalScore=total_score,
-            nextQuestion=pub_q(current_q),
-            allQuestions=[pub_q(q) for q in questions] if is_team_mode else [],
-            finished=finished, leaderboard=leaderboard,
-            teamScores=team_scores, teamQuestionStatus=team_question_status,
-            myTeamId=my_team_id, phase=phase,
-            myAnswered=my_answered, myResult=my_result,
-            answerStatus=answer_status, answerBreakdown=answer_breakdown,
-            myRank=my_rank, showExactRank=bool(my_rank and my_rank <= 5),
-            correctAnswerText=correct_answer_text, explanation=explanation_text,
-            gameStartTs=int(room.get('game_start_ts') or 0),
-            isTeamMode=is_team_mode
-        )
-    except Exception as e:
-        return jsonify(success=False, message=f'讀取遊戲狀態失敗：{e}'), 500
-
-
-@app.route('/submit_answer', methods=['POST'])
-def submit_answer():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        question_id = str(data.get('questionId', '')).strip()
-        selected = data.get('selected', [])
-        remain_sec = int(data.get('remainSeconds', 0) or 0)
-        if not isinstance(selected, list):
-            selected = []
-        selected = sorted([int(x) for x in selected])
-
-        with closing(get_conn()) as conn:
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='房間不存在'), 404
-            is_team_mode = bool(room.get('team_mode'))
-            if not is_team_mode and (room.get('phase') or 'question') != 'question':
-                return jsonify(success=False, message='本題已結束作答'), 400
-
-            q = conn.execute(
-                'SELECT * FROM room_questions WHERE room_pin=? AND question_id=?', (pin, question_id)
-            ).fetchone()
-            if not q:
-                return jsonify(success=False, message='找不到題目'), 404
-
-            if is_team_mode:
-                me = conn.execute(
-                    'SELECT team_id FROM room_players WHERE room_pin=? AND player_name=?',
-                    (pin, player_name)
-                ).fetchone()
-                my_team_id = int((me or {}).get('team_id') or 0)
-                already = conn.execute('''
-                    SELECT rr.player_name FROM room_results rr
-                    JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
-                    WHERE rr.room_pin=? AND rr.question_id=? AND rp.team_id=? LIMIT 1
-                ''', (pin, question_id, my_team_id)).fetchone()
-                if already:
-                    return jsonify(success=False,
-                                   message=f'{already["player_name"]} 已代表本組作答此題'), 400
-
-            existing = conn.execute(
-                'SELECT * FROM room_results WHERE room_pin=? AND player_name=? AND question_id=?',
-                (pin, player_name, question_id)
-            ).fetchone()
-
-            answer_indexes = sorted(json.loads(q['answer_json'] or '[]'))
-            option_labels = [chr(65+i) for i in answer_indexes]
-
-            if existing:
-                total_score = conn.execute(
-                    'SELECT COALESCE(SUM(points_earned),0) AS total FROM room_results WHERE room_pin=? AND player_name=?',
-                    (pin, player_name)
-                ).fetchone()['total']
-                return jsonify(success=True, alreadyAnswered=True,
-                               isCorrect=bool(existing['is_correct']),
-                               pointsEarned=int(existing['points_earned'] or 0),
-                               correctIndexes=answer_indexes, correctLabels=option_labels,
-                               explanation=q.get('explanation') or '',
-                               answerText='、'.join(option_labels) or '無',
-                               totalScore=total_score)
-
-            is_correct = 1 if selected == answer_indexes else 0
-            answer_order = 0
-            if is_correct:
-                answered_before = conn.execute(
-                    'SELECT COUNT(*) AS c FROM room_results WHERE room_pin=? AND question_id=?',
-                    (pin, question_id)
-                ).fetchone()['c']
-                answer_order = answered_before + 1
-                time_limit = int(''.join(filter(str.isdigit, q.get('time_label') or '20')) or 20)
-                points = calc_kahoot_score(int(q.get('score') or 1000), time_limit, remain_sec, answer_order)
-            else:
-                points = 0
-
-            conn.execute('''
-                INSERT INTO room_results
-                (room_pin,player_name,question_id,selected_json,is_correct,points_earned,answer_order,remain_sec,answered_at)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            ''', (pin, player_name, question_id, json.dumps(selected, ensure_ascii=False),
-                  is_correct, points, answer_order, remain_sec, now_ts()))
-
-            total_score = conn.execute(
-                'SELECT COALESCE(SUM(points_earned),0) AS total FROM room_results WHERE room_pin=? AND player_name=?',
-                (pin, player_name)
-            ).fetchone()['total']
-            top5 = conn.execute('''
-                SELECT player_name,COALESCE(SUM(points_earned),0) AS total_score
-                FROM room_results WHERE room_pin=?
-                GROUP BY player_name ORDER BY total_score DESC,player_name ASC LIMIT 5
-            ''', (pin,)).fetchall()
-            all_rank = conn.execute('''
-                SELECT player_name,COALESCE(SUM(points_earned),0) AS total_score
-                FROM room_results WHERE room_pin=?
-                GROUP BY player_name ORDER BY total_score DESC,player_name ASC
-            ''', (pin,)).fetchall()
-            my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
-            conn.commit()
-
-            return jsonify(success=True, isCorrect=bool(is_correct), pointsEarned=points,
-                           answerOrder=answer_order,
-                           correctIndexes=answer_indexes, correctLabels=option_labels,
-                           explanation=q.get('explanation') or '',
-                           answerText='、'.join(option_labels) or '無',
-                           totalScore=total_score, top5=top5, myRank=my_rank,
-                           showExactRank=bool(my_rank and my_rank <= 5))
-    except Exception as e:
-        return jsonify(success=False, message=f'提交答案失敗：{e}'), 500
-
-
-@app.route('/host_finish_question', methods=['POST'])
-def host_finish_question():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        with closing(get_conn()) as conn:
-            if not conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
-                (pin, player_name)
-            ).fetchone():
-                return jsonify(success=False, message='只有房主可以操作'), 403
-            conn.execute("UPDATE rooms SET phase='explanation' WHERE pin=?", (pin,))
-            conn.commit()
-        return jsonify(success=True, message='已進入解析階段')
-    except Exception as e:
-        return jsonify(success=False, message=f'切換解析階段失敗：{e}'), 500
-
-
-@app.route('/host_skip_explanation', methods=['POST'])
-def host_skip_explanation():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        with closing(get_conn()) as conn:
-            if not conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
-                (pin, player_name)
-            ).fetchone():
-                return jsonify(success=False, message='只有房主可以操作'), 403
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='房間不存在'), 404
-            total = conn.execute(
-                'SELECT COUNT(*) AS total FROM room_questions WHERE room_pin=?', (pin,)
-            ).fetchone()['total']
-            next_index = int(room.get('current_question_index') or 0) + 1
-            conn.execute(
-                "UPDATE rooms SET current_question_index=?,phase='question' WHERE pin=?",
-                (next_index, pin)
-            )
-            conn.commit()
-        return jsonify(success=True, message='已進入下一題', finished=next_index >= total)
-    except Exception as e:
-        return jsonify(success=False, message=f'切換下一題失敗：{e}'), 500
-
-
-@app.route('/host_end_team_game', methods=['POST'])
-def host_end_team_game():
-    try:
-        data = request.get_json() or {}
-        pin = str(data.get('pin', '')).strip()
-        player_name = str(data.get('playerName', '')).strip()
-        with closing(get_conn()) as conn:
-            if not conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
-                (pin, player_name)
-            ).fetchone():
-                return jsonify(success=False, message='只有房主可以操作'), 403
-            total = conn.execute(
-                'SELECT COUNT(*) AS t FROM room_questions WHERE room_pin=?', (pin,)
-            ).fetchone()['t']
-            conn.execute(
-                "UPDATE rooms SET current_question_index=?,phase='question',status='closed' WHERE pin=?",
-                (total, pin)
-            )
-            conn.commit()
-        return jsonify(success=True, message='遊戲已結束')
-    except Exception as e:
-        return jsonify(success=False, message=f'結束遊戲失敗：{e}'), 500
-
-
-@app.route('/host_all_results')
-def host_all_results():
-    try:
-        pin = request.args.get('pin', '').strip()
-        if not pin:
-            return jsonify(success=False, message='缺少 PIN'), 400
-        with closing(get_conn()) as conn:
-            questions = conn.execute(
-                'SELECT question_id,seq,title FROM room_questions WHERE room_pin=? ORDER BY seq ASC', (pin,)
-            ).fetchall()
-            results = conn.execute(
-                'SELECT rr.*,rp.team_id FROM room_results rr JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name WHERE rr.room_pin=? ORDER BY rp.team_id ASC,rr.player_name ASC',
-                (pin,)
-            ).fetchall()
-        q_order = {q['question_id']: q['seq'] for q in questions}
-        q_titles = {q['question_id']: q['title'] for q in questions}
-        enriched = [{
-            'player_name': r['player_name'], 'team_id': r['team_id'],
-            'question_id': r['question_id'],
-            'seq': q_order.get(r['question_id'], 0),
-            'title': q_titles.get(r['question_id'], ''),
-            'selected_json': r['selected_json'],
-            'is_correct': bool(r['is_correct']),
-            'points_earned': int(r['points_earned'] or 0),
-            'answer_order': int(r['answer_order'] or 0),
-        } for r in results]
-        return jsonify(success=True, results=enriched)
-    except Exception as e:
-        return jsonify(success=False, message=f'讀取明細失敗：{e}'), 500
-
-
-@app.route('/<path:filename>')
-def static_files(filename):
-    return send_from_directory(PROJECT_DIR, filename)
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+/* ── base ── */
+body{margin:0;min-height:100vh;font-family:"Comic Sans MS","Arial","GenSenRounded",sans-serif;background:url(../images/waiting.jpg) center/cover no-repeat fixed;color:#865d72}
+body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg,rgba(255,235,244,.22),rgba(255,208,228,.18));pointer-events:none}
+
+/* ── shell & topbar ── */
+.game-shell{position:relative;z-index:1;padding:18px;max-width:1500px;margin:0 auto}
+.game-topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.game-logo{width:min(280px,70vw)}
+.game-badges{display:flex;gap:10px;flex-wrap:wrap}
+.badge-pill{background:rgba(255,255,255,.82);padding:10px 16px;border-radius:999px;font-weight:800;box-shadow:0 8px 24px rgba(116,35,70,.15)}
+.badge-pill strong{color:#df5c93}
+
+/* ── layout: 3 columns on wide, 1 column on mobile ── */
+.game-layout{
+  display:grid;
+  grid-template-columns:280px 1fr 200px;
+  gap:18px;
+  align-items:start;
+}
+
+/* ── glass card ── */
+.glass-card{background:linear-gradient(180deg,rgba(255,255,255,.82),rgba(255,245,249,.72));border:2px solid rgba(255,255,255,.9);border-radius:30px;backdrop-filter:blur(14px);box-shadow:0 16px 34px rgba(168,102,136,.18)}
+
+/* ── left side board ── */
+.side-board{padding:22px}
+.side-board h3{margin:0 0 12px;color:#d65d94}
+.progress-copy{font-size:1.12rem;font-weight:800;margin-bottom:18px}
+.leaderboard-title{font-weight:900;margin-bottom:10px;color:#c85f81}
+.leaderboard-list{display:grid;gap:10px}
+.leader-item{background:rgba(255,255,255,.74);border-radius:16px;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;font-weight:800}
+.leader-item.mine{outline:3px solid rgba(255,143,188,.5)}
+
+/* ── right side player panel ── */
+.player-side-panel{padding:16px}
+.psp-title{font-weight:900;color:#d65d94;margin-bottom:12px;font-size:1rem}
+.player-side-list{display:flex;flex-direction:column;gap:10px}
+
+.psl-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:rgba(255,255,255,.74);
+  border-radius:16px;
+  padding:8px 10px;
+  font-weight:800;
+  font-size:.88rem;
+}
+.psl-item.done{outline:2px solid rgba(100,200,130,.4)}
+.psl-item.wait{opacity:.75}
+.psl-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.psl-icon{flex-shrink:0}
+
+/* ── mini avatar ── */
+.mini-avatar{
+  position:relative;
+  flex-shrink:0;
+  overflow:hidden;
+}
+.ma-layer{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:100%;
+  bottom:0;
+  pointer-events:none;
+  user-select:none;
+}
+.ma-face{z-index:1}
+.ma-eyes{z-index:2}
+.ma-hair{z-index:3}
+
+/* ── main board ── */
+.main-board{padding:22px}
+.question-kicker{display:inline-block;background:#ffd5e4;color:#c85f81;border-radius:999px;padding:8px 14px;font-weight:900}
+.question-title{font-size:clamp(1.7rem,3vw,2.6rem);color:#df5d95;margin:16px 0 10px}
+.question-content{font-size:1.1rem;line-height:1.8;color:#7e6070}
+.question-image{max-width:100%;max-height:280px;border-radius:20px;display:block;margin:12px auto 18px;box-shadow:0 12px 22px rgba(168,102,136,.18)}
+
+/* ── options ── */
+.options-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.option-btn{border:none;text-align:left;border-radius:24px;padding:18px;background:rgba(255,255,255,.9);font-size:1rem;font-weight:800;color:#87596f;box-shadow:0 10px 18px rgba(168,102,136,.1);display:flex;gap:12px;align-items:center;cursor:pointer;transition:.2s}
+.option-btn:hover{transform:translateY(-2px);filter:brightness(1.03)}
+.option-btn.selected{outline:4px solid rgba(255,144,188,.5);background:rgba(255,240,246,.96)}
+.option-letter{width:42px;height:42px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ff8eb7,#ff72a8);color:#fff;flex-shrink:0}
+
+/* ── submit / action btns ── */
+.submit-btn{margin-top:22px;border:none;border-radius:18px;padding:16px 22px;background:linear-gradient(180deg,#ff93ba,#f66f9f);color:#fff;font-weight:900;font-size:1.06rem;box-shadow:0 14px 22px rgba(243,115,160,.24);cursor:pointer;transition:.2s;display:inline-block}
+.submit-btn:hover{transform:translateY(-2px);filter:brightness(1.05)}
+.back-home-btn{text-decoration:none}
+
+.host-skip-early-btn{
+  background:linear-gradient(135deg,#6fd4a0,#3cb87a);
+  display:block;
+  width:100%;
+  margin:10px 0;
+  box-shadow:0 8px 18px rgba(60,184,122,.22);
+}
+
+/* ── finish wrap ── */
+.finish-wrap{text-align:center;padding:60px 20px}
+.finish-score{font-size:1.3rem;color:#c85f81;margin:20px 0}
+
+/* ── host monitor ── */
+.host-monitor-box{margin-bottom:18px;padding:16px;border-radius:20px;background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.9)}
+.host-monitor-title{font-weight:900;color:#d65d94;margin-bottom:12px}
+.host-answer-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.host-answer-item{background:rgba(255,245,249,.95);border-radius:14px;padding:10px 12px;display:flex;justify-content:space-between;font-weight:800}
+.host-answer-item.done{outline:3px solid rgba(120,214,150,.35)}
+.host-answer-item.wait{opacity:.75}
+.host-breakdown-title{margin:14px 0 10px;font-weight:900;color:#c85f81}
+.host-answer-breakdown{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.breakdown-item{background:rgba(255,255,255,.86);border-radius:16px;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.breakdown-left{display:flex;gap:10px;align-items:center;min-width:0}
+.breakdown-label{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ff8eb7,#ff72a8);color:#fff;font-weight:900;flex-shrink:0}
+.breakdown-text{font-weight:800;color:#865d72;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.breakdown-count{color:#d65d94;font-size:1.05rem}
+
+/* ── result overlay ── */
+.result-overlay{position:fixed;inset:0;background:rgba(62,33,48,.34);display:none;align-items:center;justify-content:center;z-index:9998;padding:20px}
+.result-overlay.show{display:flex}
+.result-card{max-width:560px;width:100%;background:linear-gradient(180deg,rgba(255,250,252,.98),rgba(255,233,241,.96));border-radius:28px;padding:28px;border:3px solid rgba(255,255,255,.95);box-shadow:0 22px 40px rgba(116,35,70,.22);text-align:center;max-height:90vh;overflow-y:auto}
+.result-badge{font-size:2rem;font-weight:900;color:#df5d95}
+.result-score{font-size:1.12rem;margin-top:12px}
+.result-answer{font-weight:900;margin-top:10px;color:#b35379}
+.result-my-score{margin-top:12px;font-weight:900;color:#c85f81}
+.result-top5-title{margin-top:18px;font-weight:900;color:#c85f81}
+.result-top5-list{margin-top:10px;display:grid;gap:8px}
+.result-top5-item{display:flex;justify-content:space-between;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.82);font-weight:800}
+.result-top5-item.mine{outline:3px solid rgba(255,143,188,.34)}
+.result-rank-box{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.82);color:#c85f81;font-weight:900}
+.result-explanation{margin-top:16px;padding:16px;border-radius:18px;background:rgba(255,255,255,.75);line-height:1.7;text-align:left}
+.result-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ── 頒獎台 overlay ── */
+.podium-overlay{
+  position:fixed;inset:0;
+  background:rgba(40,20,32,.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  padding:20px;
+}
+.podium-card{
+  max-width:680px;width:100%;
+  background:linear-gradient(180deg,rgba(255,248,252,.98),rgba(255,230,242,.96));
+  border-radius:32px;
+  padding:36px 28px 28px;
+  border:3px solid rgba(255,255,255,.95);
+  box-shadow:0 24px 48px rgba(116,35,70,.28);
+  text-align:center;
+  max-height:92vh;overflow-y:auto;
+}
+.podium-title{font-size:1.7rem;font-weight:900;color:#df5d95;margin-bottom:28px}
+.podium-inner{display:flex;justify-content:center}
+.podium-row{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:12px;
+}
+.podium-col{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+.podium-avatar{margin-bottom:4px}
+.podium-medal{font-size:1.8rem}
+.podium-name{font-weight:900;color:#865d72;font-size:1rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium-score{font-size:.9rem;color:#c85f81;font-weight:800}
+.podium-stage{
+  width:110px;
+  border-radius:12px 12px 0 0;
+  background:linear-gradient(180deg,#ffb3d4,#ff8db8);
+  box-shadow:0 8px 20px rgba(255,100,170,.25);
+}
+.podium-1 .podium-stage{background:linear-gradient(180deg,#ffd700,#ffa500);box-shadow:0 8px 20px rgba(255,165,0,.3)}
+.podium-2 .podium-stage{background:linear-gradient(180deg,#c0c0c0,#a0a0a0);box-shadow:0 8px 20px rgba(160,160,160,.3)}
+.podium-3 .podium-stage{background:linear-gradient(180deg,#cd7f32,#a0522d);box-shadow:0 8px 20px rgba(160,82,45,.3)}
+.podium-continue-btn{margin-top:24px}
+
+/* ── 結算 overlay ── */
+.scoreboard-overlay{
+  position:fixed;inset:0;
+  background:rgba(40,20,32,.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  padding:20px;
+}
+.scoreboard-card{
+  max-width:720px;width:100%;
+  background:linear-gradient(180deg,rgba(255,248,252,.98),rgba(255,230,242,.96));
+  border-radius:32px;
+  padding:36px 28px 28px;
+  border:3px solid rgba(255,255,255,.95);
+  box-shadow:0 24px 48px rgba(116,35,70,.28);
+  text-align:center;
+  max-height:92vh;overflow-y:auto;
+}
+.scoreboard-list{display:grid;gap:10px;margin-top:16px}
+.sb-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  background:rgba(255,255,255,.82);
+  border-radius:16px;
+  padding:12px 16px;
+  font-weight:800;
+  text-align:left;
+}
+.sb-row.sb-mine{outline:3px solid rgba(255,143,188,.4)}
+.sb-rank{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#ff8eb7,#ff72a8);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0}
+.sb-name{flex:1;color:#865d72}
+.sb-score{color:#df5d95;font-size:1.05rem}
+
+/* ── 房主明細 ── */
+.host-detail-title{font-size:1.1rem;font-weight:900;color:#d65d94;margin-bottom:14px;text-align:left}
+.host-detail-wrap{display:grid;gap:16px;text-align:left}
+.hd-player-block{background:rgba(255,255,255,.8);border-radius:18px;padding:14px 16px}
+.hd-player-name{font-weight:900;color:#d65d94;margin-bottom:10px;font-size:1rem}
+.hd-answers{display:grid;gap:8px}
+.hd-answer-item{display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:12px;font-weight:800;font-size:.9rem}
+.hd-answer-item.correct{background:rgba(210,255,225,.9);color:#2a7a4b}
+.hd-answer-item.wrong{background:rgba(255,220,225,.9);color:#b93030}
+.hd-q{min-width:60px}
+.hd-sel{flex:1}
+.hd-pts{font-weight:900}
+
+/* ── toast ── */
+.toast-qa{position:fixed;right:18px;bottom:18px;background:rgba(54,37,48,.92);color:#fff;padding:12px 16px;border-radius:14px;opacity:0;pointer-events:none;transform:translateY(10px);transition:.2s;z-index:10000}
+.toast-qa.show{opacity:1;transform:translateY(0)}
+.audio-toggle{position:fixed;right:18px;top:18px;z-index:9999;border:none;border-radius:999px;padding:10px 14px;background:rgba(255,255,255,.9);color:#d35f93;font-weight:800;box-shadow:0 8px 24px rgba(116,35,70,.2);cursor:pointer}
+
+/* ── RWD ── */
+@media (max-width:1100px){
+  .game-layout{grid-template-columns:240px 1fr}
+  .player-side-panel{display:none} /* 收起右側，改併入左側排行榜 */
+}
+
+@media (max-width:960px){
+  .game-layout{grid-template-columns:1fr}
+  .options-list{grid-template-columns:1fr}
+  .host-answer-breakdown,.host-answer-status{grid-template-columns:1fr}
+  .player-side-panel{display:block}
+  .player-side-list{flex-direction:row;flex-wrap:wrap}
+  .psl-item{width:calc(50% - 5px)}
+}
+
+@media (max-width:560px){
+  .game-shell{padding:12px}
+  .game-topbar{gap:8px}
+  .game-badges{gap:6px}
+  .badge-pill{padding:8px 12px;font-size:.85rem}
+  .question-title{font-size:1.4rem}
+  .podium-row{gap:6px}
+  .podium-stage{width:80px}
+  .podium-name{max-width:80px;font-size:.85rem}
+  .scoreboard-card,.podium-card{padding:20px 14px}
+}
+
+/* ═══════════════════════════════════════
+   房主視角補丁
+   ═══════════════════════════════════════ */
+
+/* 房主題目標頭 */
+.host-question-header {
+  padding: 16px 20px 12px;
+  border-bottom: 2px solid rgba(255,255,255,0.3);
+  margin-bottom: 16px;
+}
+
+/* 答題狀況：正確 / 錯誤 / 等待 顏色 */
+.ans-correct { color: #2ecc71; }
+.ans-wrong   { color: #e74c3c; }
+.ans-wait    { color: #aaa; }
+
+/* 答題狀況 item 加頭像 */
+.host-answer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.36);
+  margin-bottom: 6px;
+}
+.host-answer-item.done { background: rgba(200,255,200,0.28); }
+.host-answer-item.wait { background: rgba(255,255,255,0.20); }
+.host-answer-item span { flex: 1; font-weight: 800; font-size: .95rem; }
+.host-answer-item strong { font-size: .88rem; }
+
+/* 房主解析 overlay（共用 result-overlay 底層樣式，只換 class） */
+#hostExplanationOverlay {
+  /* 完全同 resultOverlay，CSS 已有 .result-overlay */
+}
+.host-badge-label {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+}
+
+/* 離開遊戲按鈕 */
+.leave-game-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  font-weight: 800;
+  font-size: .88rem;
+  cursor: pointer;
+  margin-left: auto;
+  transition: background .15s;
+}
+.leave-game-btn:hover { background: rgba(255,80,80,0.55); }
+
+/* ═══════════════════════════════════════
+   房主選項（看得到、不能點、正解標色）
+   ═══════════════════════════════════════ */
+
+.host-options-list {
+  margin-top: 16px;
+  pointer-events: none;   /* 整塊不可互動 */
+}
+
+/* 房主的選項按鈕：改用 div，灰化 */
+.host-option {
+  opacity: 0.72;
+  cursor: default !important;
+  background: rgba(240,240,240,0.85) !important;
+  color: #7a6070 !important;
+  box-shadow: none !important;
+  position: relative;
+}
+
+/* 正確選項：亮綠邊框 + 淡綠背景 */
+.host-correct-option {
+  opacity: 1 !important;
+  background: rgba(200,255,218,0.92) !important;
+  outline: 3px solid #3cbe7a !important;
+  color: #1a6640 !important;
+}
+
+/* 正解標籤 */
+.correct-tag {
+  margin-left: auto;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #2a7a4b;
+  background: rgba(100,220,150,0.25);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
