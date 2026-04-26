@@ -3,7 +3,7 @@ import os, sqlite3, json, hashlib, random, time, threading
 from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..'))
+PROJECT_DIR = BASE_DIR
 USERS_DB_PATH = os.path.join(BASE_DIR, 'quizarena.db')
 ROOMS_DB_PATH = os.path.join(BASE_DIR, 'rooms.db')
 QUIZ_BANKS_PATH = os.path.join(BASE_DIR, 'quiz_banks.json')
