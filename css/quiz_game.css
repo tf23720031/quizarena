@@ -31,22 +31,22 @@ button, a, label, [role="button"], .option-btn, .submit-btn, .leave-game-btn, .i
 }
 
 body.dark-mode {
-  --bg-overlay: rgba(4,12,32,.82);
-  --glass-bg: linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.04));
-  --glass-border: rgba(255,255,255,.12);
-  --text-main: #ffffff;
+  --bg-overlay: transparent;
+  --glass-bg: linear-gradient(145deg, rgba(255,255,255,.055) 0%, rgba(255,255,255,.025) 100%);
+  --glass-border: rgba(255,255,255,.1);
+  --text-main: #e8f0fe;
   --text-title: #ffffff;
-  --text-sub: rgba(255,255,255,.75);
-  --badge-bg: rgba(255,255,255,.1);
-  --badge-text: #ffffff;
-  --leader-bg: rgba(255,255,255,.08);
-  --option-bg: rgba(255,255,255,.08);
-  --option-color: #ffffff;
-  --option-selected-bg: rgba(80,160,255,.25);
-  --result-card-bg: linear-gradient(145deg,rgba(8,18,48,.97),rgba(4,12,36,.98));
-  --host-option-correct-bg: rgba(0,200,100,0.18);
-  --shadow: 0 16px 40px rgba(0,8,32,.7);
-  --topbar-bg: rgba(255,255,255,.06);
+  --text-sub: rgba(232,240,254,.7);
+  --badge-bg: rgba(255,255,255,.09);
+  --badge-text: #e8f0fe;
+  --leader-bg: rgba(255,255,255,.07);
+  --option-bg: rgba(255,255,255,.07);
+  --option-color: #e8f0fe;
+  --option-selected-bg: rgba(100,180,255,.2);
+  --result-card-bg: linear-gradient(145deg, rgba(10,20,50,.97) 0%, rgba(6,14,38,.98) 100%);
+  --host-option-correct-bg: rgba(0,220,110,0.15);
+  --shadow: 0 20px 60px rgba(0,0,0,.55), 0 4px 20px rgba(0,0,0,.3);
+  --topbar-bg: rgba(255,255,255,.05);
 }
 
 /* ── base ── */
@@ -65,10 +65,14 @@ body::before {
   pointer-events: none;
   transition: background .3s;
 }
-/* 深色模式：蓋掉背景圖，改成深藍漸層 */
+/* 深色模式：深邃宇宙藍漸層 */
 body.dark-mode {
   background-image: none !important;
-  background: linear-gradient(135deg, #020b1a 0%, #041230 35%, #06183d 60%, #030d24 100%) !important;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(30,60,120,.4) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(20,40,100,.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 60% 80%, rgba(10,25,70,.3) 0%, transparent 50%),
+    linear-gradient(160deg, #010810 0%, #020e22 25%, #030f28 50%, #02091a 75%, #010710 100%) !important;
   background-attachment: fixed !important;
 }
 body.dark-mode::before {
@@ -253,66 +257,230 @@ body.dark-mode .question-kicker {
 body.dark-mode .host-monitor-box { background: rgba(20,50,120,.12); border: 1px solid rgba(80,160,255,.1); }
 
 /* 深色模式藍調特效 */
+/* ═══ 深色模式精緻細節 ═══ */
+
+/* 玻璃卡片：帶微妙藍光邊框和光澤 */
 body.dark-mode .glass-card {
-  box-shadow: 0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  background: linear-gradient(145deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.02) 100%);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.55),
+    0 4px 20px rgba(0,0,0,.3),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -1px 0 rgba(0,0,0,.3);
+  backdrop-filter: blur(20px) saturate(1.2);
 }
-body.dark-mode .badge-pill {
-  box-shadow: 0 2px 12px rgba(0,0,0,.4);
-}
+
+/* Topbar 精緻感 */
 body.dark-mode .game-topbar {
-  box-shadow: 0 4px 24px rgba(0,0,0,.5);
-  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 4px 24px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(20px);
 }
-body.dark-mode .option-btn { color: #ffffff !important; }
-body.dark-mode .option-btn:hover { box-shadow: 0 0 20px rgba(100,160,255,.2); }
+
+/* Badge：半透明磨砂玻璃 */
+body.dark-mode .badge-pill {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter: blur(10px);
+}
+
+/* 選項按鈕 */
+body.dark-mode .option-btn {
+  background: rgba(255,255,255,.07) !important;
+  border: 1px solid rgba(255,255,255,.09);
+  color: #e8f0fe !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter: blur(8px);
+}
+body.dark-mode .option-btn:hover {
+  background: rgba(255,255,255,.12) !important;
+  border-color: rgba(255,255,255,.18);
+  box-shadow: 0 8px 24px rgba(0,0,0,.3), 0 0 0 1px rgba(100,180,255,.2);
+  transform: translateY(-2px);
+}
 body.dark-mode .option-btn.selected {
-  outline-color: rgba(100,180,255,.7);
-  box-shadow: 0 0 20px rgba(80,160,255,.3);
+  background: rgba(80,160,255,.18) !important;
+  border-color: rgba(100,180,255,.5) !important;
+  box-shadow: 0 0 0 2px rgba(100,180,255,.3), 0 8px 24px rgba(0,0,0,.3);
 }
 body.dark-mode .option-btn.correct-reveal {
-  background: rgba(0,160,80,.25) !important;
-  outline-color: #2de08a !important;
-  color: #ffffff !important;
+  background: rgba(0,220,100,.18) !important;
+  border-color: #2de08a !important;
+  color: #e8f0fe !important;
+  box-shadow: 0 0 0 2px rgba(45,224,138,.3), 0 0 20px rgba(45,224,138,.15) !important;
 }
 body.dark-mode .option-btn.wrong-reveal {
-  background: rgba(200,40,40,.25) !important;
-  outline-color: #ff4444 !important;
-  color: #ffffff !important;
+  background: rgba(255,60,60,.15) !important;
+  border-color: #ff4444 !important;
+  color: #e8f0fe !important;
+  box-shadow: 0 0 0 2px rgba(255,68,68,.3) !important;
 }
-body.dark-mode .host-correct-option { color: #ffffff !important; }
-body.dark-mode .correct-tag { color: #7fffb0; background: rgba(0,200,100,.15); }
+
+/* 房主選項 */
+body.dark-mode .host-correct-option {
+  background: rgba(0,220,100,.18) !important;
+  border-color: #2de08a !important;
+  color: #e8f0fe !important;
+}
+body.dark-mode .correct-tag { color: #2de08a; background: rgba(45,224,138,.12); border: 1px solid rgba(45,224,138,.2); }
+
+/* 提交按鈕 */
 body.dark-mode .submit-btn {
-  background: linear-gradient(135deg,#1a6aff,#0a44cc);
-  box-shadow: 0 8px 24px rgba(26,106,255,.4);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 8px 32px rgba(37,99,235,.4), inset 0 1px 0 rgba(255,255,255,.15);
   color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,.1);
 }
-body.dark-mode .host-skip-early-btn { background: linear-gradient(135deg,#00b894,#007a60); }
-body.dark-mode .result-explanation { background: rgba(255,255,255,.05); color: rgba(255,255,255,.85); }
-body.dark-mode .result-answer { color: rgba(255,255,255,.9); }
-body.dark-mode .result-badge { color: #ffffff; }
-body.dark-mode .result-my-score { color: rgba(255,255,255,.9); }
-body.dark-mode .result-top5-title { color: rgba(255,255,255,.9); }
-body.dark-mode .result-score { color: rgba(255,255,255,.8); }
-body.dark-mode .leader-item { color: #ffffff; }
-body.dark-mode .leader-item strong { color: #a0d0ff; }
-body.dark-mode .progress-copy { color: rgba(255,255,255,.9); }
-body.dark-mode .leaderboard-title { color: rgba(255,255,255,.9); }
-body.dark-mode .psp-title { color: rgba(255,255,255,.9); }
-body.dark-mode .psl-name { color: #ffffff; }
-body.dark-mode .question-title { color: #ffffff; }
-body.dark-mode .question-content { color: rgba(255,255,255,.8); }
-body.dark-mode .host-monitor-title { color: rgba(255,255,255,.9); }
-body.dark-mode .breakdown-title { color: rgba(255,255,255,.9); }
-body.dark-mode .breakdown-text { color: rgba(255,255,255,.75); }
-body.dark-mode .breakdown-count { color: #a0d0ff; }
-body.dark-mode .sb-name { color: #ffffff; }
-body.dark-mode .sb-score { color: #a0d0ff; }
-body.dark-mode .podium-title { color: #ffffff; }
-body.dark-mode .podium-name { color: rgba(255,255,255,.9); }
-body.dark-mode .podium-score { color: rgba(255,255,255,.7); }
-body.dark-mode .hd-player-name { color: rgba(255,255,255,.9); }
-body.dark-mode .hd-answer-item.correct { background: rgba(0,160,80,.2); color: #7fffb0; }
-body.dark-mode .hd-answer-item.wrong   { background: rgba(200,40,40,.2); color: #ff9999; }
+body.dark-mode .submit-btn:hover {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 12px 40px rgba(37,99,235,.5);
+}
+body.dark-mode .host-skip-early-btn {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 8px 24px rgba(5,150,105,.4);
+}
+
+/* 文字顏色 */
+body.dark-mode .question-title,
+body.dark-mode .podium-title,
+body.dark-mode .result-badge,
+body.dark-mode .progress-copy,
+body.dark-mode .leaderboard-title,
+body.dark-mode .psp-title,
+body.dark-mode .psl-name,
+body.dark-mode .sb-name,
+body.dark-mode .podium-name,
+body.dark-mode .hd-player-name,
+body.dark-mode .leader-item,
+body.dark-mode .host-monitor-title,
+body.dark-mode .breakdown-title { color: #ffffff; }
+
+body.dark-mode .question-content,
+body.dark-mode .result-my-score,
+body.dark-mode .result-top5-title,
+body.dark-mode .result-score,
+body.dark-mode .result-answer,
+body.dark-mode .breakdown-text,
+body.dark-mode .podium-score { color: rgba(232,240,254,.78); }
+
+body.dark-mode .sb-score,
+body.dark-mode .breakdown-count,
+body.dark-mode .leader-item strong { color: #93c5fd; }
+
+/* 解析說明框 */
+body.dark-mode .result-explanation {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  color: rgba(232,240,254,.82);
+}
+
+/* 排行 / 結算 */
+body.dark-mode .result-top5-item,
+body.dark-mode .leader-item {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.07);
+}
+body.dark-mode .result-top5-item.mine,
+body.dark-mode .leader-item.mine {
+  border-color: rgba(147,197,253,.3);
+  box-shadow: 0 0 0 1px rgba(147,197,253,.2);
+}
+
+/* Scoreboard / Podium 卡片 */
+body.dark-mode .result-card,
+body.dark-mode .scoreboard-card,
+body.dark-mode .podium-card {
+  background: linear-gradient(145deg, rgba(10,20,50,.97) 0%, rgba(6,14,38,.98) 100%);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 24px 80px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.08);
+  color: #e8f0fe;
+}
+body.dark-mode .sb-row {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.07);
+}
+body.dark-mode .sb-row.sb-mine {
+  border-color: rgba(147,197,253,.3);
+  box-shadow: 0 0 0 1px rgba(147,197,253,.2);
+}
+
+/* 明細 */
+body.dark-mode .hd-player-block {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.07);
+}
+body.dark-mode .hd-answer-item.correct {
+  background: rgba(0,200,80,.15);
+  border-left: 3px solid #2de08a;
+  color: #a7f3d0;
+}
+body.dark-mode .hd-answer-item.wrong {
+  background: rgba(220,38,38,.12);
+  border-left: 3px solid #f87171;
+  color: #fca5a5;
+}
+
+/* 監控區 */
+body.dark-mode .host-monitor-box {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+}
+body.dark-mode .host-answer-item {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.07);
+  color: #e8f0fe;
+}
+body.dark-mode .host-answer-item.done {
+  border-color: rgba(45,224,138,.2);
+  background: rgba(0,200,80,.07);
+}
+body.dark-mode .breakdown-item {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.07);
+}
+
+/* 觀戰 */
+body.dark-mode .spectator-banner h2 { color: #f87171; }
+body.dark-mode .spectator-banner p  { color: rgba(232,240,254,.7); }
+body.dark-mode .spectator-hint {
+  background: rgba(248,113,113,.08);
+  border: 1px solid rgba(248,113,113,.2);
+  color: #fca5a5;
+}
+
+/* 問題 kicker */
+body.dark-mode .question-kicker {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e8f0fe;
+}
+
+/* icon-btn */
+body.dark-mode .icon-btn {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.1);
+  color: #e8f0fe;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+body.dark-mode .icon-btn:hover {
+  background: rgba(255,255,255,.14);
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+
+/* leave btn */
+body.dark-mode .leave-game-btn {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.09);
+  color: #e8f0fe;
+}
+body.dark-mode .leave-game-btn:hover {
+  background: rgba(220,38,38,.25);
+  border-color: rgba(248,113,113,.3);
+  color: #fff;
+}
 .host-monitor-title { font-weight: 900; color: var(--text-title); margin-bottom: 12px; }
 .host-answer-status { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
 .host-answer-item {
