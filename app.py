@@ -1025,6 +1025,7 @@ def player_game_state():
                 'title': q['title'], 'content': q['content'], 'type': q['type'],
                 'options': opts,
                 'time': q['time_label'], 'score': q['score'],
+                'fake_answer': bool(q.get('fake_answer') or 0),
                 'explanation': q.get('explanation') or '', 'image': q.get('image') or ''
             }
             if include_answers:
