@@ -420,7 +420,8 @@ def lobby_rooms():
         for row in rows:
             room = serialize_room(row)
             room['player_count'] = int(room.get('player_count', 0) or 0)
-            room['player_names'] = [n for n in str(room.get('player_names') or '').split('||') if n]
+            room['player_names'] = [n for n in str(room.get('player_names') or '').split('||')
+                                     if n and not (n.startswith('__host_') and n.endswith('__'))]
             room['joinable'] = (room['status'] == 'waiting'
                                 and room['player_count'] < int(room.get('max_players', 8) or 8))
             room['display_name'] = room.get('room_name') or room.get('bank_title') or f"房間 {room['pin']}"
@@ -545,13 +546,13 @@ def create_room():
                       int(q.get('score',1000) or 1000), 1 if q.get('fakeAnswer') else 0,
                       q.get('mode','個人賽'), q.get('image',''), bank_id, str(q.get('id',''))))
 
-            # 建房時插入佔位房主，防止選頭像期間房間被系統刪除
-            # player_join 完成後 join_room 會用 ON CONFLICT DO UPDATE 覆蓋
+            # 建房時插入佔位房主（用 created_by 帳號名稱當 key）
+            # player_join 完成後 join_room ON CONFLICT DO UPDATE 會覆蓋成真正的玩家資料
             conn.execute('''
                 INSERT OR IGNORE INTO room_players
                 (room_pin, player_name, face, hair, eyes, eyes_offset_y, is_host, team_id, joined_at, last_seen)
-                VALUES (?, '__PENDING_HOST__', 'images/face/face.png', 'images/hair/hair01.png', 'images/face/eyes01.png', 0, 1, 0, ?, ?)
-            ''', (pin, now_ts(), now_ts()))
+                VALUES (?, ?, 'images/face/face.png', 'images/hair/hair01.png', 'images/face/eyes01.png', 0, 1, 0, ?, ?)
+            ''', (pin, f'__host_{created_by}__', now_ts(), now_ts()))
             conn.commit()
 
         return jsonify(success=True, message='房間建立成功', room=serialize_room(fetch_room(pin)))
@@ -740,7 +741,9 @@ def room_state(pin):
             )
             players = conn.execute('''
                 SELECT room_pin,player_name,face,hair,eyes,eyes_offset_y,is_host,team_id,joined_at
-                FROM room_players WHERE room_pin=?
+                FROM room_players
+                WHERE room_pin=?
+                  AND NOT (player_name LIKE '__host_%__' AND is_host=1)
                 ORDER BY is_host DESC,joined_at ASC,id ASC
             ''', (pin,)).fetchall()
             teams = conn.execute(
@@ -773,8 +776,8 @@ def heartbeat():
             # 一般玩家/房主的心跳
             conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
                          (now_ts(), pin, player_name))
-            # 房主選頭像期間，同時更新佔位記錄（__PENDING_HOST__）
-            if player_name == '__host_pending__':
+            # 若傳入的是佔位房主名稱，同時刷新所有 is_host=1 的 last_seen
+            if player_name.startswith('__host_') and player_name.endswith('__'):
                 conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND is_host=1',
                              (now_ts(), pin))
             conn.commit()
@@ -959,7 +962,9 @@ def player_game_state():
                     FROM room_players rp
                     LEFT JOIN room_results rr
                       ON rr.room_pin=rp.room_pin AND rr.player_name=rp.player_name AND rr.question_id=?
-                    WHERE rp.room_pin=? ORDER BY rp.is_host DESC, rp.is_eliminated ASC, rp.player_name ASC
+                    WHERE rp.room_pin=?
+                      AND NOT (rp.player_name LIKE '__host_%__' AND rp.is_host=1)
+                    ORDER BY rp.is_host DESC, rp.is_eliminated ASC, rp.player_name ASC
                 ''', (current_q['question_id'], pin)).fetchall()
                 options = json.loads(current_q['options_json'] or '[]')
                 all_res = conn.execute(
