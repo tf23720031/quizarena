@@ -544,6 +544,14 @@ def create_room():
                       q.get('explanation',''), q.get('time','20 秒'),
                       int(q.get('score',1000) or 1000), 1 if q.get('fakeAnswer') else 0,
                       q.get('mode','個人賽'), q.get('image',''), bank_id, str(q.get('id',''))))
+
+            # 建房時插入佔位房主，防止選頭像期間房間被系統刪除
+            # player_join 完成後 join_room 會用 ON CONFLICT DO UPDATE 覆蓋
+            conn.execute('''
+                INSERT OR IGNORE INTO room_players
+                (room_pin, player_name, face, hair, eyes, eyes_offset_y, is_host, team_id, joined_at, last_seen)
+                VALUES (?, '__PENDING_HOST__', 'images/face/face.png', 'images/hair/hair01.png', 'images/face/eyes01.png', 0, 1, 0, ?, ?)
+            ''', (pin, now_ts(), now_ts()))
             conn.commit()
 
         return jsonify(success=True, message='房間建立成功', room=serialize_room(fetch_room(pin)))
@@ -762,8 +770,13 @@ def heartbeat():
         with closing(get_conn()) as conn:
             if not conn.execute('SELECT 1 FROM rooms WHERE pin=?', (pin,)).fetchone():
                 return jsonify(success=False, message='房間不存在'), 404
+            # 一般玩家/房主的心跳
             conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
                          (now_ts(), pin, player_name))
+            # 房主選頭像期間，同時更新佔位記錄（__PENDING_HOST__）
+            if player_name == '__host_pending__':
+                conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND is_host=1',
+                             (now_ts(), pin))
             conn.commit()
         return jsonify(success=True)
     except Exception as e:
