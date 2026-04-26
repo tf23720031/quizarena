@@ -3,7 +3,7 @@ import os, sqlite3, json, hashlib, random, time, threading
 from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = BASE_DIR  # ← 原本是 os.path.abspath(os.path.join(BASE_DIR, '..'))
+PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..'))
 USERS_DB_PATH = os.path.join(BASE_DIR, 'quizarena.db')
 ROOMS_DB_PATH = os.path.join(BASE_DIR, 'rooms.db')
 QUIZ_BANKS_PATH = os.path.join(BASE_DIR, 'quiz_banks.json')
@@ -1188,4 +1188,4 @@ def static_files(filename):
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
