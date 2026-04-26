@@ -287,4 +287,28 @@ joinRoomBtn?.addEventListener("click", joinRoom);
 
 populateRoomInfo();
 syncAvatarImages();
+
+// ── 房主在選頭像期間發 heartbeat，防止房間被系統刪除 ──────
+(function startHostHeartbeat() {
+  const ctx = getJoinContext();
+  if (!ctx?.isHost || !ctx?.room?.pin) return;   // 只有房主需要
+
+  const pin = ctx.room.pin;
+
+  // 先用一個暫時名稱發一次 join，讓 last_seen 存進去
+  // （房主真正 join 會在按「進入房間」時完成，這裡只是保持心跳）
+  async function beat() {
+    try {
+      await fetch('/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, playerName: '__host_pending__' })
+      });
+    } catch (_) {}
+  }
+
+  // 每 20 秒發一次（host_alive_cutoff = 80 秒，20 秒保底夠用）
+  beat();
+  setInterval(beat, 20000);
+})();
 updatePartTabs();
