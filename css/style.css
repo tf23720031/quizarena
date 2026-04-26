@@ -13,22 +13,41 @@ button, a, label, input[type=checkbox], input[type=radio], select, [role="button
    深色模式（全站）
    ════════════════════════════════════════ */
 body.dark-mode {
-  background-image: url(../images/bg_dark.png), linear-gradient(180deg,#0e0618,#1a0a2e);
-  color: #d4a8c0;
+  background-image: linear-gradient(145deg, #030b1e 0%, #050f28 50%, #04091c 100%);
+  color: #a8c8f0;
 }
-body.dark-mode .custom-btn.btn-auth   { background: linear-gradient(135deg,#cc3377,#992255); }
-body.dark-mode .custom-btn.btn-create { background: linear-gradient(135deg,#5a3299,#3d1a7a); }
-body.dark-mode .custom-btn.btn-join   { background: linear-gradient(135deg,#1a6699,#0d4477); }
-body.dark-mode .login-status-card     { background: rgba(40,20,55,.9); border-color: rgba(200,100,180,.2); }
-body.dark-mode .lobby-shell           { background: rgba(20,10,35,.72); border-color: rgba(200,100,180,.15); }
-body.dark-mode .room-card             { background: linear-gradient(180deg,rgba(40,22,60,.9),rgba(30,14,50,.85)); color: #c8a0bb; }
-body.dark-mode .room-card h3          { color: #ff88cc; }
-body.dark-mode .room-pin              { color: #ff77bb; }
-body.dark-mode .stat-card             { background: rgba(40,20,55,.8); color: #d090bb; }
+body.dark-mode body::before { background: linear-gradient(145deg,rgba(4,12,32,.8),rgba(6,18,48,.6)); }
+body.dark-mode .custom-btn.btn-auth   { background: linear-gradient(135deg,#1a5ccc,#0d3a99); box-shadow: 0 6px 18px rgba(26,92,204,.4); }
+body.dark-mode .custom-btn.btn-create { background: linear-gradient(135deg,#0e3d99,#082a77); box-shadow: 0 6px 18px rgba(14,61,153,.4); }
+body.dark-mode .custom-btn.btn-join   { background: linear-gradient(135deg,#0d6888,#084466); box-shadow: 0 6px 18px rgba(13,104,136,.4); }
+body.dark-mode .custom-btn.btn-play   { background: linear-gradient(135deg,#0a4daa,#063380); }
+body.dark-mode .login-status-card     { background: rgba(8,20,52,.95); border-color: rgba(60,140,255,.2); box-shadow: 0 4px 18px rgba(0,20,80,.5); }
+body.dark-mode .status-label         { color: #5080cc; }
+body.dark-mode .status-name          { color: #80b4f0; }
+body.dark-mode .lobby-shell           { background: rgba(6,16,44,.78); border-color: rgba(40,120,255,.15); box-shadow: 0 8px 32px rgba(0,10,50,.6); }
+body.dark-mode .lobby-header h2      { color: #60aaff; }
+body.dark-mode .lobby-header p       { color: #5880b0; }
+body.dark-mode .room-card            { background: linear-gradient(145deg,rgba(10,22,56,.95),rgba(8,16,44,.9)); color: #90b8e0; border-color: rgba(40,100,220,.2); box-shadow: 0 8px 24px rgba(0,10,50,.5); }
+body.dark-mode .room-card h3         { color: #60aaff; }
+body.dark-mode .room-card .small-text { color: #4870a8; }
+body.dark-mode .room-pin             { color: #4090ff; text-shadow: 0 0 20px rgba(64,144,255,.4); }
+body.dark-mode .stat-card            { background: rgba(8,20,54,.88); color: #6090cc; border: 1px solid rgba(40,100,220,.15); }
+body.dark-mode .badge-qa, .dark-mode .badge-public { background: rgba(8,40,120,.8); color: #60aaff; }
+body.dark-mode .badge-private        { background: rgba(80,10,10,.8); color: #ff7777; }
+body.dark-mode .badge-team           { background: rgba(10,40,100,.8); color: #70c0ff; }
 body.dark-mode .cute-modal .modal-content,
-body.dark-mode .modal-content         { background: linear-gradient(180deg,rgba(40,22,58,.98),rgba(30,14,48,.96)) !important; color: #d4a8c0; }
-body.dark-mode .member-input          { background: rgba(255,255,255,.06); color: #d4a8c0; border-color: rgba(200,100,180,.3); }
-body.dark-mode .pin-input             { background: rgba(255,255,255,.08); color: #ffaacc; border-color: rgba(255,120,190,.4); }
+body.dark-mode .modal-content        { background: linear-gradient(145deg,rgba(8,18,46,.98),rgba(10,24,52,.96)) !important; color: #a8c8f0; border: 1px solid rgba(40,100,220,.2) !important; }
+body.dark-mode .member-input         { background: rgba(8,20,52,.8); color: #a8c8f0; border-color: rgba(40,100,220,.3); }
+body.dark-mode .pin-input            { background: rgba(8,20,52,.6); color: #80c0ff; border-color: rgba(40,120,255,.4); }
+body.dark-mode .start-btn            { background: linear-gradient(135deg,#1a5ccc,#0d3a99); color: #fff; border-color: rgba(40,120,255,.4); }
+body.dark-mode .welcome-copy         { color: #6090cc; }
+body.dark-mode .welcome-copy h1      { color: #80b4f0; }
+body.dark-mode .footer-text          { color: rgba(80,140,220,.6); }
+body.dark-mode .modal-ok-btn         { background: linear-gradient(135deg,#1a5ccc,#0d3a99); }
+body.dark-mode .member-switch-btn    { background: rgba(8,20,52,.7); color: #60aaff; border-color: rgba(40,100,220,.2); }
+body.dark-mode .member-switch-btn.active { background: linear-gradient(135deg,#1a5ccc,#0d3a99); color: #fff; }
+body.dark-mode .pink-text            { color: #60aaff; }
+body.dark-mode .empty-lobby          { background: rgba(8,20,52,.4); color: #5080aa; }
 
 body {
   margin: 0;
