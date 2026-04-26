@@ -31,22 +31,22 @@ button, a, label, [role="button"], .option-btn, .submit-btn, .leave-game-btn, .i
 }
 
 body.dark-mode {
-  --bg-overlay: rgba(18,10,24,.72);
-  --glass-bg: linear-gradient(180deg,rgba(40,28,52,.88),rgba(30,18,42,.82));
-  --glass-border: rgba(255,120,190,.15);
-  --text-main: #d4a8c0;
-  --text-title: #ff88c0;
-  --text-sub: #b88faa;
-  --badge-bg: rgba(50,30,60,.9);
-  --badge-text: #ff88c0;
-  --leader-bg: rgba(50,30,60,.8);
-  --option-bg: rgba(55,35,68,.9);
-  --option-color: #d4a8c0;
-  --option-selected-bg: rgba(100,40,80,.9);
-  --result-card-bg: linear-gradient(180deg,rgba(40,22,52,.98),rgba(50,28,62,.96));
-  --host-option-correct-bg: rgba(20,80,50,0.82);
-  --shadow: 0 16px 34px rgba(0,0,0,.5);
-  --topbar-bg: rgba(20,10,32,.72);
+  --bg-overlay: rgba(4,12,32,.82);
+  --glass-bg: linear-gradient(145deg,rgba(12,24,52,.92),rgba(8,16,40,.88));
+  --glass-border: rgba(80,160,255,.18);
+  --text-main: #a8c8f0;
+  --text-title: #60b4ff;
+  --text-sub: #7098c8;
+  --badge-bg: rgba(10,22,50,.95);
+  --badge-text: #60b4ff;
+  --leader-bg: rgba(14,28,58,.9);
+  --option-bg: rgba(12,24,56,.92);
+  --option-color: #a8c8f0;
+  --option-selected-bg: rgba(20,60,120,.9);
+  --result-card-bg: linear-gradient(145deg,rgba(8,18,42,.98),rgba(12,24,52,.96));
+  --host-option-correct-bg: rgba(10,60,40,0.85);
+  --shadow: 0 16px 40px rgba(0,8,32,.7);
+  --topbar-bg: rgba(6,14,36,.88);
 }
 
 /* ── base ── */
@@ -66,7 +66,7 @@ body::before {
   transition: background .3s;
 }
 body.dark-mode::before {
-  background: rgba(10,5,20,.7);
+  background: linear-gradient(145deg, rgba(4,12,32,.85), rgba(6,18,48,.75));
 }
 
 /* ── shell & topbar ── */
@@ -244,7 +244,40 @@ body.dark-mode .question-kicker {
 /* ── host monitor ── */
 .host-question-header { padding-bottom: 16px; border-bottom: 2px solid var(--glass-border); margin-bottom: 16px; }
 .host-monitor-box { margin-bottom: 18px; padding: 16px; border-radius: 20px; background: rgba(255,255,255,.22); }
-body.dark-mode .host-monitor-box { background: rgba(255,255,255,.06); }
+body.dark-mode .host-monitor-box { background: rgba(20,50,120,.12); border: 1px solid rgba(80,160,255,.1); }
+
+/* 深色模式藍調特效 */
+body.dark-mode .glass-card {
+  box-shadow: 0 8px 32px rgba(0,30,90,.5), inset 0 1px 0 rgba(80,160,255,.12);
+}
+body.dark-mode .badge-pill {
+  box-shadow: 0 2px 12px rgba(0,20,60,.5), inset 0 1px 0 rgba(80,160,255,.1);
+}
+body.dark-mode .game-topbar {
+  box-shadow: 0 4px 24px rgba(0,10,40,.6), inset 0 1px 0 rgba(80,160,255,.08);
+  border-bottom: 1px solid rgba(60,130,255,.1);
+}
+body.dark-mode .option-btn:hover { box-shadow: 0 0 20px rgba(40,120,255,.2); }
+body.dark-mode .option-btn.selected {
+  outline-color: rgba(60,150,255,.7);
+  box-shadow: 0 0 20px rgba(40,120,255,.25);
+}
+body.dark-mode .option-btn.correct-reveal {
+  background: rgba(10,80,50,.9) !important;
+  outline-color: #2de08a !important;
+  box-shadow: 0 0 20px rgba(45,224,138,.2) !important;
+}
+body.dark-mode .host-correct-option { color: #5fffb0 !important; }
+body.dark-mode .correct-tag { color: #5fffb0; background: rgba(45,224,138,.15); }
+body.dark-mode .submit-btn {
+  background: linear-gradient(135deg,#1a6aff,#0a44cc);
+  box-shadow: 0 8px 24px rgba(26,106,255,.35);
+}
+body.dark-mode .host-skip-early-btn { background: linear-gradient(135deg,#00b894,#00836a); }
+body.dark-mode .result-explanation { background: rgba(10,28,70,.6); color: #a8c8f0; }
+body.dark-mode .result-answer { color: #60b4ff; }
+body.dark-mode .hd-answer-item.correct { background: rgba(10,60,40,.8); color: #5fffb0; }
+body.dark-mode .hd-answer-item.wrong   { background: rgba(60,10,10,.8); color: #ff8888; }
 .host-monitor-title { font-weight: 900; color: var(--text-title); margin-bottom: 12px; }
 .host-answer-status { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
 .host-answer-item {
@@ -475,4 +508,25 @@ body.dark-mode .hd-answer-item.wrong   { background: rgba(80,20,20,.7); color: #
   .podium-stage { width: 80px; }
   .podium-name { max-width: 80px; font-size: .8rem; }
   .scoreboard-card, .podium-card { padding: 18px 12px; }
+}
+
+/* ── 語言選單 ── */
+.lang-select {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  font-weight: 800;
+  font-size: .88rem;
+  box-shadow: 0 4px 12px rgba(116,35,70,.12);
+  transition: background .3s, color .3s;
+  outline: none;
+  cursor: pointer;
+}
+.lang-select:hover { filter: brightness(1.05); }
+body.dark-mode .lang-select {
+  background: rgba(10,22,54,.95);
+  color: #60b4ff;
+  border: 1px solid rgba(60,140,255,.2);
 }
