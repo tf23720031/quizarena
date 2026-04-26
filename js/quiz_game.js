@@ -1,41 +1,43 @@
 /* ================================================================
-   quiz_game.js  ─  房主=老師（監控 + 進題）/ 玩家=學生（答題）
+   quiz_game.js
+   ─ 房主：看到選項（灰色、不可點）+ 監控答題 + 全部答完可提前結束
+   ─ 玩家：選項順序每人隨機打亂（防作弊），答案用原始 index 對應
    ================================================================ */
 
-const toastEl    = document.getElementById('toast');
-const pin        = localStorage.getItem('currentRoomPin') || '';
+const toastEl       = document.getElementById('toast');
+const pin           = localStorage.getItem('currentRoomPin') || '';
 const playerProfile = JSON.parse(localStorage.getItem('roomPlayerProfile') || '{}');
-const isHost     = !!playerProfile?.isHost;
+const isHost        = !!playerProfile?.isHost;
 
 /* ── DOM refs ── */
-const roomPinText      = document.getElementById('roomPinText');
-const playerNameText   = document.getElementById('playerNameText');
-const roleText         = document.getElementById('roleText');
-const countdownText    = document.getElementById('countdownText');
-const totalScoreText   = document.getElementById('totalScoreText');
-const scoreBadgePill   = document.getElementById('scoreBadgePill');
-const progressText     = document.getElementById('progressText');
-const leaderboardList  = document.getElementById('leaderboardList');
+const roomPinText     = document.getElementById('roomPinText');
+const playerNameText  = document.getElementById('playerNameText');
+const roleText        = document.getElementById('roleText');
+const countdownText   = document.getElementById('countdownText');
+const totalScoreText  = document.getElementById('totalScoreText');
+const scoreBadgePill  = document.getElementById('scoreBadgePill');
+const progressText    = document.getElementById('progressText');
+const leaderboardList = document.getElementById('leaderboardList');
 
 /* 房主視角 */
-const hostView              = document.getElementById('hostView');
-const hostQuestionKicker    = document.getElementById('hostQuestionKicker');
-const hostQuestionTitle     = document.getElementById('hostQuestionTitle');
-const hostQuestionContent   = document.getElementById('hostQuestionContent');
-const hostQuestionImage     = document.getElementById('hostQuestionImage');
-const hostMonitorBox        = document.getElementById('hostMonitorBox');
-const hostAnswerStatus      = document.getElementById('hostAnswerStatus');
-const hostAnswerBreakdown   = document.getElementById('hostAnswerBreakdown');
-const hostAllDoneSkipBtn    = document.getElementById('hostAllDoneSkipBtn');
+const hostView               = document.getElementById('hostView');
+const hostQuestionKicker     = document.getElementById('hostQuestionKicker');
+const hostQuestionTitle      = document.getElementById('hostQuestionTitle');
+const hostQuestionContent    = document.getElementById('hostQuestionContent');
+const hostQuestionImage      = document.getElementById('hostQuestionImage');
+const hostOptionsList        = document.getElementById('hostOptionsList');
+const hostMonitorBox         = document.getElementById('hostMonitorBox');
+const hostAnswerStatus       = document.getElementById('hostAnswerStatus');
+const hostAnswerBreakdown    = document.getElementById('hostAnswerBreakdown');
+const hostAllDoneSkipBtn     = document.getElementById('hostAllDoneSkipBtn');
 const hostExplanationOverlay = document.getElementById('hostExplanationOverlay');
-const hostCorrectAnswerText = document.getElementById('hostCorrectAnswerText');
-const hostExplanationText   = document.getElementById('hostExplanationText');
-const hostResultTop5List    = document.getElementById('hostResultTop5List');
+const hostCorrectAnswerText  = document.getElementById('hostCorrectAnswerText');
+const hostExplanationText    = document.getElementById('hostExplanationText');
+const hostResultTop5List     = document.getElementById('hostResultTop5List');
 const hostSkipExplanationBtn = document.getElementById('hostSkipExplanationBtn');
 
 /* 玩家視角 */
 const playerView      = document.getElementById('playerView');
-const questionWrap    = document.getElementById('questionWrap');
 const questionKicker  = document.getElementById('questionKicker');
 const questionTitle   = document.getElementById('questionTitle');
 const questionContent = document.getElementById('questionContent');
@@ -43,24 +45,23 @@ const questionImage   = document.getElementById('questionImage');
 const optionsList     = document.getElementById('optionsList');
 const submitAnswerBtn = document.getElementById('submitAnswerBtn');
 
-/* 結果 overlay（玩家用）*/
-const resultOverlay      = document.getElementById('resultOverlay');
-const resultBadge        = document.getElementById('resultBadge');
-const earnedScoreText    = document.getElementById('earnedScoreText');
-const correctAnswerText  = document.getElementById('correctAnswerText');
-const resultExplanation  = document.getElementById('resultExplanation');
-const myLiveScoreText    = document.getElementById('myLiveScoreText');
-const myRankBox          = document.getElementById('myRankBox');
-const myRankText         = document.getElementById('myRankText');
-const resultTop5List     = document.getElementById('resultTop5List');
-const skipExplanationBtn = document.getElementById('skipExplanationBtn');
-const nextQuestionBtn    = document.getElementById('nextQuestionBtn');
+/* 結果 overlay */
+const resultOverlay     = document.getElementById('resultOverlay');
+const resultBadge       = document.getElementById('resultBadge');
+const earnedScoreText   = document.getElementById('earnedScoreText');
+const correctAnswerText = document.getElementById('correctAnswerText');
+const resultExplanation = document.getElementById('resultExplanation');
+const myLiveScoreText   = document.getElementById('myLiveScoreText');
+const myRankBox         = document.getElementById('myRankBox');
+const myRankText        = document.getElementById('myRankText');
+const resultTop5List    = document.getElementById('resultTop5List');
+const nextQuestionBtn   = document.getElementById('nextQuestionBtn');
 
 /* 結束 */
-const finishWrap    = document.getElementById('finishWrap');
-const finishScoreText = document.getElementById('finishScoreText');
-const podiumOverlay = document.getElementById('podiumOverlay');
-const podiumInner   = document.getElementById('podiumInner');
+const finishWrap        = document.getElementById('finishWrap');
+const finishScoreText   = document.getElementById('finishScoreText');
+const podiumOverlay     = document.getElementById('podiumOverlay');
+const podiumInner       = document.getElementById('podiumInner');
 const scoreboardOverlay = document.getElementById('scoreboardOverlay');
 const scoreboardWrap    = document.getElementById('scoreboardWrap');
 const hostDetailSection = document.getElementById('hostDetailSection');
@@ -68,23 +69,22 @@ const hostDetailWrap    = document.getElementById('hostDetailWrap');
 const playerSideList    = document.getElementById('playerSideList');
 
 /* ── state ── */
-let currentQuestion       = null;
-let currentQuestionId     = null;
-let currentPhase          = 'question';
-let selected              = [];
-let timerInterval         = null;
-let remainSeconds         = 0;
-let hasSubmitted          = false;
-let hasLeftRoom           = false;
-let isInternalNavigation  = false;
-let gameFinished          = false;
-let lastHandledPhaseQid   = null;   // 避免重複開 overlay
-let hostFinishedQuestion  = false;
+let currentQuestion      = null;
+let currentQuestionId    = null;
+let currentPhase         = 'question';
+let selected             = [];           // 存的是「原始 index」
+let shuffleMap           = [];           // shuffleMap[顯示位置] = 原始 index
+let timerInterval        = null;
+let remainSeconds        = 0;
+let hasSubmitted         = false;
+let hasLeftRoom          = false;
+let isInternalNavigation = false;
+let gameFinished         = false;
+let lastHandledPhaseQid  = null;
+let hostFinishedQuestion = false;
 
 /* ── helpers ── */
-function getPlayerName() {
-  return (playerProfile?.name || '').trim();
-}
+const getPlayerName = () => (playerProfile?.name || '').trim();
 
 function showToast(msg, delay = 2400) {
   toastEl.textContent = msg;
@@ -94,7 +94,7 @@ function showToast(msg, delay = 2400) {
 }
 
 async function api(url, opts = {}) {
-  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  const res  = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
   const data = await res.json();
   if (!res.ok || data.success === false) throw new Error(data.message || '操作失敗');
   return data;
@@ -112,8 +112,51 @@ function avatarHtml(p, size = 48) {
   </div>`;
 }
 
-/* ── 倒數計時 ── */
-function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+/* ══════════════════════════════════════
+   選項亂序（防作弊）
+   ── 每個玩家用自己名字 + question_id 當種子，
+      同一個人每次刷新順序一致，不同人順序不同。
+   ══════════════════════════════════════ */
+function seededShuffle(arr, seed) {
+  // 簡單 mulberry32 PRNG
+  let s = seed >>> 0;
+  function rand() {
+    s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+    return (s >>> 0) / 4294967296;
+  }
+  const result = arr.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function strToSeed(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * 產生此玩家這題的選項亂序表
+ * shuffleMap[顯示位置 i] = 原始 index
+ */
+function buildShuffleMap(options, questionId) {
+  if (isHost) {
+    // 房主看原始順序（方便核對正解）
+    return options.map((_, i) => i);
+  }
+  const seed = strToSeed(getPlayerName() + '|' + questionId);
+  const originalIndexes = options.map((_, i) => i);
+  return seededShuffle(originalIndexes, seed);
+}
+
+/* ── 倒數 ── */
+const stopTimer = () => { clearInterval(timerInterval); timerInterval = null; };
 
 function startTimer(seconds, onEnd) {
   stopTimer();
@@ -122,10 +165,7 @@ function startTimer(seconds, onEnd) {
   timerInterval = setInterval(() => {
     remainSeconds = Math.max(0, remainSeconds - 1);
     countdownText.textContent = remainSeconds;
-    if (remainSeconds <= 0) {
-      stopTimer();
-      onEnd?.();
-    }
+    if (remainSeconds <= 0) { stopTimer(); onEnd?.(); }
   }, 1000);
 }
 
@@ -156,8 +196,10 @@ function renderTop5(listEl, items = []) {
 /* ── 側邊玩家列表 ── */
 function renderPlayerSideList(answerStatus = []) {
   if (!playerSideList) return;
-  if (!answerStatus.length) { playerSideList.innerHTML = ''; return; }
-  playerSideList.innerHTML = answerStatus.map(p => {
+  // 排除房主本身（isHost=1），只顯示玩家
+  const players = answerStatus.filter(p => !p.is_host);
+  if (!players.length) { playerSideList.innerHTML = ''; return; }
+  playerSideList.innerHTML = players.map(p => {
     let icon = '<i class="fa-solid fa-ellipsis" style="color:#bbb"></i>';
     if (p.answered) {
       icon = p.is_correct
@@ -178,19 +220,36 @@ function renderPlayerSideList(answerStatus = []) {
 function renderHostQuestion(q, answeredCount, totalQuestions) {
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題`;
   const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : '單選題';
-  hostQuestionKicker.textContent = `${typeLabel} ・ ${q.time || '20 秒'} ・ ${q.score} 分`;
-  hostQuestionTitle.textContent  = q.title || `第 ${answeredCount + 1} 題`;
+  hostQuestionKicker.textContent  = `${typeLabel} ・ ${q.time || '20 秒'} ・ ${q.score} 分`;
+  hostQuestionTitle.textContent   = q.title || `第 ${answeredCount + 1} 題`;
   hostQuestionContent.textContent = q.content || '';
+
   if (q.image) { hostQuestionImage.src = q.image; hostQuestionImage.style.display = 'block'; }
   else { hostQuestionImage.style.display = 'none'; }
+
+  /* 房主看原始順序的選項，帶正解標記，灰色不可點 */
+  if (hostOptionsList) {
+    const correctIndexes = q.correct_indexes || [];   // 後端會帶
+    hostOptionsList.innerHTML = (q.options || []).map((opt, idx) => {
+      const isCorrect = correctIndexes.includes(idx);
+      return `<div class="option-btn host-option ${isCorrect ? 'host-correct-option' : ''}">
+        <span class="option-letter">${String.fromCharCode(65 + idx)}</span>
+        <span>${opt.text}</span>
+        ${isCorrect ? '<span class="correct-tag">✓ 正解</span>' : ''}
+      </div>`;
+    }).join('');
+  }
 }
 
 function renderHostAnswerStatus(items = []) {
   if (!hostAnswerStatus) return;
-  const done  = items.filter(x => x.answered).length;
-  const total = items.length;
-  hostAnswerStatus.innerHTML = items.length
-    ? items.map(it => `
+  // 過濾掉房主自己
+  const players = items.filter(p => !p.is_host);
+  const done    = players.filter(x => x.answered).length;
+  const total   = players.length;
+
+  hostAnswerStatus.innerHTML = players.length
+    ? players.map(it => `
         <div class="host-answer-item ${it.answered ? 'done' : 'wait'}">
           ${avatarHtml(it, 34)}
           <span>${it.player_name}</span>
@@ -200,9 +259,10 @@ function renderHostAnswerStatus(items = []) {
         </div>`).join('')
     : '<div class="host-answer-item wait"><span>尚無玩家</span></div>';
 
+  /* 所有玩家都答完 → 顯示「提前結束」按鈕 */
   if (hostAllDoneSkipBtn) {
     hostAllDoneSkipBtn.style.display =
-      (total > 0 && done === total) ? 'inline-block' : 'none';
+      (total > 0 && done >= total) ? 'inline-block' : 'none';
   }
 }
 
@@ -220,7 +280,6 @@ function renderHostBreakdown(items = []) {
     : '<div class="breakdown-item"><span class="breakdown-label">-</span><span class="breakdown-text">尚無統計</span></div>';
 }
 
-/* 房主解析 overlay */
 function openHostExplanation({ correctText, explanation, top5 }) {
   if (hostCorrectAnswerText) hostCorrectAnswerText.textContent = correctText || '-';
   if (hostExplanationText)   hostExplanationText.textContent   = explanation || '本題未提供解析。';
@@ -228,17 +287,15 @@ function openHostExplanation({ correctText, explanation, top5 }) {
   if (hostExplanationOverlay) hostExplanationOverlay.classList.add('show');
 }
 
-function closeHostExplanation() {
-  if (hostExplanationOverlay) hostExplanationOverlay.classList.remove('show');
-}
+const closeHostExplanation = () => hostExplanationOverlay?.classList.remove('show');
 
 /* ══════════════════════════════════════
-   玩家視角
+   玩家視角（選項亂序）
    ══════════════════════════════════════ */
 function renderPlayerQuestion(q, answeredCount, totalQuestions) {
-  currentQuestion   = q;
-  selected          = [];
-  hasSubmitted      = false;
+  currentQuestion  = q;
+  selected         = [];
+  hasSubmitted     = false;
 
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題`;
   const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : '單選題';
@@ -249,29 +306,38 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
   if (q.image) { questionImage.src = q.image; questionImage.style.display = 'block'; }
   else { questionImage.style.display = 'none'; }
 
-  optionsList.innerHTML = (q.options || []).map((opt, idx) => `
-    <button class="option-btn" data-index="${idx}">
-      <span class="option-letter">${String.fromCharCode(65 + idx)}</span>
-      <span>${opt.text}</span>
-    </button>`).join('');
+  /* 建立亂序表：shuffleMap[顯示位置] = 原始 index */
+  shuffleMap = buildShuffleMap(q.options || [], q.question_id);
+
+  optionsList.innerHTML = shuffleMap.map((origIdx, displayPos) => {
+    const opt = (q.options || [])[origIdx];
+    return `<button class="option-btn" data-orig="${origIdx}" data-pos="${displayPos}">
+      <span class="option-letter">${String.fromCharCode(65 + displayPos)}</span>
+      <span>${opt?.text || ''}</span>
+    </button>`;
+  }).join('');
 
   document.querySelectorAll('.option-btn').forEach(btn =>
-    btn.addEventListener('click', () => setSelection(Number(btn.dataset.index))));
+    btn.addEventListener('click', () => toggleOption(Number(btn.dataset.orig)))
+  );
 
   if (submitAnswerBtn) submitAnswerBtn.style.display = 'inline-block';
 }
 
-function setSelection(index) {
+/* selected 存的是「原始 index」，這樣傳給後端不需要轉換 */
+function toggleOption(origIdx) {
   if (!currentQuestion || hasSubmitted) return;
   if (currentQuestion.type === 'multiple') {
-    selected = selected.includes(index)
-      ? selected.filter(i => i !== index)
-      : [...selected, index].sort((a, b) => a - b);
+    selected = selected.includes(origIdx)
+      ? selected.filter(i => i !== origIdx)
+      : [...selected, origIdx].sort((a, b) => a - b);
   } else {
-    selected = [index];
+    selected = [origIdx];
   }
+  /* 更新 UI：用原始 index 比對 */
   document.querySelectorAll('.option-btn').forEach(btn =>
-    btn.classList.toggle('selected', selected.includes(Number(btn.dataset.index))));
+    btn.classList.toggle('selected', selected.includes(Number(btn.dataset.orig)))
+  );
 }
 
 /* 玩家結果 overlay */
@@ -284,12 +350,11 @@ function openPlayerResult({ badge, points, answerText, explanation, top5, myRank
   renderTop5(resultTop5List, top5 || []);
   if (myRankBox) myRankBox.style.display = (showExactRank && myRank) ? 'block' : 'none';
   if (myRankText && myRank) myRankText.textContent = `你目前第 ${myRank} 名`;
-  if (skipExplanationBtn) skipExplanationBtn.style.display = 'none';
-  if (nextQuestionBtn)    nextQuestionBtn.style.display    = 'none';
+  if (nextQuestionBtn) nextQuestionBtn.style.display = 'none';
   resultOverlay.classList.add('show');
 }
 
-function closePlayerResult() { resultOverlay.classList.remove('show'); }
+const closePlayerResult = () => resultOverlay.classList.remove('show');
 
 /* ── 提交答案 ── */
 async function submitAnswer(isTimeout = false) {
@@ -307,7 +372,7 @@ async function submitAnswer(isTimeout = false) {
         pin,
         playerName: getPlayerName(),
         questionId: currentQuestion.question_id,
-        selected,
+        selected,           // 原始 index，後端直接比對
         remainSeconds,
         isTimeout
       })
@@ -359,8 +424,8 @@ function handleState(data) {
   /* ─ 題目切換 ─ */
   const qChanged = (qId !== currentQuestionId);
   if (qChanged) {
-    currentQuestionId   = qId;
-    lastHandledPhaseQid = null;
+    currentQuestionId    = qId;
+    lastHandledPhaseQid  = null;
     hostFinishedQuestion = false;
     closePlayerResult();
     closeHostExplanation();
@@ -370,7 +435,7 @@ function handleState(data) {
         renderHostQuestion(q, data.answeredCount, data.totalQuestions);
         if (phase === 'question') {
           startTimer(parseInt(q.time) || 20, () => {
-            showToast('時間到，正在切換到本題統計...');
+            showToast('時間到，正在進入統計...');
             hostFinishQuestion();
           });
         }
@@ -383,7 +448,7 @@ function handleState(data) {
     }
   }
 
-  /* ─ 玩家側邊列表 ─ */
+  /* ─ 側邊玩家列表（房主/玩家都更新）─ */
   renderPlayerSideList(data.answerStatus || []);
 
   /* ─ phase 分支 ─ */
@@ -393,10 +458,10 @@ function handleState(data) {
     if (isHost) {
       renderHostAnswerStatus(data.answerStatus || []);
       renderHostBreakdown([]);
+      /* 重整頁面後補回計時器 */
       if (!qChanged && !timerInterval && q) {
-        // 倒數被中斷後補回（例如重新整理）
         startTimer(remainSeconds || parseInt(q.time) || 20, () => {
-          showToast('時間到，正在切換到本題統計...');
+          showToast('時間到，正在進入統計...');
           hostFinishQuestion();
         });
       }
@@ -409,8 +474,7 @@ function handleState(data) {
   /* ─ explanation 階段 ─ */
   stopTimer();
   countdownText.textContent = 0;
-
-  if (lastHandledPhaseQid === phaseKey) return;  // 已處理過，不重複開 overlay
+  if (lastHandledPhaseQid === phaseKey) return;
   lastHandledPhaseQid = phaseKey;
 
   if (isHost) {
@@ -422,7 +486,6 @@ function handleState(data) {
       top5: data.leaderboard?.slice(0, 5) || []
     });
   } else {
-    // 玩家：如果已作答就顯示帶解析的 overlay；未作答也給個提示
     openPlayerResult({
       badge:        data.myAnswered
                       ? (data.myResult?.is_correct ? '🎉 答對了！' : '😢 答錯了')
@@ -451,12 +514,10 @@ async function loadState(force = false) {
       `/player_game_state?pin=${encodeURIComponent(pin)}&playerName=${encodeURIComponent(getPlayerName())}`
     );
 
-    /* topbar */
     roomPinText.textContent    = pin;
     playerNameText.textContent = getPlayerName();
     roleText.textContent       = isHost ? '🎓 房主' : '🎮 玩家';
 
-    /* 房主不需要分數 badge */
     if (scoreBadgePill) scoreBadgePill.style.display = isHost ? 'none' : '';
     if (!isHost) {
       totalScoreText.textContent  = data.totalScore ?? 0;
@@ -465,17 +526,14 @@ async function loadState(force = false) {
 
     renderLeaderboard(data.leaderboard || []);
 
-    /* 顯示對應的視角 */
     if (hostView)   hostView.style.display   = isHost ? 'block' : 'none';
     if (playerView) playerView.style.display = isHost ? 'none'  : 'block';
 
-    /* 遊戲結束 */
     if (data.finished) {
       if (!gameFinished) showFinishScreen(data);
       return;
     }
 
-    /* 正常遊戲中 */
     if (finishWrap) finishWrap.style.display = 'none';
     handleState(data);
 
@@ -488,11 +546,11 @@ async function loadState(force = false) {
    結束畫面
    ══════════════════════════════════════ */
 function buildPodiumHTML(leaderboard) {
-  const top3 = leaderboard.slice(0, 3);
+  const top3    = leaderboard.slice(0, 3);
   while (top3.length < 3) top3.push(null);
   const medals  = ['🥇', '🥈', '🥉'];
   const heights = ['140px', '110px', '85px'];
-  const order   = [1, 0, 2];  // 2nd | 1st | 3rd
+  const order   = [1, 0, 2];
   return `<div class="podium-row">${order.map(i => {
     const p = top3[i];
     if (!p) return `<div class="podium-col podium-${i + 1}"><div class="podium-stage" style="height:${heights[i]}"></div></div>`;
@@ -519,13 +577,16 @@ function buildScoreboardHTML(leaderboard) {
 function buildHostDetailHTML(results) {
   if (!results?.length) return '<p>無詳細資料</p>';
   const byPlayer = {};
-  results.forEach(r => { if (!byPlayer[r.player_name]) byPlayer[r.player_name] = []; byPlayer[r.player_name].push(r); });
+  results.forEach(r => {
+    if (!byPlayer[r.player_name]) byPlayer[r.player_name] = [];
+    byPlayer[r.player_name].push(r);
+  });
   return Object.entries(byPlayer).map(([name, rows]) => `
     <div class="hd-player-block">
       <div class="hd-player-name">${name}</div>
       <div class="hd-answers">
         ${rows.sort((a, b) => a.seq - b.seq).map(r => {
-          const sel = (() => { try { return JSON.parse(r.selected_json || '[]'); } catch { return []; } })();
+          const sel     = (() => { try { return JSON.parse(r.selected_json || '[]'); } catch { return []; } })();
           const selText = sel.map(i => String.fromCharCode(65 + i)).join(', ') || '未作答';
           return `<div class="hd-answer-item ${r.is_correct ? 'correct' : 'wrong'}">
             <span class="hd-q">第 ${r.seq + 1} 題</span>
@@ -547,7 +608,7 @@ async function showFinishScreen(data) {
   if (playerView) playerView.style.display = 'none';
   if (finishWrap) finishWrap.style.display = 'block';
 
-  if (podiumInner) podiumInner.innerHTML = buildPodiumHTML(data.leaderboard || []);
+  if (podiumInner)    podiumInner.innerHTML    = buildPodiumHTML(data.leaderboard || []);
   if (scoreboardWrap) scoreboardWrap.innerHTML = buildScoreboardHTML(data.leaderboard || []);
 
   if (isHost && hostDetailWrap) {
@@ -603,7 +664,6 @@ function leaveRoomOnUnload() {
 submitAnswerBtn?.addEventListener('click', () => submitAnswer(false));
 nextQuestionBtn?.addEventListener('click', closePlayerResult);
 
-/* 房主：「進入下一題」按鈕（在 hostExplanationOverlay 裡） */
 hostSkipExplanationBtn?.addEventListener('click', async () => {
   closeHostExplanation();
   try {
@@ -615,7 +675,6 @@ hostSkipExplanationBtn?.addEventListener('click', async () => {
   } catch (e) { showToast(e.message); }
 });
 
-/* 房主：所有人答完快速結束按鈕 */
 hostAllDoneSkipBtn?.addEventListener('click', async () => {
   try {
     await api('/host_finish_question', {
@@ -626,15 +685,13 @@ hostAllDoneSkipBtn?.addEventListener('click', async () => {
   } catch (e) { showToast(e.message); }
 });
 
-/* 頒獎台 → 結算 */
 document.getElementById('podiumContinueBtn')?.addEventListener('click', () => {
-  if (podiumOverlay) podiumOverlay.style.display = 'none';
+  if (podiumOverlay)     podiumOverlay.style.display     = 'none';
   if (scoreboardOverlay) scoreboardOverlay.style.display = 'flex';
 });
 
 document.getElementById('backHomeBtn')?.addEventListener('click', leaveRoom);
 document.getElementById('leaveGameBtn')?.addEventListener('click', leaveRoom);
-
 window.addEventListener('beforeunload', leaveRoomOnUnload);
 
 /* ── 初始化 ── */
