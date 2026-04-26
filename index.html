@@ -42,6 +42,10 @@
   <button class="custom-btn btn-join" id="refreshLobbyBtn">
     <i class="fa-solid fa-rotate"></i> 重新整理
   </button>
+
+  <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
+    <i class="fa-solid fa-moon" id="darkModeIcon"></i>
+  </button>
 </div>
 </header>
 
@@ -174,5 +178,17 @@
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/index.js"></script>
+  <script>
+    // 深色模式（全站共用 localStorage key: quizDarkMode）
+    const _darkBtn  = document.getElementById('darkModeBtn');
+    const _darkIcon = document.getElementById('darkModeIcon');
+    function _applyDark(on) {
+      document.body.classList.toggle('dark-mode', on);
+      if (_darkIcon) _darkIcon.className = on ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      localStorage.setItem('quizDarkMode', on ? '1' : '0');
+    }
+    _darkBtn?.addEventListener('click', () => _applyDark(!document.body.classList.contains('dark-mode')));
+    _applyDark(localStorage.getItem('quizDarkMode') === '1');
+  </script>
 </body>
 </html>
