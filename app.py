@@ -3,7 +3,7 @@ import os, sqlite3, json, hashlib, random, time, threading
 from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = BASE_DIR
+PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..'))
 USERS_DB_PATH = os.path.join(BASE_DIR, 'quizarena.db')
 ROOMS_DB_PATH = os.path.join(BASE_DIR, 'rooms.db')
 QUIZ_BANKS_PATH = os.path.join(BASE_DIR, 'quiz_banks.json')
@@ -1181,6 +1181,37 @@ def host_skip_explanation():
     except Exception as e:
         return jsonify(success=False, message=f'切換下一題失敗：{e}'), 500
 
+
+
+@app.route('/host_all_results')
+def host_all_results():
+    try:
+        pin = request.args.get('pin', '').strip()
+        if not pin:
+            return jsonify(success=False, message='缺少 PIN'), 400
+        with closing(get_conn()) as conn:
+            questions = conn.execute(
+                'SELECT question_id, seq, title FROM room_questions WHERE room_pin = ? ORDER BY seq ASC',
+                (pin,)
+            ).fetchall()
+            results = conn.execute(
+                'SELECT player_name, question_id, selected_json, is_correct, points_earned FROM room_results WHERE room_pin = ? ORDER BY player_name ASC',
+                (pin,)
+            ).fetchall()
+        q_order  = {q['question_id']: q['seq']   for q in questions}
+        q_titles = {q['question_id']: q['title'] for q in questions}
+        enriched = [{
+            'player_name':   r['player_name'],
+            'question_id':   r['question_id'],
+            'seq':           q_order.get(r['question_id'], 0),
+            'title':         q_titles.get(r['question_id'], ''),
+            'selected_json': r['selected_json'],
+            'is_correct':    bool(r['is_correct']),
+            'points_earned': int(r['points_earned'] or 0),
+        } for r in results]
+        return jsonify(success=True, results=enriched)
+    except Exception as e:
+        return jsonify(success=False, message=f'讀取明細失敗：{e}'), 500
 
 @app.route('/<path:filename>')
 def static_files(filename):
