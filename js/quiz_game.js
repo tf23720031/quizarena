@@ -686,16 +686,12 @@ function handleState(data) {
   currentPhase = phase;
 
   /* 淘汰狀態同步 */
-  if (data.isEliminated !== undefined) isEliminated = data.isEliminated;
+  if (data.isEliminated !== undefined) isEliminated = !!data.isEliminated;
 
   /* ─ 決定視角 ─ */
-  if (isHost) {
-    showView('host');
-  } else if (isEliminated) {
-    showView('spectator');
-  } else {
-    showView('player');
-  }
+  if (isHost) showView('host');
+  else if (isEliminated) showView('spectator');
+  else showView('player');
 
   const qChanged = (qId !== currentQuestionId);
   if (qChanged) {
@@ -826,6 +822,12 @@ async function loadState(force = false) {
     }
 
     if (finishWrap) finishWrap.style.display = 'none';
+
+    // 確保視角在 handleState 前就正確顯示，避免白畫面
+    if (isHost) showView('host');
+    else if (data.isEliminated) showView('spectator');
+    else showView('player');
+
     handleState(data);
 
   } catch (e) {
