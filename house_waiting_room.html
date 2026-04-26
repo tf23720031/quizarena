@@ -11,34 +11,70 @@
 <body>
   <div class="cloud-layer"></div>
   <main class="page-wrap">
-    <header class="top-header"><div class="logo-wrap"><img src="images/LOGO.png" alt="QuizArena Logo" class="site-logo"></div></header>
+    <header class="top-header">
+      <div class="logo-wrap">
+        <img src="images/LOGO.png" alt="QuizArena Logo" class="site-logo">
+      </div>
+    </header>
+
     <section class="waiting-room">
       <aside class="left-panel">
         <div class="pin-card glass-card">
           <div class="card-title">✦ ROOM PIN ✦</div>
-          <div class="pin-box"><div class="pin-number" id="roomPin">859991</div></div>
+          <div class="pin-box"><div class="pin-number" id="roomPin">------</div></div>
           <div class="pin-tip" id="roomName">Host room</div>
-          <div class="room-mini-grid"><div><span>題庫</span><strong id="bankTitle">-</strong></div><div><span>狀態</span><strong id="roomStatus">waiting</strong></div></div>
+          <div class="room-mini-grid">
+            <div><span>題庫</span><strong id="bankTitle">-</strong></div>
+            <div><span>狀態</span><strong id="roomStatus">waiting</strong></div>
+          </div>
         </div>
+
         <div class="chat-card glass-card">
           <div class="chat-header">✦ Player chat ✦</div>
-          <div class="chat-list" id="chatList"><div class="chat-empty" id="chatEmpty">No messages yet...</div></div>
-          <form class="chat-input-wrap" id="chatForm"><input type="text" id="chatInput" placeholder="Type a message"><button class="send-btn" id="sendBtn">➤</button></form>
+          <div class="chat-list" id="chatList">
+            <div class="chat-empty">No messages yet...</div>
+          </div>
+          <form class="chat-input-wrap" id="chatForm">
+            <input type="text" id="chatInput" placeholder="Type a message">
+            <button class="send-btn" id="sendBtn" type="submit">➤</button>
+          </form>
         </div>
       </aside>
+
       <section class="right-panel">
-        <div class="girl-wrap"><img src="images/waiting_girl.png" alt="Anime Girl" class="girl-img"></div>
+        <div class="girl-wrap">
+          <img src="images/waiting_girl.png" alt="Anime Girl" class="girl-img">
+        </div>
+
         <div class="player-card glass-card host-card">
           <div class="player-title">✦ Player Joined ✦</div>
-          <div class="status-topline"><span id="currentPlayerName">HOST</span><button class="leave-soft" id="leaveRoomBtn">離開房間</button></div>
+          <div class="status-topline">
+            <span id="currentPlayerName">HOST</span>
+            <button class="leave-soft" id="leaveRoomBtn">離開房間</button>
+          </div>
+
+          <!-- 團體賽分組區：只在 team_mode 時顯示 -->
+          <div id="teamSetupBox" class="team-setup-box" style="display:none;">
+            <div class="team-setup-title">
+              <i class="fa-solid fa-people-group"></i>
+              團體賽分組
+              <button class="shuffle-btn" id="shuffleTeamsBtn" type="button">
+                <i class="fa-solid fa-shuffle"></i> 隨機分組
+              </button>
+            </div>
+            <div id="teamColumnsWrap" class="team-columns-wrap"></div>
+          </div>
+
           <div class="player-list" id="playerList"></div>
           <div class="waiting-text" id="waitingHint">你是房主，可以確認玩家都進來後再開始。</div>
-          <button class="start-wide-btn" id="startGameBtn">開始遊戲</button>
+          <button class="start-wide-btn" id="startGameBtn" type="button">開始遊戲</button>
         </div>
       </section>
     </section>
+
     <footer class="footer-text">© 2026 Quiz Arena ・ Made with love ・ All rights reserved.</footer>
   </main>
+
   <div class="toast-qa" id="toast"></div>
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/audio.js"></script>
