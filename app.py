@@ -1008,8 +1008,8 @@ def player_game_state():
 
             # 判斷請求者是否為房主（用於決定是否帶正解）
             _host_row = conn.execute(
-                'SELECT player_name FROM room_players WHERE room_pin=? AND is_host=1'
-                ' AND NOT (player_name LIKE '__host_%__') LIMIT 1', (pin,)
+                "SELECT player_name FROM room_players WHERE room_pin=? AND is_host=1"
+                " AND NOT (player_name LIKE '__host_%__') LIMIT 1", (pin,)
             ).fetchone()
             is_host_player = bool(_host_row and _host_row.get('player_name') == player_name)
 
