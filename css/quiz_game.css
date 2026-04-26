@@ -32,21 +32,21 @@ button, a, label, [role="button"], .option-btn, .submit-btn, .leave-game-btn, .i
 
 body.dark-mode {
   --bg-overlay: rgba(4,12,32,.82);
-  --glass-bg: linear-gradient(145deg,rgba(12,24,52,.92),rgba(8,16,40,.88));
-  --glass-border: rgba(80,160,255,.18);
-  --text-main: #a8c8f0;
-  --text-title: #60b4ff;
-  --text-sub: #7098c8;
-  --badge-bg: rgba(10,22,50,.95);
-  --badge-text: #60b4ff;
-  --leader-bg: rgba(14,28,58,.9);
-  --option-bg: rgba(12,24,56,.92);
-  --option-color: #a8c8f0;
-  --option-selected-bg: rgba(20,60,120,.9);
-  --result-card-bg: linear-gradient(145deg,rgba(8,18,42,.98),rgba(12,24,52,.96));
-  --host-option-correct-bg: rgba(10,60,40,0.85);
+  --glass-bg: linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.04));
+  --glass-border: rgba(255,255,255,.12);
+  --text-main: #ffffff;
+  --text-title: #ffffff;
+  --text-sub: rgba(255,255,255,.75);
+  --badge-bg: rgba(255,255,255,.1);
+  --badge-text: #ffffff;
+  --leader-bg: rgba(255,255,255,.08);
+  --option-bg: rgba(255,255,255,.08);
+  --option-color: #ffffff;
+  --option-selected-bg: rgba(80,160,255,.25);
+  --result-card-bg: linear-gradient(145deg,rgba(8,18,48,.97),rgba(4,12,36,.98));
+  --host-option-correct-bg: rgba(0,200,100,0.18);
   --shadow: 0 16px 40px rgba(0,8,32,.7);
-  --topbar-bg: rgba(6,14,36,.88);
+  --topbar-bg: rgba(255,255,255,.06);
 }
 
 /* ── base ── */
@@ -65,8 +65,14 @@ body::before {
   pointer-events: none;
   transition: background .3s;
 }
+/* 深色模式：蓋掉背景圖，改成深藍漸層 */
+body.dark-mode {
+  background-image: none !important;
+  background: linear-gradient(135deg, #020b1a 0%, #041230 35%, #06183d 60%, #030d24 100%) !important;
+  background-attachment: fixed !important;
+}
 body.dark-mode::before {
-  background: linear-gradient(145deg, rgba(4,12,32,.85), rgba(6,18,48,.75));
+  background: transparent;
 }
 
 /* ── shell & topbar ── */
@@ -180,7 +186,7 @@ body.dark-mode::before {
   transition: background .3s;
 }
 body.dark-mode .question-kicker {
-  background: rgba(120,40,80,.6); color: #ffaacc;
+  background: rgba(255,255,255,.12); color: #ffffff;
 }
 .question-title {
   font-size: clamp(1.5rem,2.8vw,2.4rem);
@@ -248,36 +254,65 @@ body.dark-mode .host-monitor-box { background: rgba(20,50,120,.12); border: 1px 
 
 /* 深色模式藍調特效 */
 body.dark-mode .glass-card {
-  box-shadow: 0 8px 32px rgba(0,30,90,.5), inset 0 1px 0 rgba(80,160,255,.12);
+  box-shadow: 0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
 }
 body.dark-mode .badge-pill {
-  box-shadow: 0 2px 12px rgba(0,20,60,.5), inset 0 1px 0 rgba(80,160,255,.1);
+  box-shadow: 0 2px 12px rgba(0,0,0,.4);
 }
 body.dark-mode .game-topbar {
-  box-shadow: 0 4px 24px rgba(0,10,40,.6), inset 0 1px 0 rgba(80,160,255,.08);
-  border-bottom: 1px solid rgba(60,130,255,.1);
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  border-bottom: 1px solid rgba(255,255,255,.06);
 }
-body.dark-mode .option-btn:hover { box-shadow: 0 0 20px rgba(40,120,255,.2); }
+body.dark-mode .option-btn { color: #ffffff !important; }
+body.dark-mode .option-btn:hover { box-shadow: 0 0 20px rgba(100,160,255,.2); }
 body.dark-mode .option-btn.selected {
-  outline-color: rgba(60,150,255,.7);
-  box-shadow: 0 0 20px rgba(40,120,255,.25);
+  outline-color: rgba(100,180,255,.7);
+  box-shadow: 0 0 20px rgba(80,160,255,.3);
 }
 body.dark-mode .option-btn.correct-reveal {
-  background: rgba(10,80,50,.9) !important;
+  background: rgba(0,160,80,.25) !important;
   outline-color: #2de08a !important;
-  box-shadow: 0 0 20px rgba(45,224,138,.2) !important;
+  color: #ffffff !important;
 }
-body.dark-mode .host-correct-option { color: #5fffb0 !important; }
-body.dark-mode .correct-tag { color: #5fffb0; background: rgba(45,224,138,.15); }
+body.dark-mode .option-btn.wrong-reveal {
+  background: rgba(200,40,40,.25) !important;
+  outline-color: #ff4444 !important;
+  color: #ffffff !important;
+}
+body.dark-mode .host-correct-option { color: #ffffff !important; }
+body.dark-mode .correct-tag { color: #7fffb0; background: rgba(0,200,100,.15); }
 body.dark-mode .submit-btn {
   background: linear-gradient(135deg,#1a6aff,#0a44cc);
-  box-shadow: 0 8px 24px rgba(26,106,255,.35);
+  box-shadow: 0 8px 24px rgba(26,106,255,.4);
+  color: #ffffff !important;
 }
-body.dark-mode .host-skip-early-btn { background: linear-gradient(135deg,#00b894,#00836a); }
-body.dark-mode .result-explanation { background: rgba(10,28,70,.6); color: #a8c8f0; }
-body.dark-mode .result-answer { color: #60b4ff; }
-body.dark-mode .hd-answer-item.correct { background: rgba(10,60,40,.8); color: #5fffb0; }
-body.dark-mode .hd-answer-item.wrong   { background: rgba(60,10,10,.8); color: #ff8888; }
+body.dark-mode .host-skip-early-btn { background: linear-gradient(135deg,#00b894,#007a60); }
+body.dark-mode .result-explanation { background: rgba(255,255,255,.05); color: rgba(255,255,255,.85); }
+body.dark-mode .result-answer { color: rgba(255,255,255,.9); }
+body.dark-mode .result-badge { color: #ffffff; }
+body.dark-mode .result-my-score { color: rgba(255,255,255,.9); }
+body.dark-mode .result-top5-title { color: rgba(255,255,255,.9); }
+body.dark-mode .result-score { color: rgba(255,255,255,.8); }
+body.dark-mode .leader-item { color: #ffffff; }
+body.dark-mode .leader-item strong { color: #a0d0ff; }
+body.dark-mode .progress-copy { color: rgba(255,255,255,.9); }
+body.dark-mode .leaderboard-title { color: rgba(255,255,255,.9); }
+body.dark-mode .psp-title { color: rgba(255,255,255,.9); }
+body.dark-mode .psl-name { color: #ffffff; }
+body.dark-mode .question-title { color: #ffffff; }
+body.dark-mode .question-content { color: rgba(255,255,255,.8); }
+body.dark-mode .host-monitor-title { color: rgba(255,255,255,.9); }
+body.dark-mode .breakdown-title { color: rgba(255,255,255,.9); }
+body.dark-mode .breakdown-text { color: rgba(255,255,255,.75); }
+body.dark-mode .breakdown-count { color: #a0d0ff; }
+body.dark-mode .sb-name { color: #ffffff; }
+body.dark-mode .sb-score { color: #a0d0ff; }
+body.dark-mode .podium-title { color: #ffffff; }
+body.dark-mode .podium-name { color: rgba(255,255,255,.9); }
+body.dark-mode .podium-score { color: rgba(255,255,255,.7); }
+body.dark-mode .hd-player-name { color: rgba(255,255,255,.9); }
+body.dark-mode .hd-answer-item.correct { background: rgba(0,160,80,.2); color: #7fffb0; }
+body.dark-mode .hd-answer-item.wrong   { background: rgba(200,40,40,.2); color: #ff9999; }
 .host-monitor-title { font-weight: 900; color: var(--text-title); margin-bottom: 12px; }
 .host-answer-status { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
 .host-answer-item {
@@ -381,7 +416,18 @@ body.dark-mode .correct-tag { color: #7fffb8; }
   margin-top: 16px; padding: 16px; border-radius: 18px;
   background: rgba(255,255,255,.75); line-height: 1.7; text-align: left;
 }
-body.dark-mode .result-explanation { background: rgba(255,255,255,.06); }
+body.dark-mode .result-explanation { background: rgba(255,255,255,.06); color: rgba(255,255,255,.82); }
+body.dark-mode .result-card { color: #ffffff; }
+body.dark-mode .result-top5-item { color: #ffffff; background: rgba(255,255,255,.07); }
+body.dark-mode .scoreboard-card { color: #ffffff; }
+body.dark-mode .podium-card { color: #ffffff; }
+body.dark-mode .host-detail-title { color: rgba(255,255,255,.9); }
+body.dark-mode .hd-player-block { background: rgba(255,255,255,.06); }
+body.dark-mode .spectator-banner h2 { color: #ff6666; }
+body.dark-mode .spectator-banner p { color: rgba(255,255,255,.75); }
+body.dark-mode .spectator-hint { background: rgba(255,60,60,.1); color: #ff9999; }
+body.dark-mode .host-answer-item { color: #ffffff; }
+body.dark-mode .host-answer-item span { color: rgba(255,255,255,.9); }
 .result-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
 .host-badge-label { background: linear-gradient(135deg,#6c5ce7,#a29bfe) !important; color: #fff !important; }
 
@@ -526,7 +572,7 @@ body.dark-mode .hd-answer-item.wrong   { background: rgba(80,20,20,.7); color: #
 }
 .lang-select:hover { filter: brightness(1.05); }
 body.dark-mode .lang-select {
-  background: rgba(10,22,54,.95);
-  color: #60b4ff;
-  border: 1px solid rgba(60,140,255,.2);
+  background: rgba(255,255,255,.1);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,.15);
 }
