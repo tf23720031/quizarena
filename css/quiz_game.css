@@ -296,6 +296,9 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 #hostExplanationOverlay {
   /* 完全同 resultOverlay，CSS 已有 .result-overlay */
 }
+.host-badge-label {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+}
 
 /* 離開遊戲按鈕 */
 .leave-game-btn {
@@ -311,3 +314,42 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
   transition: background .15s;
 }
 .leave-game-btn:hover { background: rgba(255,80,80,0.55); }
+
+/* ═══════════════════════════════════════
+   房主選項（看得到、不能點、正解標色）
+   ═══════════════════════════════════════ */
+
+.host-options-list {
+  margin-top: 16px;
+  pointer-events: none;   /* 整塊不可互動 */
+}
+
+/* 房主的選項按鈕：改用 div，灰化 */
+.host-option {
+  opacity: 0.72;
+  cursor: default !important;
+  background: rgba(240,240,240,0.85) !important;
+  color: #7a6070 !important;
+  box-shadow: none !important;
+  position: relative;
+}
+
+/* 正確選項：亮綠邊框 + 淡綠背景 */
+.host-correct-option {
+  opacity: 1 !important;
+  background: rgba(200,255,218,0.92) !important;
+  outline: 3px solid #3cbe7a !important;
+  color: #1a6640 !important;
+}
+
+/* 正解標籤 */
+.correct-tag {
+  margin-left: auto;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #2a7a4b;
+  background: rgba(100,220,150,0.25);
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
