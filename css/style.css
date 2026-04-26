@@ -1,3 +1,35 @@
+/* ════════════════════════════════════════
+   全域自訂游標（首頁 / 所有頁面共用）
+   ════════════════════════════════════════ */
+*, *::before, *::after {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M6 2 L6 26 L12 20 L17 30 L21 28 L16 18 L24 18 Z' fill='%23ff6fa4' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 6 2, auto !important;
+}
+button, a, label, input[type=checkbox], input[type=radio], select, [role="button"],
+.custom-btn, .start-btn, .join-room-btn, .room-card {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath d='M6 2 L6 26 L12 20 L17 30 L21 28 L16 18 L24 18 Z' fill='%23df3a7e' stroke='white' stroke-width='2'/%3E%3Ccircle cx='22' cy='8' r='5' fill='%23ffe0ef' stroke='%23df3a7e' stroke-width='2'/%3E%3C/svg%3E") 6 2, pointer !important;
+}
+
+/* ════════════════════════════════════════
+   深色模式（全站）
+   ════════════════════════════════════════ */
+body.dark-mode {
+  background-image: url(../images/bg_dark.png), linear-gradient(180deg,#0e0618,#1a0a2e);
+  color: #d4a8c0;
+}
+body.dark-mode .custom-btn.btn-auth   { background: linear-gradient(135deg,#cc3377,#992255); }
+body.dark-mode .custom-btn.btn-create { background: linear-gradient(135deg,#5a3299,#3d1a7a); }
+body.dark-mode .custom-btn.btn-join   { background: linear-gradient(135deg,#1a6699,#0d4477); }
+body.dark-mode .login-status-card     { background: rgba(40,20,55,.9); border-color: rgba(200,100,180,.2); }
+body.dark-mode .lobby-shell           { background: rgba(20,10,35,.72); border-color: rgba(200,100,180,.15); }
+body.dark-mode .room-card             { background: linear-gradient(180deg,rgba(40,22,60,.9),rgba(30,14,50,.85)); color: #c8a0bb; }
+body.dark-mode .room-card h3          { color: #ff88cc; }
+body.dark-mode .room-pin              { color: #ff77bb; }
+body.dark-mode .stat-card             { background: rgba(40,20,55,.8); color: #d090bb; }
+body.dark-mode .cute-modal .modal-content,
+body.dark-mode .modal-content         { background: linear-gradient(180deg,rgba(40,22,58,.98),rgba(30,14,48,.96)) !important; color: #d4a8c0; }
+body.dark-mode .member-input          { background: rgba(255,255,255,.06); color: #d4a8c0; border-color: rgba(200,100,180,.3); }
+body.dark-mode .pin-input             { background: rgba(255,255,255,.08); color: #ffaacc; border-color: rgba(255,120,190,.4); }
+
 body {
   margin: 0;
   min-height: 100vh;
