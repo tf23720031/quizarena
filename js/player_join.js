@@ -297,12 +297,14 @@ syncAvatarImages();
 
   // 先用一個暫時名稱發一次 join，讓 last_seen 存進去
   // （房主真正 join 會在按「進入房間」時完成，這裡只是保持心跳）
+  // 用 __host_{帳號}__ 格式讓後端辨識為佔位心跳
+  const hostPlaceholderName = `__host_${ctx.room.created_by || 'host'}__`;
   async function beat() {
     try {
       await fetch('/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, playerName: '__host_pending__' })
+        body: JSON.stringify({ pin, playerName: hostPlaceholderName })
       });
     } catch (_) {}
   }
