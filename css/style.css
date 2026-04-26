@@ -14,9 +14,13 @@ button, a, label, input[type=checkbox], input[type=radio], select, [role="button
    ════════════════════════════════════════ */
 body.dark-mode {
   background-image: none !important;
-  background: linear-gradient(135deg, #020b1a 0%, #041230 35%, #06183d 60%, #030d24 100%) !important;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(30,60,120,.4) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(20,40,100,.35) 0%, transparent 55%),
+    radial-gradient(ellipse at 60% 80%, rgba(10,25,70,.3) 0%, transparent 50%),
+    linear-gradient(160deg, #010810 0%, #020e22 25%, #030f28 50%, #02091a 75%, #010710 100%) !important;
   background-attachment: fixed !important;
-  color: #ffffff;
+  color: #e8f0fe;
 }
 body.dark-mode body::before { background: linear-gradient(145deg,rgba(4,12,32,.8),rgba(6,18,48,.6)); }
 body.dark-mode .custom-btn.btn-auth   { background: linear-gradient(135deg,#1a5ccc,#0d3a99); box-shadow: 0 6px 18px rgba(26,92,204,.4); }
