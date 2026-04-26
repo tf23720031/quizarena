@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuizArena 首頁</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="sparkle-layer"></div>
+  <main class="page-wrap home-page">
+   <header class="top-bar">
+  <div class="logo-area">
+    <img src="images/LOGO.png" class="logo-img">
+  </div>
+<div class="top-actions">
+  <div class="login-status-card" id="loginStatusCard">
+    <div class="login-status-icon">
+      <i class="fa-solid fa-circle-user"></i>
+    </div>
+
+    <div class="login-status-text">
+      <span class="status-label">目前帳號</span>
+      <strong id="loginStatus" class="status-name">尚未登入</strong>
+    </div>
+  </div>
+
+  <button class="custom-btn btn-auth" id="loginBtn">
+    <i class="fa fa-user"></i> 登入 / 註冊
+  </button>
+
+  <button class="custom-btn btn-logout d-none" id="logoutBtn">
+    <i class="fa-solid fa-right-from-bracket"></i> 登出
+  </button>
+
+  <button class="custom-btn btn-create" id="createQuizBtn">
+    <i class="fa-solid fa-wand-magic-sparkles"></i> 題庫中心
+  </button>
+
+  <button class="custom-btn btn-join" id="refreshLobbyBtn">
+    <i class="fa-solid fa-rotate"></i> 重新整理
+  </button>
+</div>
+</header>
+
+    <section class="main-section text-center">
+      <div class="decor decor-q1">?</div>
+      <div class="decor decor-star">✦</div>
+      <div class="decor decor-q2">?</div>
+
+      <div class="hero-box mb-4">
+        <img src="images/girl.png" alt="girl" class="girl-img-banner">
+      </div>
+
+
+      <div class="join-panel">
+        <input type="text" id="pinInput" class="pin-input" maxlength="6" placeholder="輸入6位PIN碼">
+        <button id="startBtn" class="start-btn">Join Room</button>
+      </div>
+    </section>
+
+      <div class="welcome-copy text-center">
+        <h1>歡迎來到 QuizArena 遊戲大廳</h1>
+        <p>你可以直接輸入 PIN，也可以從首頁看公開房間、房主、人數、模式，看到喜歡的房間就立刻加入。</p>
+      </div>
+    <section class="lobby-shell">
+      <div class="lobby-header">
+        <div>
+          <h2>Game Lobby</h2>
+          <p>可直接看到目前房間、房主、人數、公開 / 私人、個人賽 / 團體賽。</p>
+        </div>
+        <div class="lobby-stats">
+          <div class="stat-card"><span>等待中</span><strong id="waitingRoomCount">0</strong></div>
+          <div class="stat-card"><span>玩家總數</span><strong id="onlinePlayerCount">0</strong></div>
+          <div class="stat-card"><span>私人房</span><strong id="privateRoomCount">0</strong></div>
+        </div>
+      </div>
+      <div id="lobbyGrid" class="lobby-grid"></div>
+    </section>
+
+    <footer class="footer-text text-center">© 2026 QuizArena ・ Cute but dangerous for classmates'分數</footer>
+  </main>
+
+  <div class="modal fade" id="pinModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content cute-modal">
+        <div class="modal-body text-center p-4">
+          <h5 class="mb-2">提示</h5>
+          <p id="modalMessage" class="mb-3">訊息</p>
+          <button class="custom-btn btn-create" data-bs-dismiss="modal">知道了</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="roomKeyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content cute-modal">
+        <div class="modal-body p-4">
+          <h5 class="mb-2">私人房驗證</h5>
+          <p id="roomKeyPrompt">請輸入房間密鑰</p>
+          <input type="text" id="roomKeyInput" class="pin-input small-pin-input" placeholder="輸入房間密鑰">
+          <div class="d-flex gap-2 justify-content-end mt-3">
+            <button class="custom-btn btn-join" data-bs-dismiss="modal">取消</button>
+            <button class="custom-btn btn-create" id="confirmRoomKeyBtn">確認加入</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 會員 modal -->
+  <div class="modal fade" id="memberModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content pin-modal member-modal-box">
+        <div class="modal-body p-3 p-md-4">
+
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="modal-title m-0" id="memberModalTitle">會員中心</h4>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="member-tab mb-3 d-flex gap-2">
+            <button id="showLoginBtn" class="btn member-switch-btn active flex-fill" type="button">登入</button>
+            <button id="showRegisterBtn" class="btn member-switch-btn flex-fill" type="button">註冊</button>
+          </div>
+
+          <div id="memberMessage" class="member-message mb-3"></div>
+          <hr>
+
+          <!-- 登入表單 -->
+          <form id="loginForm">
+            <div class="mb-3">
+              <label class="form-label pink-text">帳號</label>
+              <input type="text" id="loginUsername" class="form-control member-input" placeholder="請輸入帳號" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label pink-text">密碼</label>
+              <input type="password" id="loginPassword" class="form-control member-input" placeholder="請輸入密碼" required>
+            </div>
+
+            <button type="submit" class="btn modal-ok-btn w-100 p-3">登入</button>
+          </form>
+
+          <!-- 註冊表單 -->
+          <form id="registerForm" style="display:none;">
+            <div class="mb-3">
+              <label class="form-label pink-text">帳號</label>
+              <input type="text" id="registerUsername" class="form-control member-input" placeholder="請輸入帳號" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label pink-text">Email</label>
+              <input type="email" id="registerEmail" class="form-control member-input" placeholder="請輸入 Email" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label pink-text">密碼</label>
+              <input type="password" id="registerPassword" class="form-control member-input" placeholder="請輸入密碼" required>
+            </div>
+
+            <button type="submit" class="btn modal-ok-btn w-100 p-3">註冊</button>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/bootstrap.bundle.min.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/index.js"></script>
+</body>
+</html>

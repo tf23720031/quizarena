@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>waiting-room</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/waiting_room.css">
+</head>
+<body>
+  <div class="cloud-layer"></div>
+  <main class="page-wrap">
+    <header class="top-header"><div class="logo-wrap"><img src="images/LOGO.png" alt="QuizArena Logo" class="site-logo"></div></header>
+    <section class="waiting-room">
+      <aside class="left-panel">
+        <div class="pin-card glass-card">
+          <div class="card-title">✦ ROOM PIN ✦</div>
+          <div class="pin-box"><div class="pin-number" id="roomPin">859991</div></div>
+          <div class="pin-tip" id="roomName">Share this PIN with friends</div>
+          <div class="room-mini-grid"><div><span>題庫</span><strong id="bankTitle">-</strong></div><div><span>狀態</span><strong id="roomStatus">waiting</strong></div></div>
+        </div>
+        <div class="chat-card glass-card">
+          <div class="chat-header">✦ Player chat ✦</div>
+          <div class="chat-list" id="chatList"><div class="chat-empty" id="chatEmpty">No messages yet...</div></div>
+          <form class="chat-input-wrap" id="chatForm"><input type="text" id="chatInput" placeholder="Type a message"><button class="send-btn" id="sendBtn">➤</button></form>
+        </div>
+      </aside>
+      <section class="right-panel">
+        <div class="girl-wrap"><img src="images/waiting_girl.png" alt="Anime Girl" class="girl-img"></div>
+        <div class="player-card glass-card">
+          <div class="player-title">✦ Player Joined ✦</div>
+          <div class="status-topline"><span id="currentPlayerName">PLAYER</span><button class="leave-soft" id="leaveRoomBtn">離開房間</button></div>
+          <div class="player-list" id="playerList"></div>
+          <div class="waiting-text" id="waitingHint">Waiting for host to start the game...</div>
+        </div>
+      </section>
+    </section>
+    <footer class="footer-text">© 2026 Quiz Arena ・ Made with love ・ All rights reserved.</footer>
+  </main>
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/bootstrap.bundle.min.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/waiting_room.js"></script>
+</body>
+</html>

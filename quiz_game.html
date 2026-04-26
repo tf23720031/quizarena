@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuizArena Game</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/quiz_game.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="game-topbar">
+      <img src="images/LOGO.png" alt="logo" class="game-logo">
+      <div class="game-badges">
+        <span class="badge-pill">PIN <strong id="roomPinText">------</strong></span>
+        <span class="badge-pill">玩家 <strong id="playerNameText">PLAYER</strong></span>
+        <span class="badge-pill">身分 <strong id="roleText">玩家</strong></span>
+        <span class="badge-pill">倒數 <strong id="countdownText">20</strong></span>
+        <span class="badge-pill">分數 <strong id="totalScoreText">0</strong></span>
+      </div>
+    </header>
+
+    <section class="game-layout">
+      <aside class="side-board glass-card">
+        <h3>進度</h3>
+        <div class="progress-copy" id="progressText">第 1 / 10 題</div>
+        <div class="leaderboard-title">排行榜</div>
+        <div id="leaderboardList" class="leaderboard-list"></div>
+      </aside>
+
+      <section class="main-board glass-card">
+        <div id="questionWrap">
+          <div id="hostMonitorBox" class="host-monitor-box" style="display:none;">
+            <div class="host-monitor-title">玩家答題狀況</div>
+            <div id="hostAnswerStatus" class="host-answer-status"></div>
+            <div class="host-breakdown-title">本題選項統計</div>
+            <div id="hostAnswerBreakdown" class="host-answer-breakdown"></div>
+          </div>
+          <div class="question-kicker" id="questionKicker">Question</div>
+          <h1 class="question-title" id="questionTitle">載入中...</h1>
+          <p class="question-content" id="questionContent"></p>
+          <img id="questionImage" class="question-image" alt="question image" style="display:none;">
+          <div id="optionsList" class="options-list"></div>
+          <button id="submitAnswerBtn" class="submit-btn">提交答案</button>
+        </div>
+        <div id="finishWrap" class="finish-wrap" style="display:none;">
+          <h2>遊戲完成</h2>
+          <p>你已經答完全部題目。</p>
+          <div class="finish-score">總分：<strong id="finishScoreText">0</strong></div>
+          <a href="index.html" class="submit-btn back-home-btn">回首頁</a>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div class="result-overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="result-badge" id="resultBadge">答對了！</div>
+    <div class="result-score">本題得分：<strong id="earnedScoreText">0</strong></div>
+    <div class="result-answer">正解：<span id="correctAnswerText">A</span></div>
+
+    <div class="result-my-score">
+      我的目前總分：<strong id="myLiveScoreText">0</strong>
+    </div>
+
+    <div class="result-rank-box" id="myRankBox" style="display:none;">
+      <strong id="myRankText">你目前第 1 名</strong>
+    </div>
+
+    <div class="result-top5-title">目前前五名</div>
+    <div id="resultTop5List" class="result-top5-list"></div>
+
+    <div class="result-explanation" id="resultExplanation">解析</div>
+
+    <div class="result-actions">
+      <button class="submit-btn" id="skipExplanationBtn">跳過解析，進入下一題</button>
+      <button class="submit-btn" id="nextQuestionBtn" style="display:none;">下一題</button>
+    </div>
+  </div>
+</div>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/audio.js"></script>
+  <script src="js/quiz_game.js"></script>
+</body>
+</html>
