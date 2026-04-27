@@ -112,7 +112,7 @@ body.dark-mode {
   color: #e8f0fe;
   background-image:
     linear-gradient(rgba(8, 10, 24, 0.5), rgba(8, 10, 24, 0.68)),
-    url("../images/bannerbg2.png") !important;
+    url("../images/bannerbg2.jpg") !important;
   background-size: cover !important;
   background-position: center !important;
   background-attachment: fixed !important;
