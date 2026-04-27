@@ -925,7 +925,9 @@ body::before {
   width: 100%;
   white-space: nowrap;
 }
-
+.option-row.is-fill {
+  grid-template-columns: 56px minmax(0, 1fr) !important;
+}
 /* AI 生題那排選項不要太擠 */
 .ai-control-row,
 .ai-form-row,
