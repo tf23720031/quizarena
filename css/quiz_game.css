@@ -573,7 +573,7 @@ body.dark-mode .correct-tag { color: #7fffb8; }
 /* ── 結果 overlay ── */
 .result-overlay {
   position: fixed; inset: 0;
-  background: rgba(30,15,40,.45);
+ background: transparent;
   display: none; align-items: center; justify-content: center;
   z-index: 9998; padding: 20px;
 }
