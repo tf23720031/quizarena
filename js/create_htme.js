@@ -73,6 +73,35 @@ function getCurrentBank() {
   return state.quizBanks[state.currentBankIndex] || null;
 }
 
+function isReadonlyBank(bank) {
+  return !!(bank?.readonly || bank?.isSystem || bank?.isWrongBook);
+}
+
+function getMutableBanks() {
+  return state.quizBanks.filter((bank) => !isReadonlyBank(bank));
+}
+
+function firstEditableBankIndex() {
+  const idx = state.quizBanks.findIndex((bank) => !isReadonlyBank(bank));
+  return idx >= 0 ? idx : 0;
+}
+
+function mergeLoadedBanks(userBanks = [], systemBanks = [], wrongBook = null) {
+  const merged = [];
+  if (wrongBook?.questions?.length) merged.push({ ...wrongBook, readonly: true, isWrongBook: true });
+  userBanks.forEach((bank) => merged.push(bank));
+  systemBanks.forEach((bank) => merged.push({ ...bank, readonly: true, isSystem: true }));
+  return merged;
+}
+
+function insertEditableBank(bank) {
+  const copy = { ...bank, readonly: false, isSystem: false, isWrongBook: false };
+  const insertAt = state.quizBanks.findIndex((item) => isReadonlyBank(item) && item?.isSystem);
+  if (insertAt === -1) state.quizBanks.push(copy);
+  else state.quizBanks.splice(insertAt, 0, copy);
+  state.currentBankIndex = state.quizBanks.findIndex((item) => item.id === copy.id);
+}
+
 // ── 選項渲染 ──────────────────────────────────────
 function createOptionRow(index, type, value = '', checked = false) {
   const label = type === 'tf' ? (index === 0 ? '是' : '否') : OPTION_LABELS[index];
@@ -109,6 +138,8 @@ function resetQuestionForm() {
   $('questionType').value = 'single';
   $('questionTime').value = '20 秒';
   $('questionScore').value = '1000';
+  $('questionDifficulty').value = 'medium';
+  $('questionCategory').value = '';
   $('questionExplanation').value = '';
   $('fakeAnswerSwitch').checked = false;
   $('imageUpload').value = '';
@@ -125,6 +156,8 @@ function selectBank(index) {
   const bank = getCurrentBank();
   $('quizBankTitle').value = bank?.title || '';
   $('bankGameMode').value = bank?.gameMode || 'individual';
+  $('quizBankTitle').disabled = isReadonlyBank(bank);
+  $('bankGameMode').disabled = isReadonlyBank(bank);
   renderBankList();
   renderQuestionList();
   resetQuestionForm();
@@ -139,6 +172,11 @@ function renderBankList() {
   }
   wrap.innerHTML = state.quizBanks.map((bank, index) => {
     const isTeam = bank.gameMode === 'team';
+    const readonlyBadge = bank.isWrongBook
+      ? `<span class="question-chip py-1 px-2" style="background:#fff1c7;color:#8a5b00;border-radius:8px">錯題本</span>`
+      : (bank.isSystem
+        ? `<span class="question-chip py-1 px-2" style="background:#dff8e8;color:#1e7a47;border-radius:8px">系統題庫</span>`
+        : '');
     const modeBadge = isTeam
       ? `<span class="question-chip py-1 px-2" style="background:#ede0ff;color:#7952d4;border-radius:8px">團體賽</span>`
       : `<span class="question-chip py-1 px-2" style="background:#e0f7ff;color:#3a7cb8;border-radius:8px">個人賽</span>`;
@@ -151,12 +189,12 @@ function renderBankList() {
           </div>
           ${state.currentBankIndex === index
             ? '<span class="question-chip py-1 px-2">編輯中</span>'
-            : modeBadge}
+            : (readonlyBadge || modeBadge)}
         </div>
         <div class="bank-tools">
           <button class="tool-btn copy-bank-btn" data-id="${bank.id}">複製</button>
-          <button class="tool-btn rename-bank-btn" data-id="${bank.id}">改名</button>
-          <button class="tool-btn delete-bank-btn" data-id="${bank.id}">刪除</button>
+          ${isReadonlyBank(bank) ? '' : `<button class="tool-btn rename-bank-btn" data-id="${bank.id}">改名</button>`}
+          ${isReadonlyBank(bank) ? '' : `<button class="tool-btn delete-bank-btn" data-id="${bank.id}">刪除</button>`}
         </div>
       </article>`;
   }).join('');
@@ -188,6 +226,8 @@ function renderQuestionList() {
       <strong>${escapeHtml(q.title || '未命名題目')}</strong>
       <div class="meta">
         ${escapeHtml(q.type || 'single')} ・
+        ${escapeHtml(q.category || '綜合')} ・
+        ${escapeHtml(q.difficulty || 'medium')} ・
         ${escapeHtml(q.time || '20 秒')} ・
         ${escapeHtml(String(q.score || 1000))} 分
       </div>
@@ -208,6 +248,8 @@ function loadQuestion(id) {
   $('questionType').value = q.type || 'single';
   $('questionTime').value = q.time || '20 秒';
   $('questionScore').value = String(q.score || 1000);
+  $('questionDifficulty').value = q.difficulty || 'medium';
+  $('questionCategory').value = q.category || '';
   $('questionExplanation').value = q.explanation || '';
   $('fakeAnswerSwitch').checked = !!q.fakeAnswer;
   renderOptions(q.type || 'single', q.options || []);
@@ -252,6 +294,8 @@ function collectQuestionForm() {
     content, type, options,
     time: $('questionTime').value,
     score: Number($('questionScore').value || 1000),
+    difficulty: $('questionDifficulty').value,
+    category: $('questionCategory').value.trim() || '綜合',
     fakeAnswer: $('fakeAnswerSwitch').checked,
     image: state.currentImageBase64,
     explanation: $('questionExplanation').value.trim()
@@ -276,6 +320,8 @@ function pasteQuestion() {
   $('questionType').value = newQ.type || 'single';
   $('questionTime').value = newQ.time || '20 秒';
   $('questionScore').value = String(newQ.score || 1000);
+  $('questionDifficulty').value = newQ.difficulty || 'medium';
+  $('questionCategory').value = newQ.category || '';
   $('questionExplanation').value = newQ.explanation || '';
   $('fakeAnswerSwitch').checked = !!newQ.fakeAnswer;
   state.currentImageBase64 = newQ.image || '';
@@ -295,22 +341,25 @@ function pasteQuestion() {
 // ── 儲存題庫 ─────────────────────────────────────
 async function saveAllBanks() {
   const bank = getCurrentBank();
-  if (bank) {
+  if (bank && !isReadonlyBank(bank)) {
     bank.title = $('quizBankTitle').value.trim() || bank.title;
     bank.gameMode = $('bankGameMode').value;
     bank.updatedAt = Math.floor(Date.now() / 1000);
   }
   await api('/save_quiz_banks', {
     method: 'POST',
-    body: JSON.stringify({ username: state.currentUser, quizBanks: state.quizBanks })
+    body: JSON.stringify({ username: state.currentUser, quizBanks: getMutableBanks() })
   });
 }
 
 async function loadBanks() {
   const data = await api(`/load_quiz_banks?username=${encodeURIComponent(state.currentUser)}`);
-  state.quizBanks = data.quizBanks || [];
+  state.quizBanks = mergeLoadedBanks(data.quizBanks || [], data.systemQuizBanks || [], data.wrongBook || null);
   if (!state.quizBanks.length) state.quizBanks = [createEmptyBank()];
-  state.currentBankIndex = 0;
+  if (!state.quizBanks.some((bank) => !isReadonlyBank(bank))) {
+    insertEditableBank(createEmptyBank());
+  }
+  state.currentBankIndex = firstEditableBankIndex();
   $('quizBankTitle').value = getCurrentBank().title;
   $('bankGameMode').value = getCurrentBank().gameMode || 'individual';
   renderBankList();
@@ -321,6 +370,7 @@ async function loadBanks() {
 async function handleBankSave() {
   const bank = getCurrentBank();
   if (!bank) return;
+  if (isReadonlyBank(bank)) { showToast('系統題庫與錯題本不能直接修改，請先複製一份。'); return; }
   bank.title = $('quizBankTitle').value.trim() || bank.title || '未命名題庫';
   bank.gameMode = $('bankGameMode').value;
   bank.updatedAt = Math.floor(Date.now() / 1000);
@@ -333,6 +383,7 @@ async function handleBankSave() {
 function handleAddQuestion() {
   const bank = getCurrentBank();
   if (!bank) return;
+  if (isReadonlyBank(bank)) { showToast('這個題庫是唯讀的，請先複製後再編輯。'); return; }
   bank.title = $('quizBankTitle').value.trim() || bank.title;
   const question = collectQuestionForm();
   if (!question) return;
@@ -347,6 +398,7 @@ function handleAddQuestion() {
 function handleDeleteQuestion() {
   const bank = getCurrentBank();
   if (!bank || !state.editingQuestionId) { showToast('請先選擇要刪除的題目'); return; }
+  if (isReadonlyBank(bank)) { showToast('這個題庫是唯讀的，不能直接刪題。'); return; }
   bank.questions = bank.questions.filter((q) => q.id !== state.editingQuestionId);
   resetQuestionForm();
   renderBankList();
@@ -357,12 +409,17 @@ function handleDeleteQuestion() {
 // ── 題庫管理 ─────────────────────────────────────
 async function copyBank(bankId) {
   try {
-    const data = await api('/copy_quiz_bank', {
-      method: 'POST',
-      body: JSON.stringify({ username: state.currentUser, bankId, newTitle: '' })
-    });
-    state.quizBanks = data.quizBanks || [];
-    state.currentBankIndex = 0;
+    const bank = state.quizBanks.find((b) => b.id === bankId);
+    if (!bank) throw new Error('找不到要複製的題庫');
+    const copied = JSON.parse(JSON.stringify(bank));
+    copied.id = uid('bank');
+    copied.title = `${copied.title || '未命名題庫'}（複製）`;
+    copied.updatedAt = Math.floor(Date.now() / 1000);
+    delete copied.readonly;
+    delete copied.isSystem;
+    delete copied.isWrongBook;
+    insertEditableBank(copied);
+    await saveAllBanks();
     renderBankList();
     renderQuestionList();
     showToast('題庫已複製');
@@ -371,23 +428,25 @@ async function copyBank(bankId) {
 }
 
 function renameBank(bankId) {
+  const bank = state.quizBanks.find((b) => b.id === bankId);
+  if (!bank || isReadonlyBank(bank)) { showToast('這個題庫不能直接改名，請先複製。'); return; }
   state.pendingNameMode = 'rename';
   state.pendingBankId = bankId;
-  const bank = state.quizBanks.find((b) => b.id === bankId);
   $('bankNameInput').value = bank?.title || '';
   bankNameModal.show();
 }
 
 async function deleteBank(bankId) {
+  const bank = state.quizBanks.find((b) => b.id === bankId);
+  if (!bank || isReadonlyBank(bank)) { showToast('這個題庫不能直接刪除。'); return; }
   if (!confirm('確定要刪除這個題庫嗎？')) return;
   try {
-    const data = await api('/delete_quiz_bank', {
-      method: 'POST',
-      body: JSON.stringify({ username: state.currentUser, bankId })
-    });
-    state.quizBanks = data.quizBanks || [];
-    if (!state.quizBanks.length) state.quizBanks = [createEmptyBank()];
-    state.currentBankIndex = 0;
+    state.quizBanks = state.quizBanks.filter((b) => b.id !== bankId);
+    if (!state.quizBanks.some((item) => !isReadonlyBank(item))) {
+      insertEditableBank(createEmptyBank());
+    }
+    state.currentBankIndex = firstEditableBankIndex();
+    await saveAllBanks();
     $('quizBankTitle').value = getCurrentBank().title;
     $('bankGameMode').value = getCurrentBank().gameMode || 'individual';
     renderBankList();
@@ -409,14 +468,14 @@ async function confirmBankName() {
   if (!name) { showToast('請輸入名稱'); return; }
   try {
     if (state.pendingNameMode === 'rename') {
-      const data = await api('/rename_quiz_bank', {
-        method: 'POST',
-        body: JSON.stringify({ username: state.currentUser, bankId: state.pendingBankId, newTitle: name })
-      });
-      state.quizBanks = data.quizBanks || [];
+      const bank = state.quizBanks.find((b) => b.id === state.pendingBankId);
+      if (!bank || isReadonlyBank(bank)) throw new Error('這個題庫不能直接改名');
+      bank.title = name;
+      bank.updatedAt = Math.floor(Date.now() / 1000);
+      await saveAllBanks();
     } else {
-      state.quizBanks.unshift(createEmptyBank(name));
-      state.currentBankIndex = 0;
+      insertEditableBank(createEmptyBank(name));
+      await saveAllBanks();
       $('quizBankTitle').value = name;
       $('bankGameMode').value = 'individual';
     }
@@ -550,18 +609,48 @@ async function createRoom() {
   }
 }
 
+async function generateAiBank() {
+  const topic = $('aiTopicInput').value.trim();
+  if (!topic) { showToast('請先輸入 AI 題庫主題'); return; }
+
+  try {
+    const data = await api('/generate_quiz_bank', {
+      method: 'POST',
+      body: JSON.stringify({
+        topic,
+        category: $('aiCategoryInput').value.trim(),
+        difficulty: $('aiDifficultyInput').value,
+        count: Number($('aiCountInput').value || 5),
+        sourceMode: $('aiSourceModeInput').value
+      })
+    });
+    insertEditableBank(data.quizBank);
+    await saveAllBanks();
+    $('quizBankTitle').value = getCurrentBank()?.title || '';
+    $('bankGameMode').value = getCurrentBank()?.gameMode || 'individual';
+    renderBankList();
+    renderQuestionList();
+    resetQuestionForm();
+    showToast('AI 題庫已加入你的題庫清單');
+    window.quizAudio?.success?.();
+  } catch (e) {
+    showToast(e.message);
+    window.quizAudio?.fail?.();
+  }
+}
+
 // ── 事件綁定 ──────────────────────────────────────
 $('questionType').addEventListener('change', (e) => renderOptions(e.target.value));
 
 $('quizBankTitle').addEventListener('input', () => {
   const bank = getCurrentBank();
-  if (bank) bank.title = $('quizBankTitle').value.trim();
+  if (bank && !isReadonlyBank(bank)) bank.title = $('quizBankTitle').value.trim();
   renderBankList();
 });
 
 $('bankGameMode').addEventListener('change', () => {
   const bank = getCurrentBank();
-  if (bank) { bank.gameMode = $('bankGameMode').value; renderBankList(); }
+  if (bank && !isReadonlyBank(bank)) { bank.gameMode = $('bankGameMode').value; renderBankList(); }
 });
 
 $('newBankBtn').addEventListener('click', openNewBank);
@@ -572,6 +661,7 @@ $('copyQuestionBtn').addEventListener('click', copyCurrentQuestion);
 $('pasteQuestionBtn').addEventListener('click', pasteQuestion);
 $('clearQuestionBtn').addEventListener('click', resetQuestionForm);
 $('deleteQuestionBtn').addEventListener('click', handleDeleteQuestion);
+$('generateAiBankBtn').addEventListener('click', generateAiBank);
 
 $('openRoomSettingsBtn').addEventListener('click', () => {
   const bank = getCurrentBank();

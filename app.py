@@ -1,5 +1,6 @@
 from flask import Flask, send_from_directory, request, jsonify
-import os, sqlite3, json, hashlib, random, time, threading, shutil
+import os, sqlite3, json, hashlib, random, time, threading, shutil, html
+import urllib.parse, urllib.request
 from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +35,13 @@ DATA_DIR = resolve_data_dir()
 USERS_DB_PATH = os.path.join(DATA_DIR, 'quizarena.db')
 ROOMS_DB_PATH = os.path.join(DATA_DIR, 'rooms.db')
 QUIZ_BANKS_PATH = os.path.join(DATA_DIR, 'quiz_banks.json')
+DEFAULT_BANKS_PATH = os.path.join(BASE_DIR, 'default_quiz_banks.json')
+
+DEFAULT_CATEGORY = '綜合'
+DEFAULT_DIFFICULTY = 'medium'
+VALID_DIFFICULTIES = {'easy', 'medium', 'hard'}
+OPENAI_API_URL = 'https://api.openai.com/v1/responses'
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-5')
 
 
 def now_ts():
@@ -89,12 +97,349 @@ def ensure_data_store():
     migrate_legacy_file(LEGACY_QUIZ_BANKS_PATH, QUIZ_BANKS_PATH, {'users': {}})
 
 
+def normalize_difficulty(value):
+    difficulty = str(value or DEFAULT_DIFFICULTY).strip().lower()
+    return difficulty if difficulty in VALID_DIFFICULTIES else DEFAULT_DIFFICULTY
+
+
+def normalize_category(value):
+    return str(value or DEFAULT_CATEGORY).strip() or DEFAULT_CATEGORY
+
+
+def normalize_options(question_type, options):
+    if not isinstance(options, list):
+        options = []
+    normalized = []
+    for idx, opt in enumerate(options):
+        if isinstance(opt, dict):
+            text = str(opt.get('text', '')).strip()
+            correct = bool(opt.get('correct'))
+        else:
+            text = str(opt).strip()
+            correct = False
+        if not text and question_type != 'tf':
+            continue
+        normalized.append({'text': text or ('是' if idx == 0 else '否'), 'correct': correct})
+
+    if question_type == 'tf' and len(normalized) < 2:
+        normalized = [
+            {'text': '是', 'correct': True},
+            {'text': '否', 'correct': False},
+        ]
+    return normalized
+
+
+def normalize_question(raw_question):
+    q = raw_question if isinstance(raw_question, dict) else {}
+    question_type = str(q.get('type', 'single')).strip().lower()
+    if question_type not in {'single', 'multiple', 'tf'}:
+        question_type = 'single'
+    options = normalize_options(question_type, q.get('options', []))
+    answer_indexes = [i for i, opt in enumerate(options) if opt.get('correct')]
+    if question_type in {'single', 'tf'} and len(answer_indexes) > 1:
+        first = answer_indexes[0]
+        for idx, opt in enumerate(options):
+            opt['correct'] = idx == first
+
+    return {
+        'id': str(q.get('id') or uid('question')).strip() or uid('question'),
+        'title': str(q.get('title', '')).strip() or '未命名題目',
+        'content': str(q.get('content', '')).strip(),
+        'type': question_type,
+        'options': options,
+        'time': str(q.get('time', '20 秒')).strip() or '20 秒',
+        'score': int(q.get('score', 1000) or 1000),
+        'fakeAnswer': bool(q.get('fakeAnswer', False)),
+        'image': str(q.get('image', '')).strip(),
+        'explanation': str(q.get('explanation', '')).strip(),
+        'difficulty': normalize_difficulty(q.get('difficulty')),
+        'category': normalize_category(q.get('category')),
+    }
+
+
+def normalize_bank(raw_bank):
+    bank = raw_bank if isinstance(raw_bank, dict) else {}
+    questions = bank.get('questions', [])
+    if not isinstance(questions, list):
+        questions = []
+    return {
+        'id': str(bank.get('id') or uid('bank')).strip() or uid('bank'),
+        'title': str(bank.get('title', '')).strip() or '未命名題庫',
+        'gameMode': 'team' if str(bank.get('gameMode', 'individual')).strip() == 'team' else 'individual',
+        'questions': [normalize_question(q) for q in questions],
+        'updatedAt': int(bank.get('updatedAt', now_ts()) or now_ts()),
+    }
+
+
+def load_default_quiz_banks():
+    if not os.path.exists(DEFAULT_BANKS_PATH):
+        return []
+    with open(DEFAULT_BANKS_PATH, 'r', encoding='utf-8') as f:
+        raw = json.load(f)
+    banks = raw.get('banks', []) if isinstance(raw, dict) else []
+    normalized = []
+    for bank in banks:
+        item = normalize_bank(bank)
+        item['isSystem'] = True
+        item['readonly'] = True
+        normalized.append(item)
+    return normalized
+
+
+def get_wrong_book_owner(username, fallback_player_name=''):
+    username = str(username or '').strip()
+    if username:
+        return username
+    return str(fallback_player_name or '').strip()
+
+
+def build_wrong_book_for_user(username):
+    owner = str(username or '').strip()
+    if not owner:
+        return None
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.row_factory = dict_factory
+        rows = conn.execute('''
+            SELECT source_bank_id, source_bank_title, question_id, title, content, type,
+                   options_json, explanation, image, category, difficulty, wrong_count, last_wrong_at
+            FROM wrong_question_book
+            WHERE username=?
+            ORDER BY wrong_count DESC, last_wrong_at DESC, id DESC
+        ''', (owner,)).fetchall()
+    if not rows:
+        return None
+
+    questions = []
+    for row in rows:
+        try:
+            options = json.loads(row.get('options_json') or '[]')
+        except Exception:
+            options = []
+        questions.append(normalize_question({
+            'id': f"wrong_{row.get('source_bank_id')}_{row.get('question_id')}",
+            'title': row.get('title') or '未命名題目',
+            'content': row.get('content') or '',
+            'type': row.get('type') or 'single',
+            'options': options,
+            'time': '20 秒',
+            'score': 1000,
+            'image': row.get('image') or '',
+            'explanation': row.get('explanation') or '',
+            'difficulty': row.get('difficulty') or DEFAULT_DIFFICULTY,
+            'category': row.get('category') or DEFAULT_CATEGORY,
+        }))
+
+    return {
+        'id': 'wrong_book',
+        'title': '我的錯題本',
+        'gameMode': 'individual',
+        'questions': questions,
+        'updatedAt': int(rows[0].get('last_wrong_at') or now_ts()),
+        'isWrongBook': True,
+        'readonly': True,
+    }
+
+
+def save_wrong_question(owner, source_bank_id, source_bank_title, question_row):
+    if not owner or not question_row:
+        return
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.execute('''
+            INSERT INTO wrong_question_book
+            (username, source_bank_id, source_bank_title, question_id, title, content, type,
+             options_json, explanation, image, category, difficulty, wrong_count, last_wrong_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            ON CONFLICT(username, source_bank_id, question_id)
+            DO UPDATE SET
+                source_bank_title=excluded.source_bank_title,
+                title=excluded.title,
+                content=excluded.content,
+                type=excluded.type,
+                options_json=excluded.options_json,
+                explanation=excluded.explanation,
+                image=excluded.image,
+                category=excluded.category,
+                difficulty=excluded.difficulty,
+                wrong_count=wrong_question_book.wrong_count + 1,
+                last_wrong_at=excluded.last_wrong_at
+        ''', (
+            owner,
+            str(source_bank_id or '').strip(),
+            str(source_bank_title or '').strip(),
+            str(question_row.get('question_id') or question_row.get('id') or '').strip(),
+            str(question_row.get('title') or '').strip(),
+            str(question_row.get('content') or '').strip(),
+            str(question_row.get('type') or 'single').strip(),
+            question_row.get('options_json') or '[]',
+            str(question_row.get('explanation') or '').strip(),
+            str(question_row.get('image') or '').strip(),
+            normalize_category(question_row.get('category')),
+            normalize_difficulty(question_row.get('difficulty')),
+            now_ts(),
+            now_ts(),
+        ))
+        conn.commit()
+
+
+def extract_response_text(response_json):
+    pieces = []
+    for item in response_json.get('output', []):
+        if item.get('type') != 'message':
+            continue
+        for content in item.get('content', []):
+            if content.get('type') == 'output_text':
+                pieces.append(content.get('text', ''))
+    return ''.join(pieces).strip()
+
+
+def fetch_wikipedia_summary(topic):
+    topic = str(topic or '').strip()
+    if not topic:
+        return ''
+    encoded = urllib.parse.quote(topic.replace(' ', '_'))
+    urls = [
+        f'https://zh.wikipedia.org/api/rest_v1/page/summary/{encoded}',
+        f'https://en.wikipedia.org/api/rest_v1/page/summary/{encoded}',
+    ]
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'QuizArena/1.0'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            extract = str(data.get('extract', '')).strip()
+            if extract:
+                return extract
+        except Exception:
+            continue
+    return ''
+
+
+def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai'):
+    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    if not api_key:
+        raise RuntimeError('尚未設定 OPENAI_API_KEY，暫時無法使用 AI 生成。')
+
+    web_context = ''
+    if source_mode == 'web_ai':
+        web_context = fetch_wikipedia_summary(topic)
+
+    schema = {
+        'type': 'object',
+        'properties': {
+            'title': {'type': 'string'},
+            'questions': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'title': {'type': 'string'},
+                        'content': {'type': 'string'},
+                        'type': {'type': 'string', 'enum': ['single', 'multiple', 'tf']},
+                        'difficulty': {'type': 'string', 'enum': ['easy', 'medium', 'hard']},
+                        'category': {'type': 'string'},
+                        'time': {'type': 'string'},
+                        'score': {'type': 'integer'},
+                        'explanation': {'type': 'string'},
+                        'options': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'text': {'type': 'string'},
+                                    'correct': {'type': 'boolean'}
+                                },
+                                'required': ['text', 'correct'],
+                                'additionalProperties': False
+                            }
+                        }
+                    },
+                    'required': ['title', 'content', 'type', 'difficulty', 'category', 'time', 'score', 'explanation', 'options'],
+                    'additionalProperties': False
+                }
+            }
+        },
+        'required': ['title', 'questions'],
+        'additionalProperties': False
+    }
+
+    user_prompt = (
+        f'請用 JSON 產生 {count} 題題目。'
+        f'主題：{topic or "綜合學習"}。'
+        f'類別：{normalize_category(category)}。'
+        f'難度：{normalize_difficulty(difficulty)}。'
+        '每題都要有清楚解析、合理選項、唯一正解或明確多選正解。'
+        '題目語言請使用繁體中文。'
+    )
+    if web_context:
+        user_prompt += f' 你可以參考這段網路資料摘要來出題：{web_context}'
+
+    payload = {
+        'model': OPENAI_MODEL,
+        'input': [
+            {
+                'role': 'developer',
+                'content': (
+                    '你是 QuizArena 的出題助手。請為學習型測驗產生高品質題目，'
+                    '題目要兼顧趣味性與教學性，解析要簡潔且正確。'
+                )
+            },
+            {
+                'role': 'user',
+                'content': user_prompt
+            }
+        ],
+        'text': {
+            'format': {
+                'type': 'json_schema',
+                'name': 'quiz_bank',
+                'strict': True,
+                'schema': schema
+            }
+        }
+    }
+
+    req = urllib.request.Request(
+        OPENAI_API_URL,
+        data=json.dumps(payload).encode('utf-8'),
+        headers={
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        },
+        method='POST'
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        response_json = json.loads(resp.read().decode('utf-8'))
+
+    refusal = response_json.get('refusal')
+    if refusal:
+        raise RuntimeError('AI 這次拒絕了請求，請改成更明確的學習主題再試一次。')
+
+    text = extract_response_text(response_json)
+    if not text:
+        raise RuntimeError('AI 沒有回傳可解析的題庫內容。')
+
+    generated = json.loads(text)
+    bank = normalize_bank({
+        'id': uid('bank'),
+        'title': generated.get('title') or (topic or 'AI 題庫'),
+        'gameMode': 'individual',
+        'questions': generated.get('questions', []),
+        'updatedAt': now_ts(),
+    })
+    return bank
+
+
 def load_quiz_store():
     ensure_file(QUIZ_BANKS_PATH, {'users': {}})
     with open(QUIZ_BANKS_PATH, 'r', encoding='utf-8') as f:
         data = json.load(f)
     if not isinstance(data, dict) or not isinstance(data.get('users'), dict):
         data = {'users': {}}
+    normalized_users = {}
+    for username, banks in data.get('users', {}).items():
+        if isinstance(banks, list):
+            normalized_users[str(username)] = [normalize_bank(bank) for bank in banks]
+    data['users'] = normalized_users
     return data
 
 
@@ -111,7 +456,12 @@ def load_quiz_banks_for_user(username):
 def save_quiz_banks_for_user(username, banks):
     with _quiz_lock:
         data = load_quiz_store()
-        data['users'][username] = banks
+        mutable_banks = []
+        for bank in banks if isinstance(banks, list) else []:
+            if isinstance(bank, dict) and (bank.get('readonly') or bank.get('isSystem') or bank.get('isWrongBook')):
+                continue
+            mutable_banks.append(normalize_bank(bank))
+        data['users'][username] = mutable_banks
         save_quiz_store(data)
 
 
@@ -193,6 +543,40 @@ def init_users_db():
         if 'created_at' not in existing:
             c.execute('ALTER TABLE users ADD COLUMN created_at INTEGER')
             c.execute("UPDATE users SET created_at = strftime('%s','now') WHERE created_at IS NULL")
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS wrong_question_book (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                source_bank_id TEXT NOT NULL,
+                source_bank_title TEXT,
+                question_id TEXT NOT NULL,
+                title TEXT,
+                content TEXT,
+                type TEXT,
+                options_json TEXT,
+                explanation TEXT,
+                image TEXT,
+                category TEXT DEFAULT '綜合',
+                difficulty TEXT DEFAULT 'medium',
+                wrong_count INTEGER DEFAULT 1,
+                last_wrong_at INTEGER,
+                created_at INTEGER,
+                UNIQUE(username, source_bank_id, question_id)
+            )
+        ''')
+        c.execute('PRAGMA table_info(wrong_question_book)')
+        wrong_cols = {row[1] for row in c.fetchall()}
+        for col, typ in [
+            ('source_bank_title', 'TEXT'),
+            ('image', 'TEXT'),
+            ('category', "TEXT DEFAULT '綜合'"),
+            ('difficulty', "TEXT DEFAULT 'medium'"),
+            ('wrong_count', 'INTEGER DEFAULT 1'),
+            ('last_wrong_at', 'INTEGER'),
+            ('created_at', 'INTEGER'),
+        ]:
+            if col not in wrong_cols:
+                c.execute(f'ALTER TABLE wrong_question_book ADD COLUMN {col} {typ}')
         conn.commit()
 
 
@@ -277,10 +661,19 @@ def init_rooms_db():
                 title TEXT, content TEXT, type TEXT, options_json TEXT, answer_json TEXT,
                 explanation TEXT, time_label TEXT, score INTEGER DEFAULT 1000,
                 fake_answer INTEGER DEFAULT 0, mode TEXT, image TEXT,
+                difficulty TEXT DEFAULT 'medium', category TEXT DEFAULT '綜合',
                 origin_bank_id TEXT, origin_question_id TEXT,
                 UNIQUE(room_pin, question_id)
             )
         ''')
+        c.execute('PRAGMA table_info(room_questions)')
+        qcols = {row[1] for row in c.fetchall()}
+        for col, typ in [
+            ('difficulty', "TEXT DEFAULT 'medium'"),
+            ('category', "TEXT DEFAULT '綜合'")
+        ]:
+            if col not in qcols:
+                c.execute(f'ALTER TABLE room_questions ADD COLUMN {col} {typ}')
 
         c.execute('''
             CREATE TABLE IF NOT EXISTS room_results (
@@ -367,7 +760,12 @@ def load_quiz_banks_api():
     username = request.args.get('username', '').strip()
     if not username:
         return jsonify(success=False, message='缺少使用者帳號'), 400
-    return jsonify(success=True, quizBanks=load_quiz_banks_for_user(username))
+    return jsonify(
+        success=True,
+        quizBanks=load_quiz_banks_for_user(username),
+        systemQuizBanks=load_default_quiz_banks(),
+        wrongBook=build_wrong_book_for_user(username)
+    )
 
 
 @app.route('/save_quiz_banks', methods=['POST'])
@@ -382,6 +780,21 @@ def save_quiz_banks_api():
         return jsonify(success=True, message='題庫已儲存')
     except Exception as e:
         return jsonify(success=False, message=f'儲存失敗：{e}'), 500
+
+
+@app.route('/generate_quiz_bank', methods=['POST'])
+def generate_quiz_bank_api():
+    try:
+        data = request.get_json() or {}
+        topic = str(data.get('topic', '')).strip()
+        category = str(data.get('category', '')).strip()
+        difficulty = normalize_difficulty(data.get('difficulty'))
+        count = max(3, min(12, int(data.get('count', 5) or 5)))
+        source_mode = str(data.get('sourceMode', 'ai')).strip()
+        bank = generate_ai_quiz_bank(topic, category, difficulty, count, source_mode=source_mode)
+        return jsonify(success=True, quizBank=bank)
+    except Exception as e:
+        return jsonify(success=False, message=f'AI 題庫生成失敗：{e}'), 500
 
 
 @app.route('/copy_quiz_bank', methods=['POST'])
@@ -582,20 +995,24 @@ def create_room():
                         (pin, i+1, name))
 
             for idx, q in enumerate(room_questions):
+                q = normalize_question(q)
                 options = q.get('options', [])
                 answer_indexes = sorted([i for i, opt in enumerate(options) if opt.get('correct')])
                 conn.execute('''
                     INSERT INTO room_questions
                     (room_pin,question_id,seq,title,content,type,options_json,answer_json,
-                     explanation,time_label,score,fake_answer,mode,image,origin_bank_id,origin_question_id)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                     explanation,time_label,score,fake_answer,mode,image,difficulty,category,origin_bank_id,origin_question_id)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ''', (pin, str(q.get('roomQuestionId') or uid('rq')), idx,
                       q.get('title',''), q.get('content',''), q.get('type','single'),
                       json.dumps(options, ensure_ascii=False),
                       json.dumps(answer_indexes, ensure_ascii=False),
                       q.get('explanation',''), q.get('time','20 秒'),
                       int(q.get('score',1000) or 1000), 1 if q.get('fakeAnswer') else 0,
-                      q.get('mode','個人賽'), q.get('image',''), bank_id, str(q.get('id',''))))
+                      q.get('mode','個人賽'), q.get('image',''),
+                      normalize_difficulty(q.get('difficulty')),
+                      normalize_category(q.get('category')),
+                      bank_id, str(q.get('id',''))))
 
             # 建房時插入佔位房主（用 created_by 帳號名稱當 key）
             # player_join 完成後 join_room ON CONFLICT DO UPDATE 會覆蓋成真正的玩家資料
@@ -1115,7 +1532,9 @@ def player_game_state():
                 'options': opts,
                 'time': q['time_label'], 'score': q['score'],
                 'fake_answer': bool(q.get('fake_answer') or 0),
-                'explanation': q.get('explanation') or '', 'image': q.get('image') or ''
+                'explanation': q.get('explanation') or '', 'image': q.get('image') or '',
+                'difficulty': normalize_difficulty(q.get('difficulty')),
+                'category': normalize_category(q.get('category'))
             }
             if include_answers:
                 # 房主可以看到正解 index
@@ -1150,6 +1569,7 @@ def submit_answer():
         data = request.get_json() or {}
         pin = str(data.get('pin', '')).strip()
         player_name = str(data.get('playerName', '')).strip()
+        username = str(data.get('username', '')).strip()
         question_id = str(data.get('questionId', '')).strip()
         selected = data.get('selected', [])
         remain_sec = int(data.get('remainSeconds', 0) or 0)
@@ -1226,6 +1646,10 @@ def submit_answer():
                 VALUES (?,?,?,?,?,?,?,?,?)
             ''', (pin, player_name, question_id, json.dumps(selected, ensure_ascii=False),
                   is_correct, points, answer_order, remain_sec, now_ts()))
+
+            if not is_correct:
+                owner = get_wrong_book_owner(username, player_name)
+                save_wrong_question(owner, room.get('bank_id'), room.get('bank_title'), q)
 
             # ── 淘汰模式處理 ────────────────────────────
             # fake_answer=1 且答錯 → 把玩家標記為淘汰，積分歸零

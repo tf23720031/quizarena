@@ -128,6 +128,22 @@
                     </div>
                   </div>
 
+                  <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                      <div class="setting-label">題目難度</div>
+                      <select id="questionDifficulty" class="form-select cute-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="setting-label">題目類別</div>
+                      <input type="text" id="questionCategory" class="form-control cute-input"
+                             placeholder="例如：英文、歷史、自然科學">
+                    </div>
+                  </div>
+
                   <div class="mb-3">
                     <div class="setting-label">選項設定</div>
                     <div id="optionsArea" class="option-stack"></div>
@@ -179,6 +195,45 @@
                   <div class="soft-box mt-4">
                     <div class="section-label mb-2">房間題目邏輯</div>
                     <div class="small-muted">建立房間時，系統會把你勾選的題目複製成「房間專用快照」。之後就算你再改題庫，已建立房間的題目也不會被影響。</div>
+                  </div>
+
+                  <div class="soft-box mt-4">
+                    <div class="section-label mb-2">AI 題庫助手</div>
+                    <div class="small-muted mb-3">輸入主題後，可直接生成學習題庫；若有設定 API 金鑰，也能讓 AI 參考網路摘要來出題。</div>
+                    <div class="row g-2">
+                      <div class="col-12">
+                        <input type="text" id="aiTopicInput" class="form-control cute-input"
+                               placeholder="主題，例如：國中理化、英文時態、世界地理">
+                      </div>
+                      <div class="col-md-5">
+                        <input type="text" id="aiCategoryInput" class="form-control cute-input"
+                               placeholder="類別，例如：自然科學">
+                      </div>
+                      <div class="col-md-3">
+                        <select id="aiDifficultyInput" class="form-select cute-select">
+                          <option value="easy">Easy</option>
+                          <option value="medium" selected>Medium</option>
+                          <option value="hard">Hard</option>
+                        </select>
+                      </div>
+                      <div class="col-md-2">
+                        <select id="aiCountInput" class="form-select cute-select">
+                          <option value="3">3 題</option>
+                          <option value="5" selected>5 題</option>
+                          <option value="8">8 題</option>
+                          <option value="10">10 題</option>
+                        </select>
+                      </div>
+                      <div class="col-md-2">
+                        <select id="aiSourceModeInput" class="form-select cute-select">
+                          <option value="ai">AI 生成</option>
+                          <option value="web_ai">網路參考</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button class="top-action btn-create mt-3 w-100" id="generateAiBankBtn" type="button">
+                      <i class="fa-solid fa-wand-magic-sparkles"></i> 生成 AI 題庫
+                    </button>
                   </div>
                 </div>
               </div>

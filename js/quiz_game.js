@@ -665,6 +665,7 @@ async function submitAnswer(isTimeout = false) {
       method: 'POST',
       body: JSON.stringify({
         pin, playerName: getPlayerName(),
+        username: localStorage.getItem('currentUser') || '',
         questionId: currentQuestion.question_id,
         selected, remainSeconds, isTimeout
       })
