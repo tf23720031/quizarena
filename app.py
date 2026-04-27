@@ -929,7 +929,8 @@ def generate_quiz_bank_api():
         topic = str(data.get('topic', '')).strip()
         category = str(data.get('category', '')).strip()
         difficulty = normalize_difficulty(data.get('difficulty'))
-        count = 5
+        requested_count = int(data.get('count', 5) or 5)
+        count = requested_count if requested_count in {1, 3, 5, 7} else 5
         source_mode = str(data.get('sourceMode', 'ai')).strip()
         api_key = str(data.get('apiKey', '')).strip()
         bank = generate_ai_quiz_bank(topic, category, difficulty, count, source_mode=source_mode, api_key_override=api_key)
