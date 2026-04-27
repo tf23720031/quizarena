@@ -275,7 +275,7 @@ document.getElementById('startGameBtn').addEventListener('click', async () => {
     });
     document.getElementById('waitingHint').textContent = '遊戲開始中，正在帶大家進場...';
     isInternalNav = true;
-    window.quizAudio?.success?.();
+    AudioManager?.gameStart?.();
     setTimeout(() => (window.location.href = 'quiz_game.html'), 700);
   } catch (e) {
     showToast(e.message);
