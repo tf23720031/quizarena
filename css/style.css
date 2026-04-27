@@ -789,6 +789,7 @@ body.dark-mode #darkModeBtn {
 }
 
 .friends-dock-btn {
+  position: relative;
   min-height: 52px;
   display: inline-flex;
   align-items: center;
@@ -1072,6 +1073,27 @@ body.dark-mode #darkModeBtn {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
+}
+
+.friends-dock-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 22px;
+  text-align: center;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  background: #ff477f;
+  box-shadow: 0 8px 18px rgba(255, 71, 127, 0.36);
+  pointer-events: none;
 }
 
 .friends-request-badge {
@@ -1509,6 +1531,10 @@ body.dark-mode .lang-switcher:hover {
 
   .friends-dock-btn span {
     display: none;
+  }
+
+  .friends-dock-btn .friends-dock-badge:not(.d-none) {
+    display: grid;
   }
 
   .friends-drawer {
