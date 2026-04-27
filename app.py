@@ -1,12 +1,12 @@
 from flask import Flask, send_from_directory, request, jsonify
-import os, sqlite3, json, hashlib, random, time, threading
+import os, sqlite3, json, hashlib, random, time, threading, shutil
 from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = BASE_DIR
-USERS_DB_PATH = os.path.join(BASE_DIR, 'quizarena.db')
-ROOMS_DB_PATH = os.path.join(BASE_DIR, 'rooms.db')
-QUIZ_BANKS_PATH = os.path.join(BASE_DIR, 'quiz_banks.json')
+LEGACY_USERS_DB_PATH = os.path.join(BASE_DIR, 'quizarena.db')
+LEGACY_ROOMS_DB_PATH = os.path.join(BASE_DIR, 'rooms.db')
+LEGACY_QUIZ_BANKS_PATH = os.path.join(BASE_DIR, 'quiz_banks.json')
 
 app = Flask(__name__, static_folder=PROJECT_DIR, static_url_path='')
 
@@ -15,6 +15,25 @@ DEFAULT_HAIR = 'images/hair/hair01.png'
 DEFAULT_EYES = 'images/face/eyes01.png'
 
 _quiz_lock = threading.Lock()
+
+
+def resolve_data_dir():
+    env_dir = os.environ.get('QUIZARENA_DATA_DIR', '').strip()
+    if env_dir:
+        return os.path.abspath(env_dir)
+
+    if os.name == 'nt':
+        local_appdata = os.environ.get('LOCALAPPDATA', '').strip()
+        if local_appdata:
+            return os.path.join(local_appdata, 'QuizArena')
+
+    return os.path.join(os.path.expanduser('~'), '.quizarena')
+
+
+DATA_DIR = resolve_data_dir()
+USERS_DB_PATH = os.path.join(DATA_DIR, 'quizarena.db')
+ROOMS_DB_PATH = os.path.join(DATA_DIR, 'rooms.db')
+QUIZ_BANKS_PATH = os.path.join(DATA_DIR, 'quiz_banks.json')
 
 
 def now_ts():
@@ -47,8 +66,27 @@ def get_conn(path=ROOMS_DB_PATH):
 
 def ensure_file(path, default_obj):
     if not os.path.exists(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(default_obj, f, ensure_ascii=False, indent=2)
+
+
+def migrate_legacy_file(legacy_path, target_path, default_obj=None):
+    if os.path.exists(target_path):
+        return
+    if os.path.exists(legacy_path):
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        shutil.copy2(legacy_path, target_path)
+        return
+    if default_obj is not None:
+        ensure_file(target_path, default_obj)
+
+
+def ensure_data_store():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    migrate_legacy_file(LEGACY_USERS_DB_PATH, USERS_DB_PATH)
+    migrate_legacy_file(LEGACY_ROOMS_DB_PATH, ROOMS_DB_PATH)
+    migrate_legacy_file(LEGACY_QUIZ_BANKS_PATH, QUIZ_BANKS_PATH, {'users': {}})
 
 
 def load_quiz_store():
@@ -140,7 +178,8 @@ def calc_kahoot_score(base_score, time_limit_sec, remain_sec, answer_order):
 
 def init_users_db():
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
-        conn.execute('''
+        c = conn.cursor()
+        c.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -149,6 +188,11 @@ def init_users_db():
                 created_at INTEGER DEFAULT (strftime('%s','now'))
             )
         ''')
+        c.execute('PRAGMA table_info(users)')
+        existing = {row[1] for row in c.fetchall()}
+        if 'created_at' not in existing:
+            c.execute('ALTER TABLE users ADD COLUMN created_at INTEGER')
+            c.execute("UPDATE users SET created_at = strftime('%s','now') WHERE created_at IS NULL")
         conn.commit()
 
 
@@ -257,6 +301,7 @@ def init_rooms_db():
         conn.commit()
 
 
+ensure_data_store()
 init_users_db()
 init_rooms_db()
 ensure_file(QUIZ_BANKS_PATH, {'users': {}})
