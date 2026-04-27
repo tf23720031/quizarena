@@ -103,7 +103,7 @@ async function api(url, options = {}) {
 
 function buildRoomCard(room) {
   const privacy = room.is_private
-    ? '<span class="badge-qa badge-private"><i class="fa-solid fa-lock"></i> 私人房</span>'
+    ? '<span class="badge-qa badge-private"><i class="fa-solid fa-lock"></i> 已上鎖</span>'
     : '<span class="badge-qa badge-public"><i class="fa-solid fa-earth-asia"></i> 公開房</span>';
 
   const mode = room.team_mode
@@ -115,6 +115,9 @@ function buildRoomCard(room) {
     : '<span class="badge-qa"><i class="fa-regular fa-clock"></i> 等待中</span>';
 
   const disabled = !room.joinable ? "disabled" : "";
+  const keyInfo = room.is_private && room.room_key_plain
+    ? `<div class="tiny-text">房間金鑰</div><div class="room-pin" style="font-size:1.15rem;">${room.room_key_plain}</div>`
+    : `<div class="tiny-text">房間 PIN</div><div class="room-pin">${room.pin}</div>`;
 
   return `
     <article class="room-card">
@@ -132,8 +135,7 @@ function buildRoomCard(room) {
       </div>
 
       <div>
-        <div class="tiny-text">房間 PIN</div>
-        <div class="room-pin">${room.pin}</div>
+        ${keyInfo}
       </div>
 
       <div class="room-footer-meta">
