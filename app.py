@@ -939,9 +939,15 @@ def player_game_state():
             ).fetchone()['total']
 
             all_rank = conn.execute('''
-                SELECT player_name, COALESCE(SUM(points_earned),0) AS total_score
-                FROM room_results WHERE room_pin=?
-                GROUP BY player_name ORDER BY total_score DESC,player_name ASC
+                SELECT rr.player_name,
+                       COALESCE(SUM(rr.points_earned),0) AS total_score,
+                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
+                FROM room_results rr
+                JOIN room_players rp
+                  ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
+                WHERE rr.room_pin=?
+                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
+                ORDER BY total_score DESC, rr.player_name ASC
             ''', (pin,)).fetchall()
             my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
             leaderboard = all_rank[:10]
@@ -1179,18 +1185,24 @@ def submit_answer():
                 (pin, player_name)
             ).fetchone()['total']
             top5 = conn.execute('''
-                SELECT rr.player_name,COALESCE(SUM(points_earned),0) AS total_score
+                SELECT rr.player_name,
+                       COALESCE(SUM(points_earned),0) AS total_score,
+                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 FROM room_results rr
                 JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=? AND rp.is_eliminated=0
-                GROUP BY rr.player_name ORDER BY total_score DESC,rr.player_name ASC LIMIT 5
+                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
+                ORDER BY total_score DESC,rr.player_name ASC LIMIT 5
             ''', (pin,)).fetchall()
             all_rank = conn.execute('''
-                SELECT rr.player_name,COALESCE(SUM(rr.points_earned),0) AS total_score
+                SELECT rr.player_name,
+                       COALESCE(SUM(rr.points_earned),0) AS total_score,
+                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 FROM room_results rr
                 JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=? AND rp.is_eliminated=0
-                GROUP BY rr.player_name ORDER BY total_score DESC,rr.player_name ASC
+                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
+                ORDER BY total_score DESC,rr.player_name ASC
             ''', (pin,)).fetchall()
             my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
             conn.commit()
