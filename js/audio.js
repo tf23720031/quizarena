@@ -5,29 +5,22 @@
     const btn = document.createElement('button');
     btn.id = 'audioToggleBtn';
     btn.className = 'audio-toggle';
-    btn.style.position = 'fixed';
-    btn.style.right = '16px';
-    btn.style.bottom = '16px';
-    btn.style.zIndex = '9999';
-    btn.style.border = 'none';
-    btn.style.borderRadius = '999px';
-    btn.style.padding = '10px 14px';
-    btn.style.background = 'rgba(36, 22, 66, 0.88)';
-    btn.style.color = '#fff';
-    btn.style.fontWeight = '700';
-    btn.style.boxShadow = '0 10px 24px rgba(0,0,0,0.18)';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', '切換音效');
+    btn.title = '切換音效';
 
     function render() {
       const muted = AudioManager?.isMuted?.() ?? false;
       btn.innerHTML = muted
-        ? '<i class="fa-solid fa-volume-xmark"></i> 音效關'
-        : '<i class="fa-solid fa-volume-high"></i> 音效開';
+        ? '<i class="fa-solid fa-volume-xmark"></i>'
+        : '<i class="fa-solid fa-volume-high"></i>';
     }
 
     btn.addEventListener('click', () => {
       AudioManager?.toggleMute?.();
       if (!(AudioManager?.isMuted?.())) {
         AudioManager?.pop?.();
+        AudioManager?.startBgMusic?.();
       }
       render();
     });
