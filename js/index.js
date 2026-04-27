@@ -158,15 +158,20 @@
   }
 
   function renderFriendRequestBadge(count) {
-    const friendRequestBadge = $("friendRequestBadge");
     state.pendingFriendCount = Number(count || 0);
-    if (!friendRequestBadge) return;
+    const badges = [$("friendRequestBadge"), $("friendDockBadge")].filter(Boolean);
+    if (!badges.length) return;
 
     if (state.pendingFriendCount > 0) {
-      friendRequestBadge.textContent = String(state.pendingFriendCount);
-      friendRequestBadge.classList.remove("d-none");
+      badges.forEach((badge) => {
+        badge.textContent = String(state.pendingFriendCount);
+        badge.classList.remove("d-none");
+      });
     } else {
-      friendRequestBadge.classList.add("d-none");
+      badges.forEach((badge) => {
+        badge.textContent = "0";
+        badge.classList.add("d-none");
+      });
     }
   }
 
