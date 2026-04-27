@@ -11,12 +11,12 @@
 <body>
   <div class="sparkle-layer"></div>
   <main class="page-wrap home-page">
-    <header class="top-bar">
+    <header class="top-bar container-fluid">
       <div class="logo-area">
         <img src="images/LOGO.png" class="logo-img" alt="QuizArena Logo">
       </div>
 
-      <div class="top-actions">
+      <div class="top-actions d-flex flex-wrap justify-content-center justify-content-lg-end">
         <div class="login-status-card" id="loginStatusCard">
           <div class="login-status-icon">
             <i class="fa-solid fa-circle-user"></i>
@@ -51,7 +51,7 @@
       </div>
     </header>
 
-    <section class="main-section text-center">
+    <section class="main-section text-center container">
       <div class="decor decor-q1">?</div>
       <div class="decor decor-star">★</div>
       <div class="decor decor-q2">?</div>
@@ -167,8 +167,8 @@
           <p class="text-pink mb-3">輸入玩家帳號後送出好友申請。</p>
           <input type="text" id="friendUsernameInput" class="pin-input small-pin-input friends-modal-input" placeholder="輸入玩家帳號">
           <div class="d-flex justify-content-end gap-2 mt-3">
-            <button class="custom-btn btn-join" data-bs-dismiss="modal">取消</button>
-            <button class="custom-btn btn-create" id="addFriendBtn">送出申請</button>
+            <button class="custom-btn btn-join px-4" data-bs-dismiss="modal">取消</button>
+            <button class="custom-btn btn-create px-4" id="addFriendBtn">送出申請</button>
           </div>
         </div>
       </div>

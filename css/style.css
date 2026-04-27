@@ -716,3 +716,492 @@ body.dark-mode .lang-switcher:hover { background: rgba(255,255,255,.16); }
     flex-direction: column;
   }
 }
+
+/* ════════════════════════════════════════
+   2026-04 polish patch：首頁 RWD / 好友面板 / Modal / 深夜模式
+   ════════════════════════════════════════ */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+}
+
+body {
+  background-image:
+    linear-gradient(115deg, rgba(255,255,255,.60), rgba(255,255,255,.12)),
+    url(../images/bg.png);
+}
+
+body::before {
+  z-index: 0;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.42), rgba(255,244,248,.16)),
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,.70) 0 8%, transparent 28%),
+    radial-gradient(circle at 82% 28%, rgba(169,118,255,.12) 0 10%, transparent 35%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .45;
+  background:
+    linear-gradient(135deg, rgba(120, 86, 170, .13) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(255,255,255,.36) 1px, transparent 1px),
+    radial-gradient(circle at 32% 32%, rgba(255,255,255,.45) 0 1px, transparent 2px),
+    radial-gradient(circle at 72% 58%, rgba(123,93,190,.25) 0 1px, transparent 2px);
+  background-size: 72px 72px, 72px 72px, 110px 110px, 150px 150px;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 88%, transparent 100%);
+}
+
+.sparkle-layer,
+.page-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.page-wrap {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+@media (min-width: 992px) {
+  html,
+  body {
+    min-height: 100%;
+    overflow-y: hidden !important;
+  }
+
+  .home-page {
+    height: 100vh;
+    overflow: hidden;
+    padding-bottom: 20px;
+  }
+
+  .main-section {
+    margin-top: -10px;
+  }
+
+  .welcome-copy,
+  .lobby-shell,
+  .footer-text {
+    display: none !important;
+  }
+}
+
+.custom-btn,
+.start-btn,
+.friends-dock-btn,
+.friends-fab-mini,
+.friends-close-btn,
+.friends-request-trigger,
+.friend-request-btn {
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.custom-btn:hover,
+.start-btn:hover,
+.friends-dock-btn:hover,
+.friends-fab-mini:hover,
+.friends-close-btn:hover,
+.friends-request-trigger:hover,
+.friend-request-btn:hover {
+  filter: brightness(1.03) saturate(1.05);
+}
+
+/* 右上深夜模式按鈕：改成多邊形晶片，不再只是粉色圓角 */
+#darkModeBtn {
+  min-width: 52px !important;
+  height: 52px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px !important;
+  clip-path: polygon(18% 0, 82% 0, 100% 26%, 100% 74%, 82% 100%, 18% 100%, 0 74%, 0 26%);
+  background: linear-gradient(135deg, #5d4fe0, #2f82df) !important;
+  box-shadow: 0 14px 30px rgba(75, 87, 201, .28) !important;
+  border: 1px solid rgba(255,255,255,.65) !important;
+}
+
+/* 好友入口：改成膠囊＋多邊形小按鈕，降低粉感 */
+.friends-fab-stack {
+  left: 28px;
+  bottom: 28px;
+  z-index: 1060;
+}
+
+.friends-dock-btn {
+  min-height: 52px;
+  padding: 13px 22px;
+  border-radius: 18px 26px 18px 26px;
+  color: #fff;
+  background: linear-gradient(135deg, #8a63e8 0%, #5f9fea 55%, #48c0d8 100%);
+  box-shadow: 0 18px 42px rgba(86, 106, 202, .32);
+  border: 1px solid rgba(255,255,255,.72);
+}
+
+.friends-fab-mini {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  clip-path: polygon(50% 0, 92% 18%, 100% 62%, 70% 100%, 28% 100%, 0 62%, 8% 18%);
+  color: #fff;
+  background: linear-gradient(145deg, #7668e8, #48b9df);
+  box-shadow: 0 15px 34px rgba(81, 106, 210, .30);
+  border: 1px solid rgba(255,255,255,.70);
+}
+
+/* 好友側欄：更有質感、少粉、背景加線條 */
+.friends-drawer {
+  width: min(392px, calc(100vw - 24px));
+  height: 100dvh;
+  overflow-y: hidden;
+  padding: 32px 22px 22px;
+  color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.10) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(255,255,255,.08) 1px, transparent 1px),
+    radial-gradient(circle at 78% 10%, rgba(255,255,255,.30) 0 11%, transparent 34%),
+    linear-gradient(158deg, rgba(107, 87, 210, .96) 0%, rgba(91, 156, 223, .92) 52%, rgba(255, 172, 184, .88) 100%);
+  background-size: 38px 38px, 38px 38px, auto, auto;
+  box-shadow: 20px 0 58px rgba(45, 50, 115, .32);
+  border-right: 1px solid rgba(255,255,255,.36);
+  backdrop-filter: blur(22px);
+}
+
+.friends-drawer-glow {
+  width: 190px;
+  height: 190px;
+  top: 38px;
+  right: -74px;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 86% 12%, 100% 50%, 82% 88%, 50% 100%, 16% 88%, 0 50%, 14% 12%);
+  background: linear-gradient(135deg, rgba(255,255,255,.30), rgba(255,255,255,.08));
+  filter: blur(.3px);
+}
+
+.friends-drawer-head h2 {
+  font-size: clamp(1.45rem, 2vw, 1.9rem);
+  letter-spacing: .04em;
+  text-shadow: 0 8px 20px rgba(36,42,96,.22);
+}
+
+.friends-drawer-head p,
+.friends-rank-caption,
+.friends-list-text {
+  color: rgba(255,255,255,.92);
+}
+
+.friends-close-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  clip-path: polygon(18% 0, 82% 0, 100% 24%, 100% 76%, 82% 100%, 18% 100%, 0 76%, 0 24%);
+  color: #5c54c9;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 14px 28px rgba(36, 42, 96, .20);
+}
+
+.friends-rank-caption {
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.28);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.24);
+}
+
+.friends-records {
+  max-height: calc(100dvh - 315px);
+  overflow-y: auto;
+  padding-right: 3px;
+  scrollbar-width: none;
+}
+
+.friends-records::-webkit-scrollbar,
+.friends-drawer::-webkit-scrollbar,
+.friend-requests-content::-webkit-scrollbar {
+  display: none;
+}
+
+.friends-empty-card,
+.friends-record-card,
+.friend-request-card {
+  border-radius: 24px;
+  color: #37405f;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.93), rgba(255,255,255,.78));
+  border: 1px solid rgba(255,255,255,.72);
+  box-shadow: 0 18px 36px rgba(45, 50, 115, .16);
+}
+
+.friends-record-card.is-top {
+  background:
+    linear-gradient(135deg, rgba(255,248,221,.96), rgba(255,255,255,.84));
+  border-color: rgba(255,255,255,.82);
+}
+
+.friends-rank-medal,
+.friends-avatar-badge,
+.friends-request-icon-wrap {
+  border-radius: 14px;
+  clip-path: polygon(50% 0, 90% 18%, 100% 58%, 74% 100%, 26% 100%, 0 58%, 10% 18%);
+  background: linear-gradient(145deg, #7d64e8, #4aaee0);
+  color: #fff;
+}
+
+.friends-record-name,
+.friend-request-name {
+  color: #2f3554;
+}
+
+.friends-record-rank,
+.friend-request-meta {
+  color: #7c84a6;
+}
+
+.friends-record-wins {
+  color: #5b55d7;
+  background: rgba(100,104,223,.10);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.friends-list-text {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.24);
+  line-height: 1.65;
+}
+
+.friends-request-trigger {
+  width: 100%;
+  min-height: 58px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 22px;
+  color: #37405f;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 18px 36px rgba(45, 50, 115, .16);
+  border: 1px solid rgba(255,255,255,.72);
+}
+
+/* Modal：改成玻璃面板＋線條背景，按鈕字清楚 */
+#addFriendModal .modal-content,
+#friendRequestsModal .modal-content,
+.cute-modal {
+  overflow: hidden;
+  border-radius: 28px !important;
+  color: #33405f;
+  background:
+    linear-gradient(135deg, rgba(115,98,232,.08) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(82,155,220,.08) 1px, transparent 1px),
+    linear-gradient(145deg, rgba(255,255,255,.96), rgba(250,247,255,.88)) !important;
+  background-size: 34px 34px, 34px 34px, auto !important;
+  border: 1px solid rgba(255,255,255,.82) !important;
+  box-shadow: 0 28px 70px rgba(40, 43, 98, .22) !important;
+  backdrop-filter: blur(20px);
+}
+
+#addFriendModal h5,
+#friendRequestsModal h5,
+.cute-modal h5 {
+  color: #2f3554;
+  font-weight: 900;
+}
+
+#addFriendModal .text-pink {
+  color: #6754d8 !important;
+  font-weight: 800;
+}
+
+.friends-modal-input,
+#roomKeyInput,
+.small-pin-input {
+  color: #33405f !important;
+  background: rgba(255,255,255,.72) !important;
+  border: 3px solid rgba(116, 105, 224, .24) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 12px 26px rgba(92, 96, 190, .10) !important;
+}
+
+.friends-modal-input::placeholder,
+#roomKeyInput::placeholder,
+.small-pin-input::placeholder {
+  color: rgba(66,72,102,.48) !important;
+}
+
+#addFriendBtn,
+#confirmRoomKeyBtn,
+.modal-ok-btn,
+.cute-modal .btn-create {
+  color: #ffffff !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,.15);
+  background: linear-gradient(135deg, #6e5ee8 0%, #4b9be6 100%) !important;
+  border: 1px solid rgba(255,255,255,.48) !important;
+  box-shadow: 0 16px 32px rgba(74, 89, 208, .26) !important;
+}
+
+.cute-modal .btn-join {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #3fb4d2 0%, #5587df 100%) !important;
+  border: 1px solid rgba(255,255,255,.48) !important;
+  box-shadow: 0 16px 32px rgba(61, 142, 208, .24) !important;
+}
+
+.friend-request-btn.accept {
+  color: #fff;
+  background: linear-gradient(135deg, #5fcb9b, #3ba7d8);
+}
+
+.friend-request-btn.reject {
+  color: #fff;
+  background: linear-gradient(135deg, #a2a8c5, #737b9f);
+}
+
+/* 深夜模式：首頁背景、好友側欄與 Modal 一起換，不再只有右上角換色 */
+body.dark-mode {
+  background-image:
+    linear-gradient(115deg, rgba(5,10,28,.56), rgba(7,16,42,.34)),
+    url(../images/bg.png) !important;
+  background-blend-mode: multiply, normal;
+}
+
+body.dark-mode::before {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(90,112,255,.24) 0 10%, transparent 32%),
+    radial-gradient(circle at 82% 28%, rgba(52,190,225,.12) 0 12%, transparent 36%),
+    linear-gradient(160deg, rgba(1,8,18,.90), rgba(4,13,34,.78));
+}
+
+body.dark-mode::after {
+  opacity: .35;
+  background:
+    linear-gradient(135deg, rgba(137,154,255,.18) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(82,210,255,.10) 1px, transparent 1px),
+    radial-gradient(circle at 32% 32%, rgba(255,255,255,.26) 0 1px, transparent 2px);
+  background-size: 72px 72px, 72px 72px, 120px 120px;
+}
+
+body.dark-mode .friends-drawer {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.08) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(255,255,255,.05) 1px, transparent 1px),
+    radial-gradient(circle at 75% 10%, rgba(78, 149, 255, .22) 0 11%, transparent 35%),
+    linear-gradient(158deg, rgba(10, 18, 46, .98) 0%, rgba(19, 35, 82, .96) 55%, rgba(45, 44, 105, .92) 100%);
+  background-size: 38px 38px, 38px 38px, auto, auto;
+  box-shadow: 20px 0 58px rgba(0,0,0,.46);
+}
+
+body.dark-mode .friends-dock-btn,
+body.dark-mode .friends-fab-mini,
+body.dark-mode #darkModeBtn {
+  background: linear-gradient(135deg, #2542b8 0%, #1685c7 100%) !important;
+  box-shadow: 0 16px 36px rgba(19, 81, 172, .36) !important;
+}
+
+body.dark-mode .friends-empty-card,
+body.dark-mode .friends-record-card,
+body.dark-mode .friend-request-card,
+body.dark-mode .friends-request-trigger {
+  color: #eaf2ff;
+  background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+  border-color: rgba(255,255,255,.14);
+}
+
+body.dark-mode .friends-record-name,
+body.dark-mode .friend-request-name,
+body.dark-mode .friends-record-wins {
+  color: #ffffff;
+}
+
+body.dark-mode .friends-record-rank,
+body.dark-mode .friend-request-meta {
+  color: rgba(234,242,255,.68);
+}
+
+body.dark-mode #addFriendModal .modal-content,
+body.dark-mode #friendRequestsModal .modal-content,
+body.dark-mode .cute-modal {
+  color: #eaf2ff;
+  background:
+    linear-gradient(135deg, rgba(96,142,255,.12) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(67,210,255,.07) 1px, transparent 1px),
+    linear-gradient(145deg, rgba(8,17,44,.98), rgba(11,24,58,.96)) !important;
+  background-size: 34px 34px, 34px 34px, auto !important;
+  border-color: rgba(255,255,255,.14) !important;
+  box-shadow: 0 28px 70px rgba(0,0,0,.46) !important;
+}
+
+body.dark-mode #addFriendModal h5,
+body.dark-mode #friendRequestsModal h5,
+body.dark-mode .cute-modal h5,
+body.dark-mode #addFriendModal .text-pink {
+  color: #ffffff !important;
+}
+
+body.dark-mode .friends-modal-input,
+body.dark-mode #roomKeyInput,
+body.dark-mode .small-pin-input {
+  color: #ffffff !important;
+  background: rgba(255,255,255,.08) !important;
+  border-color: rgba(120,160,255,.32) !important;
+}
+
+body.dark-mode .friends-modal-input::placeholder,
+body.dark-mode #roomKeyInput::placeholder,
+body.dark-mode .small-pin-input::placeholder {
+  color: rgba(234,242,255,.52) !important;
+}
+
+body.dark-mode .btn-close {
+  filter: invert(1) grayscale(1) brightness(1.9);
+}
+
+@media (max-width: 991.98px) {
+  html,
+  body {
+    overflow-y: auto !important;
+  }
+
+  .top-bar {
+    padding-inline: 16px;
+  }
+
+  .top-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .friends-drawer {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .friends-records {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 576px) {
+  .friends-fab-stack {
+    left: 14px;
+    bottom: 14px;
+  }
+
+  .friends-dock-btn span {
+    display: none;
+  }
+
+  .friends-dock-btn {
+    width: 54px;
+    height: 54px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 18px;
+    clip-path: polygon(50% 0, 92% 18%, 100% 62%, 70% 100%, 28% 100%, 0 62%, 8% 18%);
+  }
+}
