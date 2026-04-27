@@ -1179,7 +1179,7 @@ def submit_answer():
                 (pin, player_name)
             ).fetchone()['total']
             top5 = conn.execute('''
-                SELECT player_name,COALESCE(SUM(points_earned),0) AS total_score
+                SELECT rr.player_name,COALESCE(SUM(points_earned),0) AS total_score
                 FROM room_results rr
                 JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=? AND rp.is_eliminated=0
