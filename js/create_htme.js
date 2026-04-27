@@ -356,14 +356,24 @@ function pasteQuestion() {
 // ── 儲存題庫 ─────────────────────────────────────
 async function saveAllBanks() {
   const bank = getCurrentBank();
+
   if (bank && !isReadonlyBank(bank)) {
-    bank.title = $('quizBankTitle').value.trim() || bank.title;
+    const titleInput = $('quizBankTitle').value.trim();
+
+    if (titleInput) {
+      bank.title = titleInput;
+    }
+
     bank.gameMode = $('bankGameMode').value;
     bank.updatedAt = Math.floor(Date.now() / 1000);
   }
+
   await api('/save_quiz_banks', {
     method: 'POST',
-    body: JSON.stringify({ username: state.currentUser, quizBanks: getMutableBanks() })
+    body: JSON.stringify({
+      username: state.currentUser,
+      quizBanks: getMutableBanks()
+    })
   });
 }
 
@@ -400,7 +410,9 @@ function handleAddQuestion() {
   const bank = getCurrentBank();
   if (!bank) return;
   if (isReadonlyBank(bank)) { showToast('這個題庫是唯讀的，請先複製後再編輯。'); return; }
-  bank.title = $('quizBankTitle').value.trim() || bank.title;
+  if ($('quizBankTitle').value.trim()) {
+  bank.title = $('quizBankTitle').value.trim();
+}
   const question = collectQuestionForm();
   if (!question) return;
   const idx = bank.questions.findIndex((item) => item.id === question.id);
@@ -481,25 +493,42 @@ function openNewBank() {
 
 async function confirmBankName() {
   const name = $('bankNameInput').value.trim();
-  if (!name) { showToast('請輸入名稱'); return; }
+
+  if (!name) {
+    showToast('請輸入題庫名稱');
+    return;
+  }
+
   try {
     if (state.pendingNameMode === 'rename') {
       const bank = state.quizBanks.find((b) => b.id === state.pendingBankId);
-      if (!bank || isReadonlyBank(bank)) throw new Error('這個題庫不能直接改名');
+
+      if (!bank || isReadonlyBank(bank)) {
+        throw new Error('這個題庫不能直接改名');
+      }
+
       bank.title = name;
       bank.updatedAt = Math.floor(Date.now() / 1000);
-      await saveAllBanks();
+      state.currentBankIndex = state.quizBanks.findIndex((b) => b.id === bank.id);
     } else {
-      insertEditableBank(createEmptyBank(name));
-      await saveAllBanks();
-      $('quizBankTitle').value = name;
-      $('bankGameMode').value = 'individual';
+      const newBank = createEmptyBank(name);
+      insertEditableBank(newBank);
     }
+
+    syncCurrentBankHeader();
+    await saveAllBanks();
+
     bankNameModal.hide();
     renderBankList();
     renderQuestionList();
+
+    $('bankNameInput').value = '';
     showToast('題庫名稱已更新');
-  } catch (e) { showToast(e.message); }
+    window.quizAudio?.success?.();
+  } catch (e) {
+    showToast(e.message);
+    window.quizAudio?.fail?.();
+  }
 }
 
 // ── 建立房間 ─────────────────────────────────────
