@@ -260,6 +260,120 @@ def build_wrong_book_for_user(username):
     owner = str(username or '').strip()
     if not owner:
         return None
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT source_bank_id, source_bank_title, question_id, title, content, type,
+                           options_json, explanation, image, category, difficulty, wrong_count, last_wrong_at
+                    FROM wrong_question_book
+                    WHERE username=%s
+                    ORDER BY wrong_count DESC, last_wrong_at DESC, id DESC
+                ''', (owner,))
+                rows = cur.fetchall()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            rows = conn.execute('''
+                SELECT source_bank_id, source_bank_title, question_id, title, content, type,
+                       options_json, explanation, image, category, difficulty, wrong_count, last_wrong_at
+                FROM wrong_question_book
+                WHERE username=?
+                ORDER BY wrong_count DESC, last_wrong_at DESC, id DESC
+            ''', (owner,)).fetchall()
+    if not rows:
+        return None
+
+    questions = []
+    for row in rows:
+        try:
+            options = json.loads(row.get('options_json') or '[]')
+        except Exception:
+            options = []
+        questions.append(normalize_question({
+            'id': f"wrong_{row.get('source_bank_id')}_{row.get('question_id')}",
+            'title': row.get('title') or '錯題',
+            'content': row.get('content') or '',
+            'type': row.get('type') or 'single',
+            'options': options,
+            'time': '20 秒',
+            'score': 1000,
+            'image': row.get('image') or '',
+            'explanation': row.get('explanation') or '',
+            'difficulty': row.get('difficulty') or DEFAULT_DIFFICULTY,
+            'category': row.get('category') or DEFAULT_CATEGORY,
+        }))
+
+    return {
+        'id': 'wrong_book',
+        'title': '我的錯題本',
+        'gameMode': 'individual',
+        'questions': questions,
+        'updatedAt': int(rows[0].get('last_wrong_at') or now_ts()),
+        'isWrongBook': True,
+        'readonly': True,
+    }
+
+
+def build_wrong_book_detail(username):
+    owner = str(username or '').strip()
+    if not owner:
+        return {'username': '', 'items': [], 'totalWrongCount': 0}
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT source_bank_id, source_bank_title, question_id, title, content, type,
+                           options_json, explanation, image, category, difficulty, wrong_count, last_wrong_at
+                    FROM wrong_question_book
+                    WHERE username=%s
+                    ORDER BY wrong_count DESC, last_wrong_at DESC, id DESC
+                ''', (owner,))
+                rows = cur.fetchall()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            rows = conn.execute('''
+                SELECT source_bank_id, source_bank_title, question_id, title, content, type,
+                       options_json, explanation, image, category, difficulty, wrong_count, last_wrong_at
+                FROM wrong_question_book
+                WHERE username=?
+                ORDER BY wrong_count DESC, last_wrong_at DESC, id DESC
+            ''', (owner,)).fetchall()
+
+    items = []
+    for row in rows:
+        try:
+            options = json.loads(row.get('options_json') or '[]')
+        except Exception:
+            options = []
+        items.append({
+            'sourceBankId': row.get('source_bank_id') or '',
+            'sourceBankTitle': row.get('source_bank_title') or '未命名題庫',
+            'questionId': row.get('question_id') or '',
+            'title': row.get('title') or '錯題',
+            'content': row.get('content') or '',
+            'type': row.get('type') or 'single',
+            'options': options,
+            'explanation': row.get('explanation') or '',
+            'image': row.get('image') or '',
+            'category': row.get('category') or DEFAULT_CATEGORY,
+            'difficulty': row.get('difficulty') or DEFAULT_DIFFICULTY,
+            'wrongCount': int(row.get('wrong_count') or 0),
+            'lastWrongAt': int(row.get('last_wrong_at') or 0),
+            'lastWrongAtText': time.strftime('%Y-%m-%d %H:%M', time.localtime(int(row.get('last_wrong_at') or now_ts()))),
+        })
+    return {
+        'username': owner,
+        'items': items,
+        'totalWrongCount': sum(item['wrongCount'] for item in items),
+    }
+
+
+def _legacy_build_wrong_book_for_user(username):
+    owner = str(username or '').strip()
+    if not owner:
+        return None
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         rows = conn.execute('''
@@ -305,6 +419,45 @@ def build_wrong_book_for_user(username):
 
 def save_wrong_question(owner, source_bank_id, source_bank_title, question_row):
     if not owner or not question_row:
+        return
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    INSERT INTO wrong_question_book
+                    (username, source_bank_id, source_bank_title, question_id, title, content, type,
+                     options_json, explanation, image, category, difficulty, wrong_count, last_wrong_at, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, %s, %s)
+                    ON CONFLICT(username, source_bank_id, question_id)
+                    DO UPDATE SET
+                        source_bank_title=EXCLUDED.source_bank_title,
+                        title=EXCLUDED.title,
+                        content=EXCLUDED.content,
+                        type=EXCLUDED.type,
+                        options_json=EXCLUDED.options_json,
+                        explanation=EXCLUDED.explanation,
+                        image=EXCLUDED.image,
+                        category=EXCLUDED.category,
+                        difficulty=EXCLUDED.difficulty,
+                        wrong_count=wrong_question_book.wrong_count + 1,
+                        last_wrong_at=EXCLUDED.last_wrong_at
+                ''', (
+                    owner,
+                    str(source_bank_id or '').strip(),
+                    str(source_bank_title or '').strip(),
+                    str(question_row.get('question_id') or question_row.get('id') or '').strip(),
+                    str(question_row.get('title') or '').strip(),
+                    str(question_row.get('content') or '').strip(),
+                    str(question_row.get('type') or 'single').strip(),
+                    question_row.get('options_json') or '[]',
+                    str(question_row.get('explanation') or '').strip(),
+                    str(question_row.get('image') or '').strip(),
+                    normalize_category(question_row.get('category')),
+                    normalize_difficulty(question_row.get('difficulty')),
+                    now_ts(),
+                    now_ts(),
+                ))
+            conn.commit()
         return
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.execute('''
@@ -1098,6 +1251,27 @@ def init_postgres_users_db():
                 )
             ''')
             c.execute('''
+                CREATE TABLE IF NOT EXISTS wrong_question_book (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    source_bank_id TEXT NOT NULL,
+                    source_bank_title TEXT,
+                    question_id TEXT NOT NULL,
+                    title TEXT,
+                    content TEXT,
+                    type TEXT,
+                    options_json TEXT,
+                    explanation TEXT,
+                    image TEXT,
+                    category TEXT DEFAULT '綜合',
+                    difficulty TEXT DEFAULT 'medium',
+                    wrong_count INTEGER DEFAULT 1,
+                    last_wrong_at BIGINT,
+                    created_at BIGINT,
+                    UNIQUE(username, source_bank_id, question_id)
+                )
+            ''')
+            c.execute('''
                 CREATE TABLE IF NOT EXISTS user_friend_requests (
                     id SERIAL PRIMARY KEY,
                     requester TEXT NOT NULL,
@@ -1364,7 +1538,8 @@ def home():
 
 
 for page in ['create_home.html', 'player_join.html', 'waiting_room.html',
-             'house_waiting_room.html', 'quiz_game.html']:
+             'house_waiting_room.html', 'quiz_game.html', 'wrong_book.html',
+             'teacher_report.html']:
     app.add_url_rule('/' + page, page,
                      lambda page=page: send_from_directory(PROJECT_DIR, page))
 
@@ -1506,6 +1681,14 @@ def achievements_summary_api():
     if not username:
         return jsonify(success=False, message='缺少使用者帳號'), 400
     return jsonify(success=True, **build_achievement_summary(username))
+
+
+@app.route('/wrong_book_summary')
+def wrong_book_summary_api():
+    username = str(request.args.get('username', '')).strip()
+    if not username:
+        return jsonify(success=False, message='缺少使用者帳號'), 400
+    return jsonify(success=True, **build_wrong_book_detail(username))
 
 
 @app.route('/send_friend_request', methods=['POST'])
@@ -2802,6 +2985,112 @@ def host_all_results():
         return jsonify(success=True, results=enriched)
     except Exception as e:
         return jsonify(success=False, message=f'讀取明細失敗：{e}'), 500
+
+
+@app.route('/teacher_report')
+def teacher_report_api():
+    try:
+        pin = request.args.get('pin', '').strip()
+        if not pin:
+            return jsonify(success=False, message='缺少 PIN'), 400
+        with closing(get_conn()) as conn:
+            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
+            if not room:
+                return jsonify(success=False, message='找不到這個房間'), 404
+            questions = conn.execute(
+                'SELECT question_id,seq,title,content FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
+                (pin,)
+            ).fetchall()
+            players = conn.execute('''
+                SELECT player_name, team_id, is_host
+                FROM room_players
+                WHERE room_pin=? AND NOT (player_name LIKE '__host_%__' AND is_host=1)
+                ORDER BY team_id ASC, player_name ASC
+            ''', (pin,)).fetchall()
+            results = conn.execute('''
+                SELECT rr.*, rp.team_id
+                FROM room_results rr
+                JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
+                WHERE rr.room_pin=?
+                ORDER BY rp.team_id ASC, rr.player_name ASC, rr.question_id ASC
+            ''', (pin,)).fetchall()
+
+        q_order = {q['question_id']: int(q['seq'] or 0) for q in questions}
+        q_titles = {q['question_id']: q['title'] or '' for q in questions}
+        per_player = {
+            player['player_name']: {
+                'playerName': player['player_name'],
+                'teamId': int(player.get('team_id') or 0),
+                'answered': 0,
+                'correct': 0,
+                'totalScore': 0,
+            }
+            for player in players
+        }
+        per_question = {
+            q['question_id']: {
+                'questionId': q['question_id'],
+                'seq': int(q['seq'] or 0),
+                'title': q['title'] or '',
+                'content': q['content'] or '',
+                'answered': 0,
+                'correct': 0,
+            }
+            for q in questions
+        }
+
+        enriched = []
+        for row in results:
+            player_name = row['player_name']
+            if player_name not in per_player:
+                per_player[player_name] = {
+                    'playerName': player_name,
+                    'teamId': int(row.get('team_id') or 0),
+                    'answered': 0,
+                    'correct': 0,
+                    'totalScore': 0,
+                }
+            is_correct = bool(row.get('is_correct'))
+            points = int(row.get('points_earned') or 0)
+            per_player[player_name]['answered'] += 1
+            per_player[player_name]['correct'] += 1 if is_correct else 0
+            per_player[player_name]['totalScore'] += points
+            if row['question_id'] in per_question:
+                per_question[row['question_id']]['answered'] += 1
+                per_question[row['question_id']]['correct'] += 1 if is_correct else 0
+            enriched.append({
+                'playerName': player_name,
+                'teamId': int(row.get('team_id') or 0),
+                'questionId': row['question_id'],
+                'seq': q_order.get(row['question_id'], 0),
+                'title': q_titles.get(row['question_id'], ''),
+                'isCorrect': is_correct,
+                'pointsEarned': points,
+                'answerOrder': int(row.get('answer_order') or 0),
+            })
+
+        player_summaries = sorted(per_player.values(), key=lambda item: (-item['totalScore'], item['playerName'].lower()))
+        for item in player_summaries:
+            item['accuracy'] = round((item['correct'] / item['answered']) * 100, 1) if item['answered'] else 0
+        question_stats = sorted(per_question.values(), key=lambda item: item['seq'])
+        for item in question_stats:
+            item['accuracy'] = round((item['correct'] / item['answered']) * 100, 1) if item['answered'] else 0
+
+        return jsonify(
+            success=True,
+            room={
+                'pin': room.get('pin'),
+                'roomName': room.get('room_name') or '',
+                'bankTitle': room.get('bank_title') or '',
+                'createdBy': room.get('created_by') or '',
+                'status': room.get('status') or '',
+            },
+            questions=question_stats,
+            players=player_summaries,
+            results=enriched,
+        )
+    except Exception as e:
+        return jsonify(success=False, message=f'讀取老師報表失敗：{e}'), 500
 
 
 @app.route('/<path:filename>')

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>老師模式 - QuizArena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/learning_tools.css">
+</head>
+<body>
+  <main class="tool-shell">
+    <header class="tool-topbar">
+      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <div>
+        <p class="tool-kicker">Teacher</p>
+        <h1>老師模式</h1>
+      </div>
+    </header>
+
+    <section class="tool-card report-search">
+      <label for="reportPinInput">輸入房間 PIN</label>
+      <div class="report-search-row">
+        <input id="reportPinInput" maxlength="6" inputmode="numeric" placeholder="例如 123456">
+        <button id="loadReportBtn" class="tool-btn primary"><i class="fa-solid fa-magnifying-glass-chart"></i> 查看報表</button>
+        <button id="downloadCsvBtn" class="tool-btn" disabled><i class="fa-solid fa-file-csv"></i> 匯出 CSV</button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article><span>房間</span><strong id="reportRoomName">-</strong></article>
+      <article><span>學生數</span><strong id="reportPlayerCount">0</strong></article>
+      <article><span>題目數</span><strong id="reportQuestionCount">0</strong></article>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head"><h2>學生表現</h2></div>
+      <div id="studentReportList" class="report-table-wrap"></div>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head"><h2>題目答對率</h2></div>
+      <div id="questionReportList" class="question-list compact"></div>
+    </section>
+  </main>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/teacher_report.js"></script>
+</body>
+</html>

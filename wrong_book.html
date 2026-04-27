@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的錯題本 - QuizArena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/learning_tools.css">
+</head>
+<body>
+  <main class="tool-shell">
+    <header class="tool-topbar">
+      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <div>
+        <p class="tool-kicker">Review</p>
+        <h1>我的錯題本</h1>
+      </div>
+    </header>
+
+    <section class="summary-grid">
+      <article><span>錯題數</span><strong id="wrongItemCount">0</strong></article>
+      <article><span>累積答錯</span><strong id="wrongTotalCount">0</strong></article>
+      <article><span>目前帳號</span><strong id="wrongUserName">-</strong></article>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2>複習清單</h2>
+        <button id="refreshWrongBookBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> 重新整理</button>
+      </div>
+      <div id="wrongBookList" class="question-list"></div>
+    </section>
+  </main>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/wrong_book.js"></script>
+</body>
+</html>

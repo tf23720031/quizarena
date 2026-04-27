@@ -605,6 +605,19 @@
     window.location.href = "create_home.html";
   }
 
+  function handleWrongBookClick() {
+    if (!getCurrentUser()) {
+      showToast("請先登入，才能查看錯題本");
+      openLoginModal();
+      return;
+    }
+    window.location.href = "wrong_book.html";
+  }
+
+  function handleTeacherReportClick() {
+    window.location.href = "teacher_report.html";
+  }
+
   function handleLogout() {
     clearCurrentUser();
     state.friendRequests = [];
@@ -643,6 +656,8 @@
     $("loginBtn")?.addEventListener("click", openLoginModal);
     $("logoutBtn")?.addEventListener("click", handleLogout);
     $("createQuizBtn")?.addEventListener("click", handleCreateQuizClick);
+    $("wrongBookBtn")?.addEventListener("click", handleWrongBookClick);
+    $("teacherReportBtn")?.addEventListener("click", handleTeacherReportClick);
 
     $("loginForm")?.addEventListener("submit", handleLogin);
     $("registerForm")?.addEventListener("submit", handleRegister);
