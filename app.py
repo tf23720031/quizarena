@@ -1,6 +1,17 @@
 from flask import Flask, send_from_directory, request, jsonify
-import os, sqlite3, json, hashlib, random, time, threading, shutil, html
+import os, sqlite3, json, hashlib, random, time, threading, shutil, html, re
 import urllib.parse, urllib.request
+
+try:
+    import requests
+except Exception:
+    requests = None
+
+try:
+    import psycopg2
+    import psycopg2.extras
+except Exception:
+    psycopg2 = None
 from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +54,10 @@ VALID_DIFFICULTIES = {'easy', 'medium', 'hard'}
 VALID_QUESTION_TYPES = {'single', 'multiple', 'tf', 'fill'}
 OPENAI_API_URL = 'https://api.openai.com/v1/responses'
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-5')
+HF_API_URL = os.environ.get('HF_API_URL', 'https://router.huggingface.co/v1/chat/completions')
+HF_MODEL = os.environ.get('HF_MODEL', 'Qwen/Qwen2.5-7B-Instruct')
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+ALLOW_AI_FALLBACK = os.environ.get('ALLOW_AI_FALLBACK', '1').strip() != '0'
 
 
 def now_ts():
@@ -71,6 +86,44 @@ def get_conn(path=ROOMS_DB_PATH):
     conn.execute('PRAGMA foreign_keys = ON')
     conn.execute('PRAGMA journal_mode = WAL')
     return conn
+
+
+def get_database_url():
+    url = DATABASE_URL
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+
+def use_postgres_quiz_store():
+    return bool(get_database_url() and psycopg2 is not None)
+
+
+def get_pg_conn():
+    url = get_database_url()
+    if not url or psycopg2 is None:
+        raise RuntimeError('DATABASE_URL 尚未設定，或 requirements.txt 尚未安裝 psycopg2-binary。')
+    return psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+
+
+def init_postgres_quiz_banks_db():
+    if not use_postgres_quiz_store():
+        return
+    with closing(get_pg_conn()) as conn:
+        with conn.cursor() as cur:
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS quiz_banks (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    bank_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    data JSONB NOT NULL,
+                    updated_at BIGINT DEFAULT 0,
+                    UNIQUE(username, bank_id)
+                )
+            ''')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_quiz_banks_username ON quiz_banks(username)')
+        conn.commit()
 
 
 def ensure_file(path, default_obj):
@@ -320,120 +373,175 @@ def fetch_wikipedia_summary(topic):
     return ''
 
 
+def build_local_fallback_quiz_bank(topic, category, difficulty, count):
+    topic = str(topic or '綜合學習').strip() or '綜合學習'
+    category = normalize_category(category)
+    difficulty = normalize_difficulty(difficulty)
+    questions = []
+    option_templates = [
+        ['了解基本概念', '完全無關的敘述', '只看表面文字', '隨機猜測答案'],
+        ['先理解定義再判斷', '忽略題目條件', '只背答案不理解', '把所有選項都當正確'],
+        ['能應用在實際情境', '只存在於單一情況', '不能被說明', '沒有任何用途'],
+        ['比較差異與用途', '只看字數長短', '依照選項順序決定', '完全不用閱讀題目'],
+        ['確認關鍵條件', '直接排除正確答案', '只選最短選項', '不需要解析']
+    ]
+    for i in range(max(1, int(count or 5))):
+        opts = option_templates[i % len(option_templates)]
+        questions.append({
+            'id': uid('question'),
+            'title': f'{topic}觀念題 {i + 1}',
+            'content': f'關於「{topic}」，下列哪一個說法最合理？',
+            'type': 'single',
+            'difficulty': difficulty,
+            'category': category,
+            'time': '20 秒',
+            'score': 1000,
+            'explanation': f'本題重點是理解「{topic}」的核心概念，並能排除不符合題意的選項。',
+            'options': [
+                {'text': opts[0], 'correct': True},
+                {'text': opts[1], 'correct': False},
+                {'text': opts[2], 'correct': False},
+                {'text': opts[3], 'correct': False},
+            ]
+        })
+    return normalize_bank({
+        'id': uid('bank'),
+        'title': f'{topic} 題庫',
+        'gameMode': 'individual',
+        'questions': questions,
+        'updatedAt': now_ts(),
+    })
+
+
+def extract_json_array(text):
+    text = str(text or '').strip()
+    if not text:
+        raise RuntimeError('AI 沒有回傳文字內容。')
+    fenced = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text)
+    if fenced:
+        text = fenced.group(1).strip()
+    match = re.search(r'\[[\s\S]*\]', text)
+    if not match:
+        raise RuntimeError('AI 回傳格式錯誤，找不到 JSON 題目陣列。')
+    return json.loads(match.group(0))
+
+
+def normalize_ai_generated_question(raw, idx, category, difficulty):
+    raw = raw if isinstance(raw, dict) else {}
+    options = raw.get('options', [])
+    answer = raw.get('answer', None)
+    normalized_options = []
+    if isinstance(options, list):
+        for opt_index, opt in enumerate(options):
+            if isinstance(opt, dict):
+                text = str(opt.get('text') or opt.get('label') or opt.get('value') or '').strip()
+                correct = bool(opt.get('correct'))
+            else:
+                text = str(opt or '').strip()
+                correct = False
+            if text:
+                normalized_options.append({'text': text, 'correct': correct})
+    if answer is not None and normalized_options:
+        if isinstance(answer, int) and 0 <= answer < len(normalized_options):
+            for opt_index, opt in enumerate(normalized_options):
+                opt['correct'] = opt_index == answer
+        elif isinstance(answer, str):
+            answer_text = answer.strip()
+            for opt in normalized_options:
+                if opt['text'] == answer_text:
+                    opt['correct'] = True
+    if len(normalized_options) < 2:
+        normalized_options = [{'text': '正確', 'correct': True}, {'text': '錯誤', 'correct': False}]
+    if not any(opt.get('correct') for opt in normalized_options):
+        normalized_options[0]['correct'] = True
+    return normalize_question({
+        'id': str(raw.get('id') or uid('question')),
+        'title': str(raw.get('title') or raw.get('question') or f'AI 題目 {idx + 1}').strip(),
+        'content': str(raw.get('content') or raw.get('question') or raw.get('title') or f'AI 題目 {idx + 1}').strip(),
+        'type': str(raw.get('type') or 'single').strip(),
+        'options': normalized_options,
+        'time': str(raw.get('time') or '20 秒'),
+        'score': int(raw.get('score') or 1000),
+        'explanation': str(raw.get('explanation') or raw.get('解析') or '請依照題目關鍵概念判斷。').strip(),
+        'difficulty': raw.get('difficulty') or difficulty,
+        'category': raw.get('category') or category,
+    })
+
+
 def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', api_key_override=''):
-    api_key = str(api_key_override or '').strip() or os.environ.get('OPENAI_API_KEY', '').strip()
-    if not api_key:
-        raise RuntimeError('尚未設定 OPENAI_API_KEY，暫時無法使用 AI 生成。')
+    hf_api_key = os.environ.get('HF_API_KEY', '').strip()
+    if not hf_api_key:
+        if ALLOW_AI_FALLBACK:
+            return build_local_fallback_quiz_bank(topic, category, difficulty, count)
+        raise RuntimeError('尚未設定 HF_API_KEY，請先到 Render Environment 新增 HuggingFace Token。')
+
+    if requests is None:
+        if ALLOW_AI_FALLBACK:
+            return build_local_fallback_quiz_bank(topic, category, difficulty, count)
+        raise RuntimeError('尚未安裝 requests，請在 requirements.txt 加上 requests。')
 
     web_context = ''
     if source_mode == 'web_ai':
         web_context = fetch_wikipedia_summary(topic)
 
-    schema = {
-        'type': 'object',
-        'properties': {
-            'title': {'type': 'string'},
-            'questions': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'title': {'type': 'string'},
-                        'content': {'type': 'string'},
-                        'type': {'type': 'string', 'enum': ['single', 'multiple', 'tf', 'fill']},
-                        'difficulty': {'type': 'string', 'enum': ['easy', 'medium', 'hard']},
-                        'category': {'type': 'string'},
-                        'time': {'type': 'string'},
-                        'score': {'type': 'integer'},
-                        'explanation': {'type': 'string'},
-                        'options': {
-                            'type': 'array',
-                            'items': {
-                                'type': 'object',
-                                'properties': {
-                                    'text': {'type': 'string'},
-                                    'correct': {'type': 'boolean'}
-                                },
-                                'required': ['text', 'correct'],
-                                'additionalProperties': False
-                            }
-                        }
-                    },
-                    'required': ['title', 'content', 'type', 'difficulty', 'category', 'time', 'score', 'explanation', 'options'],
-                    'additionalProperties': False
-                }
-            }
-        },
-        'required': ['title', 'questions'],
-        'additionalProperties': False
-    }
+    topic = str(topic or '綜合學習').strip() or '綜合學習'
+    category = normalize_category(category)
+    difficulty = normalize_difficulty(difficulty)
+    count = max(1, min(int(count or 5), 7))
 
-    user_prompt = (
-        f'請用 JSON 產生 {count} 題題目。'
-        f'主題：{topic or "綜合學習"}。'
-        f'類別：{normalize_category(category)}。'
-        f'難度：{normalize_difficulty(difficulty)}。'
-        '每題都要有清楚解析、合理選項、唯一正解或明確多選正解。'
-        '題目語言請使用繁體中文。'
+    prompt = (
+        f'你是 QuizArena 的繁體中文出題助手。\n'
+        f'請產生 {count} 題測驗題。\n'
+        f'主題：{topic}\n'
+        f'類別：{category}\n'
+        f'難度：{difficulty}\n\n'
+        '請只回傳 JSON 陣列，不要加任何說明文字，不要 markdown。\n'
+        '每題格式必須如下：\n'
+        '[{"title":"題目標題","content":"完整題目內容","type":"single","difficulty":"medium","category":"綜合","time":"20 秒","score":1000,"explanation":"解析文字","options":[{"text":"選項A","correct":true},{"text":"選項B","correct":false},{"text":"選項C","correct":false},{"text":"選項D","correct":false}]}]\n'
+        '限制：使用繁體中文；每題至少 4 個選項；每題只能有一個正確答案；解析要簡潔但能教學。'
     )
     if web_context:
-        user_prompt += f' 你可以參考這段網路資料摘要來出題：{web_context}'
+        prompt += f'\n\n可參考資料摘要：{web_context[:1200]}'
 
-    payload = {
-        'model': OPENAI_MODEL,
-        'input': [
-            {
-                'role': 'developer',
-                'content': (
-                    '你是 QuizArena 的出題助手。請為學習型測驗產生高品質題目，'
-                    '題目要兼顧趣味性與教學性，解析要簡潔且正確。'
-                )
+    try:
+        response = requests.post(
+            HF_API_URL,
+            headers={
+                'Authorization': f'Bearer {hf_api_key}',
+                'Content-Type': 'application/json',
             },
-            {
-                'role': 'user',
-                'content': user_prompt
-            }
-        ],
-        'text': {
-            'format': {
-                'type': 'json_schema',
-                'name': 'quiz_bank',
-                'strict': True,
-                'schema': schema
-            }
-        }
-    }
+            json={
+                'model': HF_MODEL,
+                'messages': [{'role': 'user', 'content': prompt}],
+                'max_tokens': 1800,
+                'temperature': 0.7,
+            },
+            timeout=60
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f'HuggingFace HTTP {response.status_code}: {response.text[:300]}')
 
-    req = urllib.request.Request(
-        OPENAI_API_URL,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json',
-        },
-        method='POST'
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        response_json = json.loads(resp.read().decode('utf-8'))
+        response_json = response.json()
+        content = response_json.get('choices', [{}])[0].get('message', {}).get('content', '')
+        generated_questions = extract_json_array(content)
+        questions = [
+            normalize_ai_generated_question(q, idx, category, difficulty)
+            for idx, q in enumerate(generated_questions[:count])
+        ]
+        if not questions:
+            raise RuntimeError('AI 沒有產生題目。')
 
-    refusal = response_json.get('refusal')
-    if refusal:
-        raise RuntimeError('AI 這次拒絕了請求，請改成更明確的學習主題再試一次。')
-
-    text = extract_response_text(response_json)
-    if not text:
-        raise RuntimeError('AI 沒有回傳可解析的題庫內容。')
-
-    generated = json.loads(text)
-    bank = normalize_bank({
-        'id': uid('bank'),
-        'title': generated.get('title') or (topic or 'AI 題庫'),
-        'gameMode': 'individual',
-        'questions': generated.get('questions', []),
-        'updatedAt': now_ts(),
-    })
-    return bank
-
+        return normalize_bank({
+            'id': uid('bank'),
+            'title': f'{topic} 題庫',
+            'gameMode': 'individual',
+            'questions': questions,
+            'updatedAt': now_ts(),
+        })
+    except Exception as e:
+        if ALLOW_AI_FALLBACK:
+            return build_local_fallback_quiz_bank(topic, category, difficulty, count)
+        raise RuntimeError(str(e))
 
 def get_user_exists(username):
     if not username:
@@ -637,21 +745,75 @@ def save_quiz_store(data):
 
 
 def load_quiz_banks_for_user(username):
+    username = str(username or '').strip()
+    if not username:
+        return []
+    if use_postgres_quiz_store():
+        init_postgres_quiz_banks_db()
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT data
+                    FROM quiz_banks
+                    WHERE username = %s
+                    ORDER BY updated_at DESC, id DESC
+                ''', (username,))
+                rows = cur.fetchall()
+        banks = []
+        for row in rows:
+            raw = row.get('data')
+            if isinstance(raw, str):
+                raw = json.loads(raw)
+            banks.append(normalize_bank(raw))
+        return banks
     with _quiz_lock:
         return load_quiz_store()['users'].get(username, [])
 
 
 def save_quiz_banks_for_user(username, banks):
+    username = str(username or '').strip()
+    mutable_banks = []
+    for bank in banks if isinstance(banks, list) else []:
+        if isinstance(bank, dict) and (bank.get('readonly') or bank.get('isSystem') or bank.get('isWrongBook')):
+            continue
+        mutable_banks.append(normalize_bank(bank))
+
+    if use_postgres_quiz_store():
+        init_postgres_quiz_banks_db()
+        incoming_ids = {str(bank.get('id')) for bank in mutable_banks}
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                for bank in mutable_banks:
+                    cur.execute('''
+                        INSERT INTO quiz_banks (username, bank_id, title, data, updated_at)
+                        VALUES (%s, %s, %s, %s::jsonb, %s)
+                        ON CONFLICT(username, bank_id)
+                        DO UPDATE SET
+                            title = EXCLUDED.title,
+                            data = EXCLUDED.data,
+                            updated_at = EXCLUDED.updated_at
+                    ''', (
+                        username,
+                        str(bank.get('id')),
+                        str(bank.get('title') or '未命名題庫'),
+                        json.dumps(bank, ensure_ascii=False),
+                        int(bank.get('updatedAt') or now_ts()),
+                    ))
+
+                if incoming_ids:
+                    cur.execute(
+                        'DELETE FROM quiz_banks WHERE username = %s AND NOT (bank_id = ANY(%s))',
+                        (username, list(incoming_ids))
+                    )
+                else:
+                    cur.execute('DELETE FROM quiz_banks WHERE username = %s', (username,))
+            conn.commit()
+        return
+
     with _quiz_lock:
         data = load_quiz_store()
-        mutable_banks = []
-        for bank in banks if isinstance(banks, list) else []:
-            if isinstance(bank, dict) and (bank.get('readonly') or bank.get('isSystem') or bank.get('isWrongBook')):
-                continue
-            mutable_banks.append(normalize_bank(bank))
         data['users'][username] = mutable_banks
         save_quiz_store(data)
-
 
 def validate_pin(pin):
     return bool(pin and len(pin) == 6 and pin.isdigit())
@@ -935,6 +1097,7 @@ def init_rooms_db():
 ensure_data_store()
 init_users_db()
 init_rooms_db()
+init_postgres_quiz_banks_db()
 ensure_file(QUIZ_BANKS_PATH, {'users': {}})
 
 
