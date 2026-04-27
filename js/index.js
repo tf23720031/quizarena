@@ -11,6 +11,7 @@
     pendingAfterLogin: null,
     friendRequests: [],
     pendingFriendCount: 0,
+    achievements: [],
   };
 
   const $ = (id) => document.getElementById(id);
@@ -210,6 +211,69 @@
     });
   }
 
+  function renderAchievementsSummary(data = {}) {
+    const achievementCount = $("achievementCount");
+    const achievementsList = $("achievementsList");
+    if (!achievementCount || !achievementsList) return;
+
+    const achievements = Array.isArray(data.achievements) ? data.achievements : [];
+    state.achievements = achievements;
+    achievementCount.textContent = `${Number(data.unlockedCount || 0)}/${Number(data.totalCount || achievements.length || 0)}`;
+
+    if (!achievements.length) {
+      achievementsList.innerHTML = `
+        <article class="achievement-card is-empty">
+          <i class="fa-solid fa-award"></i>
+          <div>
+            <strong>尚未載入成就</strong>
+            <span>登入後就能追蹤你的成就進度。</span>
+          </div>
+        </article>
+      `;
+      return;
+    }
+
+    achievementsList.innerHTML = achievements.map((item) => {
+      const progress = Math.max(0, Math.min(100, Number(item.progress || 0)));
+      const current = Number(item.rawCurrent ?? item.current ?? 0);
+      const target = Number(item.target || 1);
+      return `
+        <article class="achievement-card ${item.unlocked ? "is-unlocked" : ""}">
+          <div class="achievement-icon"><i class="fa-solid ${escapeHtml(item.icon || "fa-award")}"></i></div>
+          <div class="achievement-body">
+            <div class="achievement-title-row">
+              <strong>${escapeHtml(item.title)}</strong>
+              <span>${item.unlocked ? "已解鎖" : `${Math.min(current, target)}/${target}`}</span>
+            </div>
+            <p>${escapeHtml(item.description)}</p>
+            <div class="achievement-progress" aria-hidden="true">
+              <span style="width:${progress}%"></span>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  async function loadAchievementsSummary() {
+    const user = getCurrentUser();
+    const achievementsList = $("achievementsList");
+    if (!user) {
+      state.achievements = [];
+      renderAchievementsSummary({ unlockedCount: 0, totalCount: 0, achievements: [] });
+      return;
+    }
+
+    try {
+      const data = await api(`/achievements_summary?username=${encodeURIComponent(user)}`);
+      renderAchievementsSummary(data);
+    } catch (error) {
+      if (achievementsList) {
+        achievementsList.innerHTML = `<article class="achievement-card is-empty"><div><strong>成就載入失敗</strong><span>${escapeHtml(error.message)}</span></div></article>`;
+      }
+    }
+  }
+
   function toggleFriendsDrawer(forceOpen = null) {
     const friendsShell = $("friendsShell");
     if (!friendsShell || friendsShell.style.display === "none") return;
@@ -299,6 +363,7 @@
       state.friendRequests = (data.requestSummary && data.requestSummary.requests) || [];
       renderFriendRequestBadge((data.requestSummary && data.requestSummary.pendingCount) || 0);
       renderFriendRequestsModal();
+      loadAchievementsSummary();
     } catch (error) {
       showToast(error.message);
     }
@@ -465,6 +530,7 @@
       updateAuthUI();
       await loadFriendsOverview();
       await loadFriendRequestSummary();
+      await loadAchievementsSummary();
       showToast(`歡迎回來，${data.username}`);
 
       if (state.pendingAfterLogin === "create_home") {
@@ -518,7 +584,9 @@
   function handleLogout() {
     clearCurrentUser();
     state.friendRequests = [];
+    state.achievements = [];
     renderFriendRequestBadge(0);
+    renderAchievementsSummary({ unlockedCount: 0, totalCount: 0, achievements: [] });
     updateAuthUI();
     const friendsRecords = $("friendsRecords");
     const friendsList = $("friendsList");
@@ -560,6 +628,7 @@
       toggleFriendsDrawer(true);
       loadFriendsOverview();
       loadFriendRequestSummary();
+      loadAchievementsSummary();
     });
 
     $("closeFriendsDrawerBtn")?.addEventListener("click", () => toggleFriendsDrawer(false));
@@ -606,9 +675,11 @@
     loadLobby();
     loadFriendsOverview();
     loadFriendRequestSummary();
+    loadAchievementsSummary();
     setInterval(loadLobby, 8000);
     setInterval(loadFriendsOverview, 15000);
     setInterval(loadFriendRequestSummary, 15000);
+    setInterval(loadAchievementsSummary, 15000);
   }
 
   if (document.readyState === "loading") {

@@ -586,6 +586,84 @@ def get_user_wins_map(usernames):
     return result
 
 
+ACHIEVEMENTS = [
+    {
+        'id': 'welcome',
+        'title': '初次登場',
+        'description': '完成註冊並登入 QuizArena。',
+        'icon': 'fa-id-badge',
+        'metric': 'registered',
+        'target': 1,
+    },
+    {
+        'id': 'first_friend',
+        'title': '找到夥伴',
+        'description': '成功加入 1 位好友。',
+        'icon': 'fa-user-group',
+        'metric': 'friends',
+        'target': 1,
+    },
+    {
+        'id': 'first_win',
+        'title': '首勝到手',
+        'description': '拿下第 1 場勝利。',
+        'icon': 'fa-trophy',
+        'metric': 'wins',
+        'target': 1,
+    },
+    {
+        'id': 'triple_win',
+        'title': '連戰高手',
+        'description': '累積 3 場勝利。',
+        'icon': 'fa-medal',
+        'metric': 'wins',
+        'target': 3,
+    },
+    {
+        'id': 'arena_star',
+        'title': '競技場明星',
+        'description': '累積 10 場勝利。',
+        'icon': 'fa-crown',
+        'metric': 'wins',
+        'target': 10,
+    },
+]
+
+
+def build_achievement_summary(username):
+    username = str(username or '').strip()
+    if not username:
+        return {'username': '', 'unlockedCount': 0, 'totalCount': len(ACHIEVEMENTS), 'achievements': []}
+
+    friends = get_friend_usernames(username)
+    wins = get_user_wins_map([username]).get(username, 0)
+    metrics = {
+        'registered': 1 if get_user_exists(username) else 0,
+        'friends': len(friends),
+        'wins': wins,
+    }
+
+    achievements = []
+    for achievement in ACHIEVEMENTS:
+        current = int(metrics.get(achievement['metric'], 0) or 0)
+        target = int(achievement['target'] or 1)
+        unlocked = current >= target
+        achievements.append({
+            **achievement,
+            'current': min(current, target),
+            'rawCurrent': current,
+            'progress': 100 if unlocked else int((current / max(target, 1)) * 100),
+            'unlocked': unlocked,
+        })
+
+    return {
+        'username': username,
+        'unlockedCount': sum(1 for item in achievements if item['unlocked']),
+        'totalCount': len(achievements),
+        'achievements': achievements,
+    }
+
+
 def build_friends_overview(username):
     if not username:
         return {'currentUser': '', 'friends': [], 'records': []}
@@ -1217,6 +1295,14 @@ def friend_requests_summary_api():
         return jsonify(success=False, message='缺少使用者帳號'), 400
     summary = build_friend_request_summary(username)
     return jsonify(success=True, **summary)
+
+
+@app.route('/achievements_summary')
+def achievements_summary_api():
+    username = str(request.args.get('username', '')).strip()
+    if not username:
+        return jsonify(success=False, message='缺少使用者帳號'), 400
+    return jsonify(success=True, **build_achievement_summary(username))
 
 
 @app.route('/send_friend_request', methods=['POST'])
