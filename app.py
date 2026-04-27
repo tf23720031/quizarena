@@ -99,6 +99,10 @@ def use_postgres_quiz_store():
     return bool(get_database_url() and psycopg2 is not None)
 
 
+def use_postgres_user_store():
+    return use_postgres_quiz_store()
+
+
 def get_pg_conn():
     url = get_database_url()
     if not url or psycopg2 is None:
@@ -546,6 +550,12 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', 
 def get_user_exists(username):
     if not username:
         return False
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT 1 FROM users WHERE username=%s LIMIT 1', (username,))
+                row = cur.fetchone()
+        return row is not None
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         row = conn.execute('SELECT 1 FROM users WHERE username=?', (username,)).fetchone()
     return row is not None
@@ -554,6 +564,20 @@ def get_user_exists(username):
 def get_friend_usernames(username):
     if not username:
         return []
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT CASE
+                        WHEN requester = %s THEN addressee
+                        ELSE requester
+                    END AS friend_name
+                    FROM user_friendships
+                    WHERE (requester = %s OR addressee = %s) AND status = 'accepted'
+                    ORDER BY friend_name ASC
+                ''', (username, username, username))
+                rows = cur.fetchall()
+        return [row['friend_name'] for row in rows]
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         rows = conn.execute('''
@@ -572,6 +596,15 @@ def get_user_wins_map(usernames):
     names = [str(name).strip() for name in usernames if str(name).strip()]
     if not names:
         return {}
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT username, wins FROM user_stats WHERE username = ANY(%s)', (names,))
+                rows = cur.fetchall()
+        result = {name: 0 for name in names}
+        for row in rows:
+            result[row['username']] = int(row.get('wins') or 0)
+        return result
     placeholders = ','.join('?' for _ in names)
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
@@ -626,6 +659,30 @@ ACHIEVEMENTS = [
         'icon': 'fa-crown',
         'metric': 'wins',
         'target': 10,
+    },
+    {
+        'id': 'social_circle',
+        'title': '人氣玩家',
+        'description': '成功加入 3 位好友。',
+        'icon': 'fa-users',
+        'metric': 'friends',
+        'target': 3,
+    },
+    {
+        'id': 'party_builder',
+        'title': '派對核心',
+        'description': '成功加入 5 位好友。',
+        'icon': 'fa-champagne-glasses',
+        'metric': 'friends',
+        'target': 5,
+    },
+    {
+        'id': 'legend_winner',
+        'title': '傳說勝者',
+        'description': '累積 25 場勝利。',
+        'icon': 'fa-gem',
+        'metric': 'wins',
+        'target': 25,
     },
 ]
 
@@ -702,6 +759,16 @@ def describe_client_device(user_agent):
 def get_pending_friend_requests(username):
     if not username:
         return []
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT id, requester, addressee, requester_device, created_at, status
+                    FROM user_friend_requests
+                    WHERE addressee=%s AND status='pending'
+                    ORDER BY created_at DESC, id DESC
+                ''', (username,))
+                return cur.fetchall()
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         rows = conn.execute('''
@@ -716,6 +783,22 @@ def get_pending_friend_requests(username):
 def get_pending_friend_request_between(user_a, user_b):
     if not user_a or not user_b:
         return None
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT id, requester, addressee, requester_device, created_at, status
+                    FROM user_friend_requests
+                    WHERE status='pending'
+                      AND (
+                        (requester=%s AND addressee=%s)
+                        OR
+                        (requester=%s AND addressee=%s)
+                      )
+                    ORDER BY id DESC
+                    LIMIT 1
+                ''', (user_a, user_b, user_b, user_a))
+                return cur.fetchone()
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         return conn.execute('''
@@ -757,6 +840,65 @@ def build_friend_request_summary(username):
     }
 
 
+def record_user_win(room, winner_name, winner_score):
+    ts = now_ts()
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as user_conn:
+            with user_conn.cursor() as cur:
+                cur.execute('SELECT 1 FROM user_match_history WHERE room_pin=%s LIMIT 1', (room.get('pin'),))
+                if cur.fetchone():
+                    return False
+                cur.execute('''
+                    INSERT INTO user_match_history
+                    (room_pin, room_name, bank_id, bank_title, winner_username, winner_score, recorded_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ''', (
+                    room.get('pin') or '',
+                    room.get('room_name') or '',
+                    room.get('bank_id') or '',
+                    room.get('bank_title') or '',
+                    winner_name,
+                    int(winner_score or 0),
+                    ts,
+                ))
+                cur.execute('''
+                    INSERT INTO user_stats (username, wins, updated_at)
+                    VALUES (%s, 1, %s)
+                    ON CONFLICT(username) DO UPDATE SET
+                        wins = user_stats.wins + 1,
+                        updated_at = EXCLUDED.updated_at
+                ''', (winner_name, ts))
+            user_conn.commit()
+        return True
+
+    with closing(sqlite3.connect(USERS_DB_PATH)) as user_conn:
+        already = user_conn.execute('SELECT 1 FROM user_match_history WHERE room_pin=? LIMIT 1', (room.get('pin'),)).fetchone()
+        if already:
+            return False
+        user_conn.execute('''
+            INSERT INTO user_match_history
+            (room_pin, room_name, bank_id, bank_title, winner_username, winner_score, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            room.get('pin') or '',
+            room.get('room_name') or '',
+            room.get('bank_id') or '',
+            room.get('bank_title') or '',
+            winner_name,
+            int(winner_score or 0),
+            ts,
+        ))
+        user_conn.execute('''
+            INSERT INTO user_stats (username, wins, updated_at)
+            VALUES (?, 1, ?)
+            ON CONFLICT(username) DO UPDATE SET
+                wins = user_stats.wins + 1,
+                updated_at = excluded.updated_at
+        ''', (winner_name, ts))
+        user_conn.commit()
+    return True
+
+
 def record_room_winner(conn, pin):
     room = conn.execute('SELECT pin, room_name, bank_id, bank_title FROM rooms WHERE pin=?', (pin,)).fetchone()
     if not room:
@@ -777,30 +919,7 @@ def record_room_winner(conn, pin):
     if not get_user_exists(winner_name):
         return
 
-    already = conn.execute('SELECT 1 FROM user_match_history WHERE room_pin=? LIMIT 1', (pin,)).fetchone()
-    if already:
-        return
-
-    conn.execute('''
-        INSERT INTO user_match_history
-        (room_pin, room_name, bank_id, bank_title, winner_username, winner_score, recorded_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        pin,
-        room.get('room_name') or '',
-        room.get('bank_id') or '',
-        room.get('bank_title') or '',
-        winner_name,
-        int(winner.get('total_score') or 0),
-        now_ts(),
-    ))
-    conn.execute('''
-        INSERT INTO user_stats (username, wins, updated_at)
-        VALUES (?, 1, ?)
-        ON CONFLICT(username) DO UPDATE SET
-            wins = user_stats.wins + 1,
-            updated_at = excluded.updated_at
-    ''', (winner_name, now_ts()))
+    record_user_win(room, winner_name, int(winner.get('total_score') or 0))
 
 
 def load_quiz_store():
@@ -954,7 +1073,66 @@ def calc_kahoot_score(base_score, time_limit_sec, remain_sec, answer_order):
     return int(round(raw / 10) * 10)
 
 
+def init_postgres_users_db():
+    if not use_postgres_user_store():
+        return
+    with closing(get_pg_conn()) as conn:
+        with conn.cursor() as c:
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+                )
+            ''')
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS user_friendships (
+                    id SERIAL PRIMARY KEY,
+                    requester TEXT NOT NULL,
+                    addressee TEXT NOT NULL,
+                    status TEXT DEFAULT 'accepted',
+                    created_at BIGINT,
+                    UNIQUE(requester, addressee)
+                )
+            ''')
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS user_friend_requests (
+                    id SERIAL PRIMARY KEY,
+                    requester TEXT NOT NULL,
+                    addressee TEXT NOT NULL,
+                    requester_device TEXT,
+                    status TEXT DEFAULT 'pending',
+                    created_at BIGINT,
+                    responded_at BIGINT
+                )
+            ''')
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS user_stats (
+                    username TEXT PRIMARY KEY,
+                    wins INTEGER DEFAULT 0,
+                    updated_at BIGINT
+                )
+            ''')
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS user_match_history (
+                    id SERIAL PRIMARY KEY,
+                    room_pin TEXT UNIQUE,
+                    room_name TEXT,
+                    bank_id TEXT,
+                    bank_title TEXT,
+                    winner_username TEXT,
+                    winner_score INTEGER DEFAULT 0,
+                    recorded_at BIGINT
+                )
+            ''')
+        conn.commit()
+
+
 def init_users_db():
+    if use_postgres_user_store():
+        init_postgres_users_db()
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         c = conn.cursor()
         c.execute('''
@@ -1204,6 +1382,20 @@ def register():
             return jsonify(success=False, message='Email 格式不正確'), 400
         if len(password) < 6:
             return jsonify(success=False, message='密碼至少需要 6 個字元'), 400
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute('SELECT username, email FROM users WHERE username=%s OR email=%s LIMIT 1', (username, email))
+                    existing = cur.fetchone()
+                    if existing:
+                        msg = '帳號已存在' if existing.get('username') == username else 'Email 已存在'
+                        return jsonify(success=False, message=msg), 400
+                    cur.execute(
+                        'INSERT INTO users (username, email, password) VALUES (%s, %s, %s)',
+                        (username, email, hash_text(password))
+                    )
+                conn.commit()
+            return jsonify(success=True, message='註冊成功')
         with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.execute('INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
                          (username, email, hash_text(password)))
@@ -1214,7 +1406,7 @@ def register():
         msg = '帳號已存在' if 'username' in text else ('Email 已存在' if 'email' in text else '帳號或 Email 已存在')
         return jsonify(success=False, message=msg), 400
     except Exception as e:
-        return jsonify(success=False, message=f'伺服器錯誤：{e}'), 500
+        return jsonify(success=False, message=f'註冊失敗：{e}'), 500
 
 
 @app.route('/login', methods=['POST'])
@@ -1223,6 +1415,17 @@ def login():
         data = request.get_json() or {}
         username = str(data.get('username', '')).strip()
         password = str(data.get('password', '')).strip()
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        'SELECT username, email FROM users WHERE username = %s AND password = %s',
+                        (username, hash_text(password))
+                    )
+                    user = cur.fetchone()
+            if not user:
+                return jsonify(success=False, message='帳號或密碼錯誤'), 401
+            return jsonify(success=True, username=user['username'], email=user['email'], message='登入成功')
         with closing(get_conn(USERS_DB_PATH)) as conn:
             user = conn.execute(
                 'SELECT username, email FROM users WHERE username = ? AND password = ?',
@@ -1232,7 +1435,7 @@ def login():
             return jsonify(success=False, message='帳號或密碼錯誤'), 401
         return jsonify(success=True, username=user['username'], email=user['email'], message='登入成功')
     except Exception as e:
-        return jsonify(success=False, message=f'伺服器錯誤：{e}'), 500
+        return jsonify(success=False, message=f'登入失敗：{e}'), 500
 
 
 @app.route('/load_quiz_banks')
@@ -1319,6 +1522,44 @@ def send_friend_request_api():
             return jsonify(success=False, message='找不到這個帳號'), 404
 
         a, b = sorted([username, friend_name], key=lambda item: item.lower())
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute('''
+                        SELECT 1 FROM user_friendships
+                        WHERE requester=%s AND addressee=%s AND status='accepted'
+                        LIMIT 1
+                    ''', (a, b))
+                    if cur.fetchone():
+                        return jsonify(success=False, message='你們已經是好友了'), 400
+
+                    cur.execute('''
+                        SELECT id, requester, addressee
+                        FROM user_friend_requests
+                        WHERE status='pending'
+                          AND (
+                            (requester=%s AND addressee=%s)
+                            OR
+                            (requester=%s AND addressee=%s)
+                          )
+                        ORDER BY id DESC
+                        LIMIT 1
+                    ''', (username, friend_name, friend_name, username))
+                    pending = cur.fetchone()
+                    if pending:
+                        if str(pending.get('requester') or '') == friend_name and str(pending.get('addressee') or '') == username:
+                            return jsonify(success=False, message='對方已向你送出申請，請到好友申請接受'), 400
+                        return jsonify(success=False, message='好友申請已送出，請等待對方回應'), 400
+
+                    cur.execute('''
+                        INSERT INTO user_friend_requests
+                        (requester, addressee, requester_device, status, created_at)
+                        VALUES (%s, %s, %s, 'pending', %s)
+                    ''', (username, friend_name, describe_client_device(request.user_agent.string), now_ts()))
+                conn.commit()
+            summary = build_friend_request_summary(friend_name)
+            return jsonify(success=True, message='好友申請已送出', **summary)
+
         with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             existing_friend = conn.execute('''
                 SELECT 1 FROM user_friendships
@@ -1368,6 +1609,43 @@ def respond_friend_request_api():
             return jsonify(success=False, message='缺少申請資訊'), 400
         if action not in {'accept', 'reject'}:
             return jsonify(success=False, message='不支援的操作'), 400
+
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute('''
+                        SELECT id, requester, addressee, status
+                        FROM user_friend_requests
+                        WHERE id=%s AND addressee=%s
+                        LIMIT 1
+                    ''', (request_id, username))
+                    row = cur.fetchone()
+                    if not row:
+                        return jsonify(success=False, message='找不到這筆好友申請'), 404
+                    if str(row.get('status') or '') != 'pending':
+                        return jsonify(success=False, message='這筆申請已處理過'), 400
+
+                    cur.execute('''
+                        UPDATE user_friend_requests
+                        SET status=%s, responded_at=%s
+                        WHERE id=%s
+                    ''', ('accepted' if action == 'accept' else 'rejected', now_ts(), request_id))
+
+                    if action == 'accept':
+                        a, b = sorted([str(row.get('requester') or '').strip(), username], key=lambda item: item.lower())
+                        cur.execute('''
+                            INSERT INTO user_friendships (requester, addressee, status, created_at)
+                            VALUES (%s, %s, 'accepted', %s)
+                            ON CONFLICT(requester, addressee) DO NOTHING
+                        ''', (a, b, now_ts()))
+                conn.commit()
+
+            return jsonify(
+                success=True,
+                message='已接受好友申請' if action == 'accept' else '已忽略好友申請',
+                overview=build_friends_overview(username),
+                requestSummary=build_friend_request_summary(username)
+            )
 
         with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.row_factory = dict_factory
