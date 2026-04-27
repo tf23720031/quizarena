@@ -72,7 +72,23 @@ function createEmptyBank(title = '') {
 function getCurrentBank() {
   return state.quizBanks[state.currentBankIndex] || null;
 }
+function syncCurrentBankHeader() {
+  const bank = getCurrentBank();
+  if (!bank) return;
 
+  const titleInput = $('quizBankTitle');
+  const modeInput = $('bankGameMode');
+
+  if (titleInput) {
+    titleInput.value = bank.title || '';
+    titleInput.disabled = isReadonlyBank(bank);
+  }
+
+  if (modeInput) {
+    modeInput.value = bank.gameMode || 'individual';
+    modeInput.disabled = isReadonlyBank(bank);
+  }
+}
 function isReadonlyBank(bank) {
   return !!(bank?.readonly || bank?.isSystem || bank?.isWrongBook);
 }
@@ -523,6 +539,9 @@ async function confirmBankName() {
     renderQuestionList();
 
     $('bankNameInput').value = '';
+    state.pendingNameMode = 'new';
+    state.pendingBankId = '';
+
     showToast('題庫名稱已更新');
     window.quizAudio?.success?.();
   } catch (e) {
