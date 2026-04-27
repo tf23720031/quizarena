@@ -1,4 +1,6 @@
 (function () {
+  const getAudioManager = () => window.AudioManager || null;
+
   function ensureToggle() {
     if (document.getElementById('audioToggleBtn')) return;
 
@@ -10,17 +12,20 @@
     btn.title = '切換音效';
 
     function render() {
-      const muted = AudioManager?.isMuted?.() ?? false;
+      const audioManager = getAudioManager();
+      const muted = audioManager?.isMuted?.() ?? false;
       btn.innerHTML = muted
         ? '<i class="fa-solid fa-volume-xmark"></i>'
         : '<i class="fa-solid fa-volume-high"></i>';
     }
 
     btn.addEventListener('click', () => {
-      AudioManager?.toggleMute?.();
-      if (!(AudioManager?.isMuted?.())) {
-        AudioManager?.pop?.();
-        AudioManager?.startBgMusic?.();
+      const audioManager = getAudioManager();
+      if (!audioManager) return;
+      audioManager.toggleMute?.();
+      if (!audioManager.isMuted?.()) {
+        audioManager.pop?.();
+        audioManager.startBgMusic?.();
       }
       render();
     });
@@ -30,6 +35,12 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    const audioManager = getAudioManager();
+    if (!audioManager) {
+      console.warn('AudioManager is not available. Check that js/Audio_manager.js is loaded before js/audio.js.');
+      return;
+    }
+
     ensureToggle();
 
     document.body.addEventListener('click', (event) => {
