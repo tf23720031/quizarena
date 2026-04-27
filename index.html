@@ -70,6 +70,20 @@
         <h1>歡迎來到 QuizArena 遊戲大廳</h1>
         <p>你可以直接輸入 PIN，也可以從首頁看公開房間、房主、人數、模式，看到喜歡的房間就立刻加入。</p>
       </div>
+    <section class="lobby-shell" id="friendsShell" style="display:none;">
+      <div class="lobby-header">
+        <div>
+          <h2>好友戰績</h2>
+          <p>登入後可查看自己與好友的勝場數，只有第一名才會增加一場勝利。</p>
+        </div>
+      </div>
+      <div class="join-panel" style="margin-bottom:18px;">
+        <input type="text" id="friendUsernameInput" class="pin-input" placeholder="輸入好友帳號">
+        <button id="addFriendBtn" class="start-btn">加入好友</button>
+      </div>
+      <div id="friendsRecords" class="lobby-grid"></div>
+      <div id="friendsList" class="footer-text text-center" style="margin-top:12px;"></div>
+    </section>
     <section class="lobby-shell">
       <div class="lobby-header">
         <div>
