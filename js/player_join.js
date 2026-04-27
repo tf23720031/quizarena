@@ -253,9 +253,13 @@ async function joinRoom() {
     localStorage.setItem("currentRoomPin", context.room.pin);
     localStorage.setItem("currentRoomKey", context.roomKey || "");
 
-    window.location.href = isHost
-      ? "house_waiting_room.html"
-      : "waiting_room.html";
+    // 加入成功音效
+    try { AudioManager?.joinRoom?.(); } catch(_) {}
+    setTimeout(() => {
+      window.location.href = isHost
+        ? "house_waiting_room.html"
+        : "waiting_room.html";
+    }, 350);
   } catch (e) {
     showToast(e.message);
   }
