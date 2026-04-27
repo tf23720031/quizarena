@@ -633,6 +633,9 @@ body::before {
   margin-bottom: 12px;
   color: #d66b94;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
 }
 
 .bank-card.active {

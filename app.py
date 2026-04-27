@@ -40,6 +40,7 @@ DEFAULT_BANKS_PATH = os.path.join(BASE_DIR, 'default_quiz_banks.json')
 DEFAULT_CATEGORY = '綜合'
 DEFAULT_DIFFICULTY = 'medium'
 VALID_DIFFICULTIES = {'easy', 'medium', 'hard'}
+VALID_QUESTION_TYPES = {'single', 'multiple', 'tf', 'fill'}
 OPENAI_API_URL = 'https://api.openai.com/v1/responses'
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-5')
 
@@ -117,7 +118,7 @@ def normalize_options(question_type, options):
         else:
             text = str(opt).strip()
             correct = False
-        if not text and question_type != 'tf':
+        if not text and question_type not in {'tf', 'fill'}:
             continue
         normalized.append({'text': text or ('是' if idx == 0 else '否'), 'correct': correct})
 
@@ -126,13 +127,18 @@ def normalize_options(question_type, options):
             {'text': '是', 'correct': True},
             {'text': '否', 'correct': False},
         ]
+    elif question_type == 'fill':
+        answer = ''
+        if normalized:
+            answer = normalized[0].get('text', '').strip()
+        normalized = [{'text': answer, 'correct': True}]
     return normalized
 
 
 def normalize_question(raw_question):
     q = raw_question if isinstance(raw_question, dict) else {}
     question_type = str(q.get('type', 'single')).strip().lower()
-    if question_type not in {'single', 'multiple', 'tf'}:
+    if question_type not in VALID_QUESTION_TYPES:
         question_type = 'single'
     options = normalize_options(question_type, q.get('options', []))
     answer_indexes = [i for i, opt in enumerate(options) if opt.get('correct')]
@@ -314,8 +320,8 @@ def fetch_wikipedia_summary(topic):
     return ''
 
 
-def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai'):
-    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', api_key_override=''):
+    api_key = str(api_key_override or '').strip() or os.environ.get('OPENAI_API_KEY', '').strip()
     if not api_key:
         raise RuntimeError('尚未設定 OPENAI_API_KEY，暫時無法使用 AI 生成。')
 
@@ -334,7 +340,7 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai'):
                     'properties': {
                         'title': {'type': 'string'},
                         'content': {'type': 'string'},
-                        'type': {'type': 'string', 'enum': ['single', 'multiple', 'tf']},
+                        'type': {'type': 'string', 'enum': ['single', 'multiple', 'tf', 'fill']},
                         'difficulty': {'type': 'string', 'enum': ['easy', 'medium', 'hard']},
                         'category': {'type': 'string'},
                         'time': {'type': 'string'},
@@ -427,6 +433,111 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai'):
         'updatedAt': now_ts(),
     })
     return bank
+
+
+def get_user_exists(username):
+    if not username:
+        return False
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        row = conn.execute('SELECT 1 FROM users WHERE username=?', (username,)).fetchone()
+    return row is not None
+
+
+def get_friend_usernames(username):
+    if not username:
+        return []
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.row_factory = dict_factory
+        rows = conn.execute('''
+            SELECT CASE
+                WHEN requester = ? THEN addressee
+                ELSE requester
+            END AS friend_name
+            FROM user_friendships
+            WHERE (requester = ? OR addressee = ?) AND status = 'accepted'
+            ORDER BY friend_name COLLATE NOCASE ASC
+        ''', (username, username, username)).fetchall()
+    return [row['friend_name'] for row in rows]
+
+
+def get_user_wins_map(usernames):
+    names = [str(name).strip() for name in usernames if str(name).strip()]
+    if not names:
+        return {}
+    placeholders = ','.join('?' for _ in names)
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.row_factory = dict_factory
+        rows = conn.execute(f'''
+            SELECT username, wins
+            FROM user_stats
+            WHERE username IN ({placeholders})
+        ''', names).fetchall()
+    result = {name: 0 for name in names}
+    for row in rows:
+        result[row['username']] = int(row.get('wins') or 0)
+    return result
+
+
+def build_friends_overview(username):
+    if not username:
+        return {'currentUser': '', 'friends': [], 'records': []}
+    friend_names = get_friend_usernames(username)
+    names = [username] + [name for name in friend_names if name != username]
+    wins_map = get_user_wins_map(names)
+    records = [{'username': name, 'wins': wins_map.get(name, 0)} for name in names]
+    records.sort(key=lambda item: (-item['wins'], item['username'].lower()))
+    return {
+        'currentUser': username,
+        'friends': friend_names,
+        'records': records,
+        'hasWins': any(item['wins'] > 0 for item in records),
+    }
+
+
+def record_room_winner(conn, pin):
+    room = conn.execute('SELECT pin, room_name, bank_id, bank_title FROM rooms WHERE pin=?', (pin,)).fetchone()
+    if not room:
+        return
+    rankings = conn.execute('''
+        SELECT rr.player_name, COALESCE(SUM(rr.points_earned), 0) AS total_score
+        FROM room_results rr
+        JOIN room_players rp ON rp.room_pin = rr.room_pin AND rp.player_name = rr.player_name
+        WHERE rr.room_pin = ?
+          AND NOT (rp.player_name LIKE '__host_%__' AND rp.is_host=1)
+        GROUP BY rr.player_name
+        ORDER BY total_score DESC, rr.player_name ASC
+    ''', (pin,)).fetchall()
+    if not rankings:
+        return
+    winner = rankings[0]
+    winner_name = str(winner.get('player_name') or '').strip()
+    if not get_user_exists(winner_name):
+        return
+
+    already = conn.execute('SELECT 1 FROM user_match_history WHERE room_pin=? LIMIT 1', (pin,)).fetchone()
+    if already:
+        return
+
+    conn.execute('''
+        INSERT INTO user_match_history
+        (room_pin, room_name, bank_id, bank_title, winner_username, winner_score, recorded_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        pin,
+        room.get('room_name') or '',
+        room.get('bank_id') or '',
+        room.get('bank_title') or '',
+        winner_name,
+        int(winner.get('total_score') or 0),
+        now_ts(),
+    ))
+    conn.execute('''
+        INSERT INTO user_stats (username, wins, updated_at)
+        VALUES (?, 1, ?)
+        ON CONFLICT(username) DO UPDATE SET
+            wins = user_stats.wins + 1,
+            updated_at = excluded.updated_at
+    ''', (winner_name, now_ts()))
 
 
 def load_quiz_store():
@@ -577,6 +688,35 @@ def init_users_db():
         ]:
             if col not in wrong_cols:
                 c.execute(f'ALTER TABLE wrong_question_book ADD COLUMN {col} {typ}')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS user_friendships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                requester TEXT NOT NULL,
+                addressee TEXT NOT NULL,
+                status TEXT DEFAULT 'accepted',
+                created_at INTEGER,
+                UNIQUE(requester, addressee)
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS user_stats (
+                username TEXT PRIMARY KEY,
+                wins INTEGER DEFAULT 0,
+                updated_at INTEGER
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS user_match_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_pin TEXT UNIQUE,
+                room_name TEXT,
+                bank_id TEXT,
+                bank_title TEXT,
+                winner_username TEXT,
+                winner_score INTEGER DEFAULT 0,
+                recorded_at INTEGER
+            )
+        ''')
         conn.commit()
 
 
@@ -789,12 +929,48 @@ def generate_quiz_bank_api():
         topic = str(data.get('topic', '')).strip()
         category = str(data.get('category', '')).strip()
         difficulty = normalize_difficulty(data.get('difficulty'))
-        count = max(3, min(12, int(data.get('count', 5) or 5)))
+        count = 5
         source_mode = str(data.get('sourceMode', 'ai')).strip()
-        bank = generate_ai_quiz_bank(topic, category, difficulty, count, source_mode=source_mode)
+        api_key = str(data.get('apiKey', '')).strip()
+        bank = generate_ai_quiz_bank(topic, category, difficulty, count, source_mode=source_mode, api_key_override=api_key)
         return jsonify(success=True, quizBank=bank)
     except Exception as e:
         return jsonify(success=False, message=f'AI 題庫生成失敗：{e}'), 500
+
+
+@app.route('/friends_overview')
+def friends_overview_api():
+    username = str(request.args.get('username', '')).strip()
+    if not username:
+        return jsonify(success=False, message='缺少使用者帳號'), 400
+    overview = build_friends_overview(username)
+    return jsonify(success=True, **overview)
+
+
+@app.route('/add_friend', methods=['POST'])
+def add_friend_api():
+    try:
+        data = request.get_json() or {}
+        username = str(data.get('username', '')).strip()
+        friend_name = str(data.get('friendName', '')).strip()
+        if not username or not friend_name:
+            return jsonify(success=False, message='請輸入好友帳號'), 400
+        if username == friend_name:
+            return jsonify(success=False, message='自己已經在好友榜裡了'), 400
+        if not get_user_exists(username) or not get_user_exists(friend_name):
+            return jsonify(success=False, message='找不到這個帳號'), 404
+
+        a, b = sorted([username, friend_name], key=lambda item: item.lower())
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute('''
+                INSERT OR IGNORE INTO user_friendships (requester, addressee, status, created_at)
+                VALUES (?, ?, 'accepted', ?)
+            ''', (a, b, now_ts()))
+            conn.commit()
+        overview = build_friends_overview(username)
+        return jsonify(success=True, message='好友已加入', **overview)
+    except Exception as e:
+        return jsonify(success=False, message=f'加入好友失敗：{e}'), 500
 
 
 @app.route('/copy_quiz_bank', methods=['POST'])
@@ -1190,6 +1366,37 @@ def leave_room():
         return jsonify(success=False, message=f'離開房間失敗：{e}'), 500
 
 
+@app.route('/kick_player', methods=['POST'])
+def kick_player():
+    try:
+        data = request.get_json(silent=True) or {}
+        pin = str(data.get('pin', '')).strip()
+        host_name = str(data.get('hostName', '')).strip()
+        target_name = str(data.get('targetName', '')).strip()
+        if not pin or not host_name or not target_name:
+            return jsonify(success=False, message='缺少必要資料'), 400
+        with closing(get_conn()) as conn:
+            host_row = conn.execute(
+                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
+                (pin, host_name)
+            ).fetchone()
+            if not host_row:
+                return jsonify(success=False, message='只有房主可以踢人'), 403
+            target = conn.execute(
+                'SELECT is_host FROM room_players WHERE room_pin=? AND player_name=?',
+                (pin, target_name)
+            ).fetchone()
+            if not target:
+                return jsonify(success=False, message='找不到該玩家'), 404
+            if int(target.get('is_host') or 0) == 1:
+                return jsonify(success=False, message='不能踢掉房主'), 400
+            conn.execute('DELETE FROM room_players WHERE room_pin=? AND player_name=?', (pin, target_name))
+            conn.commit()
+        return jsonify(success=True, message='玩家已被移出房間')
+    except Exception as e:
+        return jsonify(success=False, message=f'踢人失敗：{e}'), 500
+
+
 @app.route('/room_state/<pin>')
 def room_state(pin):
     try:
@@ -1572,6 +1779,7 @@ def submit_answer():
         username = str(data.get('username', '')).strip()
         question_id = str(data.get('questionId', '')).strip()
         selected = data.get('selected', [])
+        text_answer = str(data.get('textAnswer', '')).strip()
         remain_sec = int(data.get('remainSeconds', 0) or 0)
         if not isinstance(selected, list):
             selected = []
@@ -1612,7 +1820,12 @@ def submit_answer():
             ).fetchone()
 
             answer_indexes = sorted(json.loads(q['answer_json'] or '[]'))
+            question_type = str(q.get('type') or 'single')
+            options = json.loads(q.get('options_json') or '[]')
             option_labels = [chr(65+i) for i in answer_indexes]
+            fill_answer = ''
+            if question_type == 'fill' and options:
+                fill_answer = str(options[0].get('text') or '').strip()
 
             if existing:
                 total_score = conn.execute(
@@ -1624,10 +1837,15 @@ def submit_answer():
                                pointsEarned=int(existing['points_earned'] or 0),
                                correctIndexes=answer_indexes, correctLabels=option_labels,
                                explanation=q.get('explanation') or '',
-                               answerText='、'.join(option_labels) or '無',
+                               answerText=(fill_answer or '無') if question_type == 'fill' else ('、'.join(option_labels) or '無'),
                                totalScore=total_score)
 
-            is_correct = 1 if selected == answer_indexes else 0
+            if question_type == 'fill':
+                normalized_input = ''.join(text_answer.lower().split())
+                normalized_answer = ''.join(fill_answer.lower().split())
+                is_correct = 1 if normalized_input and normalized_input == normalized_answer else 0
+            else:
+                is_correct = 1 if selected == answer_indexes else 0
             answer_order = 0
             if is_correct:
                 answered_before = conn.execute(
@@ -1699,7 +1917,7 @@ def submit_answer():
                            answerOrder=answer_order,
                            correctIndexes=answer_indexes, correctLabels=option_labels,
                            explanation=q.get('explanation') or '',
-                           answerText='、'.join(option_labels) or '無',
+                           answerText=(fill_answer or '無') if question_type == 'fill' else ('、'.join(option_labels) or '無'),
                            totalScore=total_score, top5=top5, myRank=my_rank,
                            showExactRank=bool(my_rank and my_rank <= 5),
                            eliminated=newly_eliminated,
@@ -1746,10 +1964,17 @@ def host_skip_explanation():
                 'SELECT COUNT(*) AS total FROM room_questions WHERE room_pin=?', (pin,)
             ).fetchone()['total']
             next_index = int(room.get('current_question_index') or 0) + 1
-            conn.execute(
-                "UPDATE rooms SET current_question_index=?,phase='question' WHERE pin=?",
-                (next_index, pin)
-            )
+            if next_index >= total:
+                conn.execute(
+                    "UPDATE rooms SET current_question_index=?,phase='question',status='closed' WHERE pin=?",
+                    (next_index, pin)
+                )
+                record_room_winner(conn, pin)
+            else:
+                conn.execute(
+                    "UPDATE rooms SET current_question_index=?,phase='question' WHERE pin=?",
+                    (next_index, pin)
+                )
             conn.commit()
         return jsonify(success=True, message='已進入下一題', finished=next_index >= total)
     except Exception as e:
@@ -1775,6 +2000,7 @@ def host_end_team_game():
                 "UPDATE rooms SET current_question_index=?,phase='question',status='closed' WHERE pin=?",
                 (total, pin)
             )
+            record_room_winner(conn, pin)
             conn.commit()
         return jsonify(success=True, message='遊戲已結束')
     except Exception as e:

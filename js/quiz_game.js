@@ -45,6 +45,8 @@ const questionTitle   = document.getElementById('questionTitle');
 const questionContent = document.getElementById('questionContent');
 const questionImage   = document.getElementById('questionImage');
 const optionsList     = document.getElementById('optionsList');
+const fillAnswerWrap  = document.getElementById('fillAnswerWrap');
+const fillAnswerInput = document.getElementById('fillAnswerInput');
 const submitAnswerBtn = document.getElementById('submitAnswerBtn');
 
 /* spectator */
@@ -464,7 +466,7 @@ async function loadTeamMessages() {
    ══════════════════════════════════════ */
 function renderHostQuestion(q, answeredCount, totalQuestions) {
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題`;
-  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : '單選題';
+  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : '單選題';
   const isFake    = q.fake_answer ? ' ⚠️ 淘汰題' : '';
   hostQuestionKicker.textContent  = `${typeLabel} ・ ${q.time || '20 秒'} ・ ${q.score} 分${isFake}`;
   hostQuestionTitle.textContent   = q.title || `第 ${answeredCount + 1} 題`;
@@ -558,7 +560,7 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
   hasSubmitted    = false;
 
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題`;
-  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : '單選題';
+  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : '單選題';
   const fakeBadge = q.fake_answer ? ' ⚠️ 淘汰題' : '';
   questionKicker.textContent  = `${typeLabel} ・ ${q.time || '20 秒'} ・ ${q.score} 分${fakeBadge}`;
   questionTitle.textContent   = q.title || `第 ${answeredCount + 1} 題`;
@@ -567,18 +569,28 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
   if (q.image) { questionImage.src = q.image; questionImage.style.display = 'block'; }
   else { questionImage.style.display = 'none'; }
 
-  shuffleMap = buildShuffleMap(q.options || [], q.question_id);
-  optionsList.innerHTML = shuffleMap.map((origIdx, displayPos) => {
-    const opt = (q.options || [])[origIdx];
-    return `<button class="option-btn" data-orig="${origIdx}" data-pos="${displayPos}">
-      <span class="option-letter">${String.fromCharCode(65 + displayPos)}</span>
-      <span>${opt?.text || ''}</span>
-    </button>`;
-  }).join('');
+  if (q.type === 'fill') {
+    optionsList.innerHTML = '';
+    if (fillAnswerWrap) fillAnswerWrap.style.display = 'block';
+    if (fillAnswerInput) {
+      fillAnswerInput.value = '';
+      fillAnswerInput.disabled = false;
+    }
+  } else {
+    if (fillAnswerWrap) fillAnswerWrap.style.display = 'none';
+    shuffleMap = buildShuffleMap(q.options || [], q.question_id);
+    optionsList.innerHTML = shuffleMap.map((origIdx, displayPos) => {
+      const opt = (q.options || [])[origIdx];
+      return `<button class="option-btn" data-orig="${origIdx}" data-pos="${displayPos}">
+        <span class="option-letter">${String.fromCharCode(65 + displayPos)}</span>
+        <span>${opt?.text || ''}</span>
+      </button>`;
+    }).join('');
 
-  document.querySelectorAll('#optionsList .option-btn').forEach(btn =>
-    btn.addEventListener('click', () => toggleOption(Number(btn.dataset.orig)))
-  );
+    document.querySelectorAll('#optionsList .option-btn').forEach(btn =>
+      btn.addEventListener('click', () => toggleOption(Number(btn.dataset.orig)))
+    );
+  }
 
   if (submitAnswerBtn) submitAnswerBtn.style.display = 'inline-block';
 }
@@ -587,7 +599,7 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
 function renderSpectatorQuestion(q, answeredCount, totalQuestions) {
   if (!spectatorQuestionBox) return;
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題（觀戰）`;
-  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : '單選題';
+  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : '單選題';
   if (spectatorKicker)  spectatorKicker.textContent  = `${typeLabel} ・ ${q.time || '20 秒'}`;
   if (spectatorTitle)   spectatorTitle.textContent   = q.title || '';
   if (spectatorContent) spectatorContent.textContent = q.content || '';
@@ -652,13 +664,17 @@ const closePlayerResult = () => resultOverlay?.classList.remove('show');
 /* ── 提交答案 ── */
 async function submitAnswer(isTimeout = false) {
   if (!currentQuestion || hasSubmitted || isHost || isEliminated) return;
-  if (!selected.length && !isTimeout) { showToast('請先選擇答案'); return; }
+  const textAnswer = (fillAnswerInput?.value || '').trim();
+  if (currentQuestion.type === 'fill') {
+    if (!textAnswer && !isTimeout) { showToast('請先輸入答案'); return; }
+  } else if (!selected.length && !isTimeout) { showToast('請先選擇答案'); return; }
 
   hasSubmitted = true;
   stopTimer();
   if (submitAnswerBtn) submitAnswerBtn.style.display = 'none';
   /* 鎖定選項 */
   document.querySelectorAll('#optionsList .option-btn').forEach(b => b.style.pointerEvents = 'none');
+  if (fillAnswerInput) fillAnswerInput.disabled = true;
 
   try {
     const data = await api('/submit_answer', {
@@ -667,7 +683,7 @@ async function submitAnswer(isTimeout = false) {
         pin, playerName: getPlayerName(),
         username: localStorage.getItem('currentUser') || '',
         questionId: currentQuestion.question_id,
-        selected, remainSeconds, isTimeout
+        selected, textAnswer, remainSeconds, isTimeout
       })
     });
 
@@ -710,6 +726,7 @@ async function submitAnswer(isTimeout = false) {
     hasSubmitted = false;
     if (submitAnswerBtn) submitAnswerBtn.style.display = 'inline-block';
     document.querySelectorAll('#optionsList .option-btn').forEach(b => b.style.pointerEvents = '');
+    if (fillAnswerInput) fillAnswerInput.disabled = false;
     showToast(e.message);
   }
 }

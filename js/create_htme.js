@@ -104,7 +104,8 @@ function insertEditableBank(bank) {
 
 // ── 選項渲染 ──────────────────────────────────────
 function createOptionRow(index, type, value = '', checked = false) {
-  const label = type === 'tf' ? (index === 0 ? '是' : '否') : OPTION_LABELS[index];
+  const isFill = type === 'fill';
+  const label = type === 'tf' ? (index === 0 ? '是' : '否') : (isFill ? '答案' : OPTION_LABELS[index]);
   const inputType = type === 'multiple' ? 'checkbox' : 'radio';
   const displayValue = type === 'tf' ? label : value;
   const readonly = type === 'tf' ? 'readonly' : '';
@@ -113,18 +114,18 @@ function createOptionRow(index, type, value = '', checked = false) {
       <span class="option-badge">${label}</span>
       <input class="form-check-input correct-check"
              ${inputType === 'radio' ? 'name="correctAnswer"' : ''}
-             type="${inputType}" ${checked ? 'checked' : ''}>
+             type="${inputType}" ${checked || isFill ? 'checked' : ''} ${isFill ? 'style="display:none;"' : ''}>
       <input class="form-control cute-input option-input"
              value="${escapeHtml(displayValue)}"
-             placeholder="請輸入選項內容" ${readonly}>
+             placeholder="${isFill ? '請輸入正確答案' : '請輸入選項內容'}" ${readonly}>
     </label>`;
 }
 
 function renderOptions(type, options = []) {
   const area = $('optionsArea');
-  const defaultCount = type === 'tf' ? 2 : 4;
+  const defaultCount = type === 'tf' ? 2 : (type === 'fill' ? 1 : 4);
   if (!options.length) {
-    area.innerHTML = Array.from({ length: defaultCount }, (_, i) => createOptionRow(i, type)).join('');
+    area.innerHTML = Array.from({ length: defaultCount }, (_, i) => createOptionRow(i, type, '', type === 'fill')).join('');
     return;
   }
   area.innerHTML = options.map((opt, i) => createOptionRow(i, type, opt.text || '', !!opt.correct)).join('');
@@ -165,12 +166,17 @@ function selectBank(index) {
 
 // ── 題庫列表渲染 ─────────────────────────────────
 function renderBankList() {
-  const wrap = $('quizBankList');
+  const myWrap = $('myQuizBankList');
+  const suggestedWrap = $('suggestedBankList');
+  const myBanks = state.quizBanks.filter((bank) => !bank.isSystem);
+  const suggestedBanks = state.quizBanks.filter((bank) => bank.isSystem);
   if (!state.quizBanks.length) {
-    wrap.innerHTML = '<div class="no-title">還沒有題庫，先建立一個吧。</div>';
+    myWrap.innerHTML = '<div class="no-title">還沒有題庫，先建立一個吧。</div>';
+    suggestedWrap.innerHTML = '<div class="no-title">目前沒有系統建議題庫。</div>';
     return;
   }
-  wrap.innerHTML = state.quizBanks.map((bank, index) => {
+  const renderCards = (list) => list.map((bank) => {
+    const index = state.quizBanks.findIndex((item) => item.id === bank.id);
     const isTeam = bank.gameMode === 'team';
     const readonlyBadge = bank.isWrongBook
       ? `<span class="question-chip py-1 px-2" style="background:#fff1c7;color:#8a5b00;border-radius:8px">錯題本</span>`
@@ -198,6 +204,11 @@ function renderBankList() {
         </div>
       </article>`;
   }).join('');
+  myWrap.innerHTML = myBanks.length ? renderCards(myBanks) : '<div class="no-title">你目前還沒有自訂題庫。</div>';
+  suggestedWrap.innerHTML = suggestedBanks.length ? renderCards(suggestedBanks) : '<div class="no-title">目前沒有系統建議題庫。</div>';
+
+  const wrongBook = state.quizBanks.find((bank) => bank.isWrongBook);
+  $('wrongBookQuickWrap').style.display = wrongBook?.questions?.length ? 'block' : 'none';
 
   document.querySelectorAll('.bank-card').forEach((el) => {
     el.addEventListener('click', (e) => {
@@ -277,7 +288,11 @@ function collectQuestionForm() {
     .map((input, index) => ({ text: input.value.trim(), correct: !!checks[index]?.checked }))
     .filter((item) => item.text !== '');
 
-  if (type === 'tf') {
+  if (type === 'fill') {
+    if (!options.length || !options[0].text) { showToast('填充題需要設定正確答案'); return null; }
+    options.splice(1);
+    options[0].correct = true;
+  } else if (type === 'tf') {
     if (options.length !== 2) { showToast('是非題只能有兩個選項'); return null; }
     if (options.filter(i => i.correct).length !== 1) { showToast('是非題必須只有一個正確答案'); return null; }
   } else if (type === 'single') {
@@ -365,6 +380,7 @@ async function loadBanks() {
   renderBankList();
   renderQuestionList();
   resetQuestionForm();
+  $('aiApiKeyInput').value = localStorage.getItem('quizOpenAIApiKey') || '';
 }
 
 async function handleBankSave() {
@@ -612,6 +628,8 @@ async function createRoom() {
 async function generateAiBank() {
   const topic = $('aiTopicInput').value.trim();
   if (!topic) { showToast('請先輸入 AI 題庫主題'); return; }
+  const apiKey = $('aiApiKeyInput').value.trim();
+  if (apiKey) localStorage.setItem('quizOpenAIApiKey', apiKey);
 
   try {
     const data = await api('/generate_quiz_bank', {
@@ -620,8 +638,8 @@ async function generateAiBank() {
         topic,
         category: $('aiCategoryInput').value.trim(),
         difficulty: $('aiDifficultyInput').value,
-        count: Number($('aiCountInput').value || 5),
-        sourceMode: $('aiSourceModeInput').value
+        sourceMode: $('aiSourceModeInput').value,
+        apiKey
       })
     });
     insertEditableBank(data.quizBank);
@@ -637,6 +655,13 @@ async function generateAiBank() {
     showToast(e.message);
     window.quizAudio?.fail?.();
   }
+}
+
+function openWrongBookChallenge() {
+  const wrongBookIndex = state.quizBanks.findIndex((bank) => bank.isWrongBook && (bank.questions || []).length);
+  if (wrongBookIndex < 0) { showToast('目前還沒有錯題可以挑戰'); return; }
+  selectBank(wrongBookIndex);
+  showToast('已切換到錯題本，直接選題後就能開房複習');
 }
 
 // ── 事件綁定 ──────────────────────────────────────
@@ -662,6 +687,7 @@ $('pasteQuestionBtn').addEventListener('click', pasteQuestion);
 $('clearQuestionBtn').addEventListener('click', resetQuestionForm);
 $('deleteQuestionBtn').addEventListener('click', handleDeleteQuestion);
 $('generateAiBankBtn').addEventListener('click', generateAiBank);
+$('openWrongBookBtn').addEventListener('click', openWrongBookChallenge);
 
 $('openRoomSettingsBtn').addEventListener('click', () => {
   const bank = getCurrentBank();

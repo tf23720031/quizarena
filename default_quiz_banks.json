@@ -55,6 +55,40 @@
             { "text": "頂級掠食者", "correct": false },
             { "text": "雲層", "correct": false }
           ]
+        },
+        {
+          "id": "science_easy_2",
+          "title": "行星知識",
+          "content": "地球繞著哪一個天體公轉？",
+          "type": "single",
+          "category": "自然科學",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "地球會繞著太陽公轉，形成一年四季與年度循環。",
+          "options": [
+            { "text": "太陽", "correct": true },
+            { "text": "月亮", "correct": false },
+            { "text": "火星", "correct": false },
+            { "text": "木星", "correct": false }
+          ]
+        },
+        {
+          "id": "science_medium_2",
+          "title": "人體器官功能",
+          "content": "人體中負責將血液送往全身的器官是什麼？",
+          "type": "single",
+          "category": "自然科學",
+          "difficulty": "medium",
+          "time": "20 秒",
+          "score": 1000,
+          "explanation": "心臟會收縮與舒張，把血液循環送往全身。",
+          "options": [
+            { "text": "心臟", "correct": true },
+            { "text": "肺臟", "correct": false },
+            { "text": "肝臟", "correct": false },
+            { "text": "腎臟", "correct": false }
+          ]
         }
       ]
     },
@@ -111,6 +145,40 @@
             { "text": "是", "correct": true },
             { "text": "否", "correct": false }
           ]
+        },
+        {
+          "id": "history_easy_2",
+          "title": "長城所在",
+          "content": "萬里長城最著名地位於哪一個國家？",
+          "type": "single",
+          "category": "歷史",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "萬里長城是中國歷史上著名的大型防禦工程。",
+          "options": [
+            { "text": "中國", "correct": true },
+            { "text": "日本", "correct": false },
+            { "text": "韓國", "correct": false },
+            { "text": "印度", "correct": false }
+          ]
+        },
+        {
+          "id": "history_medium_2",
+          "title": "大航海時代",
+          "content": "大航海時代帶來了哪些影響？",
+          "type": "multiple",
+          "category": "歷史",
+          "difficulty": "medium",
+          "time": "30 秒",
+          "score": 1000,
+          "explanation": "大航海時代促進洲際交流、貿易擴張，也改變了世界政治與經濟結構。",
+          "options": [
+            { "text": "促進洲際交流", "correct": true },
+            { "text": "帶動海外貿易", "correct": true },
+            { "text": "完全停止殖民行為", "correct": false },
+            { "text": "改變世界地理認知", "correct": true }
+          ]
         }
       ]
     },
@@ -166,6 +234,37 @@
           "options": [
             { "text": "是", "correct": true },
             { "text": "否", "correct": false }
+          ]
+        },
+        {
+          "id": "english_easy_2",
+          "title": "日常單字",
+          "content": "單字 \"teacher\" 的意思是哪一個？",
+          "type": "single",
+          "category": "英文",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "teacher 指的是老師，是常見的職業英文單字。",
+          "options": [
+            { "text": "老師", "correct": true },
+            { "text": "醫生", "correct": false },
+            { "text": "警察", "correct": false },
+            { "text": "工程師", "correct": false }
+          ]
+        },
+        {
+          "id": "english_medium_2",
+          "title": "填空挑戰",
+          "content": "I ___ to school every day. 請填入最適合的一個英文單字。",
+          "type": "fill",
+          "category": "英文",
+          "difficulty": "medium",
+          "time": "20 秒",
+          "score": 1000,
+          "explanation": "主詞是 I，表示日常習慣時，常用原形動詞 go。",
+          "options": [
+            { "text": "go", "correct": true }
           ]
         }
       ]

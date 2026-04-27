@@ -100,6 +100,9 @@ function renderTeamJoinButtons(teams, players, teamSize) {
 
 // ── 渲染玩家列表 ─────────────────────────────────
 function renderPlayerList(players) {
+  const isCurrentHost = !!players.find(p => p.player_name === playerProfile.name && p.is_host);
+  const inviteBtn = document.getElementById('inviteRoomBtn');
+  if (inviteBtn) inviteBtn.style.display = isCurrentHost ? 'inline-flex' : 'none';
   document.getElementById('playerList').innerHTML = players.map(p => `
     <div class="player-entry">
       ${avatarHtml(p)}
@@ -113,7 +116,23 @@ function renderPlayerList(players) {
             .toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
+      ${isCurrentHost && !p.is_host ? `<button class="leave-soft kick-btn" data-player="${p.player_name}">踢出</button>` : ''}
     </div>`).join('');
+
+  document.querySelectorAll('.kick-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await api('/kick_player', {
+          method: 'POST',
+          body: JSON.stringify({ pin, hostName: playerProfile.name, targetName: btn.dataset.player })
+        });
+        showToast(`已踢出 ${btn.dataset.player}`);
+        loadRoomState();
+      } catch (e) {
+        showToast(e.message);
+      }
+    });
+  });
 }
 
 // ── 渲染聊天 ─────────────────────────────────────
@@ -227,6 +246,16 @@ async function leaveRoom() {
   }
 }
 
+async function copyInvite() {
+  try {
+    const roomName = document.getElementById('roomName').textContent.trim();
+    await navigator.clipboard.writeText(`加入我的 QuizArena 房間：${roomName}，PIN：${pin}`);
+    showToast('邀請資訊已複製');
+  } catch (_) {
+    showToast('複製失敗，請手動分享 PIN');
+  }
+}
+
 function leaveRoomOnUnload() {
   if (!pin || !playerProfile?.name || hasLeftRoom || isInternalNav) return;
   hasLeftRoom = true;
@@ -251,6 +280,7 @@ async function sendHeartbeat() {
 
 document.getElementById('chatForm').addEventListener('submit', sendMessage);
 document.getElementById('leaveRoomBtn').addEventListener('click', leaveRoom);
+document.getElementById('inviteRoomBtn')?.addEventListener('click', copyInvite);
 window.addEventListener('beforeunload', leaveRoomOnUnload);
 
 // ── 初始化 ───────────────────────────────────────

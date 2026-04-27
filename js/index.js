@@ -27,6 +27,11 @@ const lobbyGrid = document.getElementById("lobbyGrid");
 const waitingRoomCount = document.getElementById("waitingRoomCount");
 const onlinePlayerCount = document.getElementById("onlinePlayerCount");
 const privateRoomCount = document.getElementById("privateRoomCount");
+const friendsShell = document.getElementById("friendsShell");
+const friendUsernameInput = document.getElementById("friendUsernameInput");
+const addFriendBtn = document.getElementById("addFriendBtn");
+const friendsRecords = document.getElementById("friendsRecords");
+const friendsList = document.getElementById("friendsList");
 
 const state = {
   rooms: [],
@@ -72,6 +77,59 @@ function updateAuthUI() {
     loginStatus.textContent = "尚未登入";
     loginBtn.classList.remove("d-none");
     logoutBtn.classList.add("d-none");
+  }
+  if (friendsShell) friendsShell.style.display = user ? "block" : "none";
+}
+
+function renderFriendsOverview(data) {
+  if (!friendsRecords || !friendsList) return;
+  const records = data.records || [];
+  if (!records.length || !data.hasWins) {
+    friendsRecords.innerHTML = '<div class="empty-lobby text-pink">目前你和好友都還沒有勝場紀錄。</div>';
+  } else {
+    friendsRecords.innerHTML = records.map((item, index) => `
+      <article class="room-card">
+        <div class="room-top">
+          <div>
+            <h3>${item.username}</h3>
+            <div class="small-text">${index === 0 ? "目前領先" : "好友榜成員"}</div>
+          </div>
+          <span class="badge-qa"><i class="fa-solid fa-trophy"></i> ${item.wins} 勝</span>
+        </div>
+      </article>
+    `).join("");
+  }
+  friendsList.textContent = (data.friends || []).length
+    ? `好友列表：${data.friends.join("、")}`
+    : "好友列表：目前還沒有好友";
+}
+
+async function loadFriendsOverview() {
+  const user = getCurrentUser();
+  if (!user || !friendsShell) return;
+  try {
+    const data = await api(`/friends_overview?username=${encodeURIComponent(user)}`);
+    renderFriendsOverview(data);
+  } catch (e) {
+    if (friendsRecords) friendsRecords.innerHTML = `<div class="empty-lobby text-pink">${e.message}</div>`;
+  }
+}
+
+async function handleAddFriend() {
+  const user = getCurrentUser();
+  const friendName = friendUsernameInput?.value.trim();
+  if (!user) { showToast("請先登入再加入好友"); return; }
+  if (!friendName) { showToast("請輸入好友帳號"); return; }
+  try {
+    const data = await api("/add_friend", {
+      method: "POST",
+      body: JSON.stringify({ username: user, friendName })
+    });
+    if (friendUsernameInput) friendUsernameInput.value = "";
+    renderFriendsOverview(data);
+    showToast(data.message || "好友已加入");
+  } catch (e) {
+    showToast(e.message);
   }
 }
 function saveJoinContext(room, roomKey = "", isHost = false) {
@@ -271,6 +329,7 @@ async function handleLogin(event) {
     setCurrentUser(data.username);
     memberModal.hide();
     updateAuthUI();
+    loadFriendsOverview();
     showToast(`歡迎回來，${data.username}`);
     window.quizAudio?.success?.();
 
@@ -327,6 +386,8 @@ function handleCreateQuizClick() {
 function handleLogout() {
   clearCurrentUser();
   updateAuthUI();
+  if (friendsRecords) friendsRecords.innerHTML = "";
+  if (friendsList) friendsList.textContent = "";
   showToast("已登出");
 }
 
@@ -345,10 +406,13 @@ createQuizBtn.addEventListener("click", handleCreateQuizClick);
 
 loginForm.addEventListener("submit", handleLogin);
 registerForm.addEventListener("submit", handleRegister);
+addFriendBtn?.addEventListener("click", handleAddFriend);
 
 updateAuthUI();
 loadLobby();
+loadFriendsOverview();
 setInterval(loadLobby, 8000);
+setInterval(loadFriendsOverview, 15000);
 
 const showLoginBtn = document.getElementById("showLoginBtn");
 const showRegisterBtn = document.getElementById("showRegisterBtn");

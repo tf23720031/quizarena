@@ -42,7 +42,16 @@
                   <i class="fa-solid fa-plus"></i>
                 </button>
               </div>
-              <div id="quizBankList" class="mini-list-box bank-list-box"></div>
+              <div id="wrongBookQuickWrap" class="soft-box mb-3" style="display:none;">
+                <div class="section-label mb-2">快速複習</div>
+                <button class="top-action btn-play w-100" id="openWrongBookBtn" type="button">
+                  <i class="fa-solid fa-bolt"></i> 一鍵進入錯題再挑戰
+                </button>
+              </div>
+              <div class="section-label mb-2">我的題庫</div>
+              <div id="myQuizBankList" class="mini-list-box bank-list-box"></div>
+              <div class="section-label mt-3 mb-2">系統建議題庫</div>
+              <div id="suggestedBankList" class="mini-list-box bank-list-box"></div>
             </div>
           </div>
 
@@ -107,6 +116,7 @@
                         <option value="single">單選題</option>
                         <option value="multiple">多選題</option>
                         <option value="tf">是非題</option>
+                        <option value="fill">填充題</option>
                       </select>
                     </div>
                     <div class="col-md-4">
@@ -205,26 +215,27 @@
                         <input type="text" id="aiTopicInput" class="form-control cute-input"
                                placeholder="主題，例如：國中理化、英文時態、世界地理">
                       </div>
+                      <div class="col-12">
+                        <input type="password" id="aiApiKeyInput" class="form-control cute-input"
+                               placeholder="OpenAI API Key（未設環境變數時可填這裡）">
+                      </div>
                       <div class="col-md-5">
                         <input type="text" id="aiCategoryInput" class="form-control cute-input"
                                placeholder="類別，例如：自然科學">
                       </div>
-                      <div class="col-md-3">
+                      <div class="col-md-4">
                         <select id="aiDifficultyInput" class="form-select cute-select">
                           <option value="easy">Easy</option>
                           <option value="medium" selected>Medium</option>
                           <option value="hard">Hard</option>
                         </select>
                       </div>
-                      <div class="col-md-2">
-                        <select id="aiCountInput" class="form-select cute-select">
-                          <option value="3">3 題</option>
-                          <option value="5" selected>5 題</option>
-                          <option value="8">8 題</option>
-                          <option value="10">10 題</option>
-                        </select>
+                      <div class="col-md-3">
+                        <div class="cute-input d-flex align-items-center justify-content-center" style="font-weight:800;">
+                          固定 5 題
+                        </div>
                       </div>
-                      <div class="col-md-2">
+                      <div class="col-md-3">
                         <select id="aiSourceModeInput" class="form-select cute-select">
                           <option value="ai">AI 生成</option>
                           <option value="web_ai">網路參考</option>
