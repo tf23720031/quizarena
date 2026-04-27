@@ -912,6 +912,13 @@ def player_game_state():
             ).fetchone()
             my_team_id    = int((me or {}).get('team_id') or 0)
             is_eliminated = bool((me or {}).get('is_eliminated') or 0)
+            players = conn.execute('''
+                SELECT player_name, face, hair, eyes, eyes_offset_y, is_host, is_eliminated, team_id
+                FROM room_players
+                WHERE room_pin=?
+                  AND NOT (player_name LIKE '__host_%__' AND is_host=1)
+                ORDER BY is_host DESC, joined_at ASC, id ASC
+            ''', (pin,)).fetchall()
 
             questions = conn.execute(
                 'SELECT * FROM room_questions WHERE room_pin=? ORDER BY seq ASC,id ASC', (pin,)
@@ -1012,7 +1019,18 @@ def player_game_state():
                 ai = sorted(json.loads(current_q['answer_json'] or '[]'))
                 correct_answer_text = '、'.join(chr(65+i) for i in ai) or '無'
                 explanation_text = current_q.get('explanation') or ''
-
+            elif is_team_mode:
+                # 團體模式也回傳玩家列表給前端右側名單使用
+                answer_status = [{
+                    'player_name': p.get('player_name'),
+                    'face': p.get('face'),
+                    'hair': p.get('hair'),
+                    'eyes': p.get('eyes'),
+                    'eyes_offset_y': p.get('eyes_offset_y'),
+                    'is_host': p.get('is_host'),
+                    'is_eliminated': p.get('is_eliminated'),
+                    'answered': 0
+                } for p in players]
             team_question_status = []
             if is_team_mode:
                 for q in questions:
@@ -1071,6 +1089,7 @@ def player_game_state():
             myTeamId=my_team_id, phase=phase,
             myAnswered=my_answered, myResult=my_result,
             answerStatus=answer_status, answerBreakdown=answer_breakdown,
+            players=players,
             myRank=my_rank, showExactRank=bool(my_rank and my_rank <= 5),
             correctAnswerText=correct_answer_text, explanation=explanation_text,
             gameStartTs=int(room.get('game_start_ts') or 0),
