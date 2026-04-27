@@ -903,3 +903,103 @@ body::before {
     min-height: 180px;
   }
 }
+/* ================================
+   AI 生題區塊輸入框修正
+================================ */
+
+#aiSourceModeInput,
+#aiDifficultyInput,
+#aiCountInput,
+#aiCategoryInput,
+#aiTopicInput {
+  min-height: 58px;
+  padding: 14px 18px;
+  font-size: 1rem;
+  border-radius: 18px;
+  line-height: 1.4;
+}
+
+/* 你圈起來的「網路」選單 */
+#aiSourceModeInput {
+  min-width: 160px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+/* AI 生題那排選項不要太擠 */
+.ai-control-row,
+.ai-form-row,
+.ai-setting-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* 手機版改成一欄 */
+@media (max-width: 768px) {
+  .ai-control-row,
+  .ai-form-row,
+  .ai-setting-row {
+    grid-template-columns: 1fr;
+  }
+
+  #aiSourceModeInput,
+  #aiDifficultyInput,
+  #aiCountInput,
+  #aiCategoryInput,
+  #aiTopicInput {
+    width: 100%;
+  }
+}
+
+/* ================================
+   答案輸入框修正
+================================ */
+
+.option-row {
+  display: grid;
+  grid-template-columns: auto 28px 1fr;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.option-input {
+  min-width: 0;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 16px;
+  font-size: 1rem;
+  border-radius: 18px;
+}
+
+/* 答案區域不要被壓縮 */
+#optionsArea {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 如果右側表單寬度太窄，讓它舒服一點 */
+.editor-panel,
+.question-editor,
+.create-editor {
+  min-width: 0;
+}
+
+/* 小螢幕答案列改成直向，避免看不到字 */
+@media (max-width: 576px) {
+  .option-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .option-badge {
+    width: fit-content;
+  }
+
+  .correct-check {
+    justify-self: start;
+  }
+}
