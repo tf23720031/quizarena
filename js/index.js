@@ -164,10 +164,11 @@ function renderLobby(rooms) {
     });
   }
 
-  const includeLobbyViewer = currentUser && joinedPins.size === 0 ? 1 : 0;
-
+  // 大廳中瀏覽的人（不在任何房間的訪客/登入者）都算在線
+  // 這裡只能估算，用 1 代表「至少有你在看」
+  const browsing = 1; // 當前這個打開大廳的人
   waitingRoomCount.textContent = rooms.filter(r => r.status === "waiting").length;
-  onlinePlayerCount.textContent = roomPlayers + includeLobbyViewer;
+  onlinePlayerCount.textContent = roomPlayers + browsing;
   privateRoomCount.textContent = rooms.filter(r => r.is_private).length;
 
   if (!rooms.length) {
