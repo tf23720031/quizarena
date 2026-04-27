@@ -119,6 +119,40 @@
       <aside class="player-side-panel glass-card">
         <div class="psp-title"><i class="fa-solid fa-users"></i> 玩家</div>
         <div id="playerSideList" class="player-side-list"></div>
+        @@ -97,50 +97,58 @@
+            <p class="spectator-hint">你仍可以看到題目、解析和排名，但無法繼續作答。</p>
+          </div>
+          <!-- 觀戰者也看得到題目（唯讀） -->
+          <div class="spectator-question-box" id="spectatorQuestionBox" style="display:none;">
+            <div class="question-kicker" id="spectatorKicker">Question</div>
+            <h2 class="question-title" id="spectatorTitle"></h2>
+            <p class="question-content" id="spectatorContent"></p>
+            <img id="spectatorImage" class="question-image" alt="" style="display:none;">
+            <div id="spectatorOptionsList" class="options-list spectator-options"></div>
+          </div>
+        </div>
+
+        <!-- 遊戲結束 -->
+        <div id="finishWrap" class="finish-wrap" style="display:none;">
+          <h2>🎉 遊戲結束！</h2>
+          <p>感謝參與，最終結果請見結算頁面。</p>
+          <div class="finish-score">你的總分：<strong id="finishScoreText">0</strong></div>
+        </div>
+
+      </section>
+
+      <!-- 右側：玩家頭像 -->
+      <aside class="player-side-panel glass-card">
+        <div class="psp-title"><i class="fa-solid fa-users"></i> 玩家</div>
+        <div id="playerSideList" class="player-side-list"></div>
+        <div id="teamChatBox" class="team-chat-box" style="display:none;">
+          <div class="team-chat-title"><i class="fa-solid fa-comments"></i> 隊伍聊天室</div>
+          <div id="teamChatList" class="team-chat-list"></div>
+          <form id="teamChatForm" class="team-chat-form">
+            <input id="teamChatInput" type="text" maxlength="120" placeholder="輸入訊息和隊友討論..." />
+            <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+          </form>
+        </div>
       </aside>
 
     </section>
