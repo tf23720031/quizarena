@@ -597,7 +597,7 @@ body.dark-mode .spectator-hint { background: rgba(255,60,60,.1); color: #ff9999;
 body.dark-mode .host-answer-item { color: #ffffff; }
 body.dark-mode .host-answer-item span { color: rgba(255,255,255,.9); }
 .result-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
-.host-badge-label { background: linear-gradient(135deg,#6c5ce7,#a29bfe) !important; color: #fff !important; }
+.host-badge-label {  color: #fff !important; }
 
 /* 淘汰通知 */
 .eliminated-notice {
