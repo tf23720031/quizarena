@@ -350,7 +350,8 @@ function startTimer(seconds, onEnd) {
     remainSeconds = Math.max(0, remainSeconds - 1);
     countdownText.textContent = remainSeconds;
     if (remainSeconds > 0 && remainSeconds <= 5 && !isHost && !isEliminated) {
-      AudioManager?.tick(remainSeconds <= 2);
+      if (remainSeconds === 3) AudioManager?.countdown3();
+      else AudioManager?.tick(remainSeconds <= 2);
     }
     if (remainSeconds <= 0) { stopTimer(); onEnd?.(); }
   }, 1000);
@@ -680,6 +681,7 @@ function showView(view) {
 }
 
 function handleState(data) {
+  try {
   const q     = data.nextQuestion;
   const qId   = q?.question_id || null;
   const phase = data.phase || 'question';
@@ -705,7 +707,7 @@ function handleState(data) {
       if (isHost) {
         renderHostQuestion(q, data.answeredCount, data.totalQuestions);
         if (phase === 'question') {
-          startTimer(parseInt(q.time) || 20, () => {
+          startTimer((parseInt(String(q.time||'').replace(/[^0-9]/g,'')) || 20), () => {
             showToast('時間到，正在進入統計...');
             hostFinishQuestion();
           });
@@ -716,7 +718,7 @@ function handleState(data) {
         renderPlayerQuestion(q, data.answeredCount, data.totalQuestions);
         AudioManager?.questionStart();
         if (phase === 'question') {
-          startTimer(parseInt(q.time) || 20, () => submitAnswer(true));
+          startTimer((parseInt(String(q.time||'').replace(/[^0-9]/g,'')) || 20), () => submitAnswer(true));
         }
       }
     }
@@ -731,7 +733,7 @@ function handleState(data) {
       renderHostAnswerStatus(data.answerStatus || []);
       renderHostBreakdown([]);
       if (!qChanged && !timerInterval && q) {
-        startTimer(remainSeconds || parseInt(q.time) || 20, () => {
+        startTimer(remainSeconds || (parseInt(String(q.time||'').replace(/[^0-9]/g,'')) || 20), () => {
           showToast('時間到，正在進入統計...');
           hostFinishQuestion();
         });
@@ -790,6 +792,10 @@ function handleState(data) {
     totalScoreText.textContent  = data.totalScore ?? 0;
     finishScoreText.textContent = data.totalScore ?? 0;
   }
+  } catch(err) {
+    console.error('[handleState error]', err);
+    showToast('狀態更新錯誤：' + err.message);
+  }
 }
 
 /* ── main poll ── */
@@ -831,7 +837,8 @@ async function loadState(force = false) {
     handleState(data);
 
   } catch (e) {
-    showToast(e.message);
+    showToast('載入失敗：' + e.message);
+    console.error('[loadState error]', e);
   }
 }
 
@@ -955,13 +962,16 @@ nextQuestionBtn?.addEventListener('click', closePlayerResult);
 
 hostSkipExplanationBtn?.addEventListener('click', async () => {
   closeHostExplanation();
+  AudioManager?.click();
   try {
     await api('/host_skip_explanation', { method: 'POST', body: JSON.stringify({ pin, playerName: getPlayerName() }) });
+    AudioManager?.questionStart();
     await loadState(true);
   } catch (e) { showToast(e.message); }
 });
 
 hostAllDoneSkipBtn?.addEventListener('click', async () => {
+  AudioManager?.click();
   try {
     await api('/host_finish_question', { method: 'POST', body: JSON.stringify({ pin, playerName: getPlayerName() }) });
     await loadState(true);
@@ -985,7 +995,10 @@ function tryStartBg() {
   bgStarted = true;
   AudioManager?.startBgMusic();
 }
-document.addEventListener('click', tryStartBg, { once: true });
+document.addEventListener('click', () => {
+  tryStartBg();
+  AudioManager?.gameStart();
+}, { once: true });
 document.addEventListener('keydown', tryStartBg, { once: true });
 
 loadState(true);
