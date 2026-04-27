@@ -80,7 +80,29 @@ function createEmptyBank(title = '') {
     updatedAt: Math.floor(Date.now() / 1000)
   };
 }
+function getLocalDraftKey() {
+  return `quizarena_draft_${state.currentUser || 'guest'}`;
+}
 
+function saveLocalDraft() {
+  if (!state.currentUser) return;
+  const mutable = getMutableBanks();
+  localStorage.setItem(getLocalDraftKey(), JSON.stringify({
+    savedAt: Math.floor(Date.now() / 1000),
+    quizBanks: mutable
+  }));
+}
+
+function loadLocalDraft() {
+  if (!state.currentUser) return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(getLocalDraftKey()) || 'null');
+    const banks = Array.isArray(raw?.quizBanks) ? raw.quizBanks : [];
+    return banks;
+  } catch {
+    return [];
+  }
+}
 function getCurrentBank() {
   return state.quizBanks[state.currentBankIndex] || null;
 }
@@ -516,13 +538,17 @@ async function saveAllBanks() {
       quizBanks: getMutableBanks()
     })
   });
+  saveLocalDraft();
 }
 
 async function loadBanks() {
   const data = await api(`/load_quiz_banks?username=${encodeURIComponent(state.currentUser)}`);
+  const localDraftBanks = loadLocalDraft();
+  const serverBanks = data.quizBanks || [];
+  const effectiveBanks = serverBanks.length ? serverBanks : localDraftBanks;
 
   state.quizBanks = mergeLoadedBanks(
-    data.quizBanks || [],
+    effectiveBanks,
     data.systemQuizBanks || [],
     data.wrongBook || null
   );
@@ -563,7 +589,7 @@ async function handleBankSave() {
   window.quizAudio?.success?.();
 }
 
-function handleAddQuestion() {
+async function handleAddQuestion() {
   const bank = getCurrentBank();
   if (!bank) return;
 
@@ -586,14 +612,14 @@ function handleAddQuestion() {
   } else {
     bank.questions.push(question);
   }
-
+  await saveAllBanks();
   renderBankList();
   renderQuestionList();
   showToast(idx >= 0 ? '題目已更新' : '題目已新增');
   window.quizAudio?.success?.();
 }
 
-function handleDeleteQuestion() {
+async function handleDeleteQuestion() {
   const bank = getCurrentBank();
 
   if (!bank || !state.editingQuestionId) {
@@ -607,7 +633,7 @@ function handleDeleteQuestion() {
   }
 
   bank.questions = bank.questions.filter((q) => q.id !== state.editingQuestionId);
-
+  await saveAllBanks();
   resetQuestionForm();
   renderBankList();
   renderQuestionList();
@@ -833,6 +859,7 @@ async function createRoom() {
   const isTeam = $('teamModeSelect').value === 'true';
   const teamCount = isTeam ? Math.max(2, parseInt($('teamCountInput')?.value) || 2) : 0;
   const teamSize = isTeam ? Math.max(1, parseInt($('teamSizeInput')?.value) || 4) : 0;
+  const teamPlayMode = isTeam ? String($('teamPlayModeSelect')?.value || 'classic') : 'classic';
   const teamNames = isTeam
     ? [...document.querySelectorAll('.team-name-input')].map((el) => el.value.trim())
     : [];
@@ -861,6 +888,7 @@ async function createRoom() {
         teamMode: isTeam,
         teamCount,
         teamSize,
+        teamPlayMode,
         teamNames,
         roomQuestions
       })
@@ -1054,6 +1082,17 @@ $('imageUpload').addEventListener('change', (event) => {
   try {
     await loadBanks();
   } catch (e) {
+    const localDraftBanks = loadLocalDraft();
+    if (localDraftBanks.length) {
+      state.quizBanks = mergeLoadedBanks(localDraftBanks, [], null);
+      state.currentBankIndex = firstEditableBankIndex();
+      syncCurrentBankHeader();
+      renderBankList();
+      renderQuestionList();
+      resetQuestionForm();
+      showToast('已從瀏覽器草稿恢復題庫資料');
+      return;
+    }
     showToast(e.message || '題庫讀取失敗');
   }
 })();
