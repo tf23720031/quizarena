@@ -991,7 +991,11 @@ body::before {
 
 @media (max-width: 576px) {
   .option-row {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 44px minmax(0, 1fr) 24px !important;
+  }
+
+  .option-row.is-fill {
+    grid-template-columns: 44px minmax(0, 1fr) !important;
   }
 
   .option-input {
