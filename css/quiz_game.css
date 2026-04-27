@@ -178,8 +178,8 @@ body.dark-mode::before {
 .mini-avatar { position: relative; flex-shrink: 0; overflow: hidden; }
 .ma-layer { position: absolute; left: 50%; transform: translateX(-50%); width: 100%; bottom: 0; pointer-events: none; }
 .ma-face { z-index: 1; }
-.ma-eyes { z-index: 2; }
-.ma-hair { z-index: 3; }
+.ma-hair { z-index: 2; }
+.ma-eyes { z-index: 3; }
 
 /* ── main board ── */
 .main-board { padding: 24px; }
