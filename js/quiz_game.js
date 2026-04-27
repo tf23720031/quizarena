@@ -117,7 +117,7 @@ function avatarHtml(p, size = 48) {
   const face = p.face || 'images/face/face.png';
   const hair = p.hair || 'images/hair/hair01.png';
   const eyes = p.eyes || 'images/face/eyes01.png';
-  const oy   = p.eyes_offset_y || p.eyesOffsetY || 0;
+  const oy   = Number(p.eyes_offset_y ?? p.eyesOffsetY ?? 0);
   return `<div class="mini-avatar" style="width:${size}px;height:${size}px;">
     <img src="${face}" class="ma-layer ma-face">
     <img src="${eyes}" class="ma-layer ma-eyes" style="transform:translateX(-50%) translateY(${oy}px)">
