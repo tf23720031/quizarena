@@ -17,6 +17,18 @@ DEFAULT_EYES = 'images/face/eyes01.png'
 _quiz_lock = threading.Lock()
 
 
+def log_startup_diagnostics():
+    try:
+        files = sorted(os.listdir(PROJECT_DIR))
+    except Exception as exc:
+        files = [f'<listdir failed: {exc}>']
+    print('[QuizArena] BASE_DIR =', BASE_DIR, flush=True)
+    print('[QuizArena] PROJECT_DIR =', PROJECT_DIR, flush=True)
+    print('[QuizArena] index.html exists =', os.path.exists(os.path.join(PROJECT_DIR, 'index.html')), flush=True)
+    print('[QuizArena] app.py exists =', os.path.exists(os.path.join(PROJECT_DIR, 'app.py')), flush=True)
+    print('[QuizArena] project files =', files, flush=True)
+
+
 def now_ts():
     return int(time.time())
 
@@ -84,16 +96,4 @@ def validate_pin(pin):
 def room_exists(pin):
     with closing(get_conn()) as conn:
         return conn.execute('SELECT 1 FROM rooms WHERE pin = ?', (pin,)).fetchone() is not None
-
-
-def fetch_room(pin):
-    with closing(get_conn()) as conn:
-        return conn.execute('SELECT * FROM rooms WHERE pin = ?', (pin,)).fetchone()
-
-
-def generate_unique_pin(length=6):
-    while True:
-        pin = str(random.randint(10 ** (length - 1), (10 ** length) - 1))
-        if not room_exists(pin):
-            return pin
 
