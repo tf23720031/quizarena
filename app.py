@@ -1,99 +1,196 @@
-from flask import Flask, send_from_directory, request, jsonify
-import os, sqlite3, json, hashlib, random, time, threading
-from contextlib import closing
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_DIR = BASE_DIR
-USERS_DB_PATH = os.path.join(BASE_DIR, 'quizarena.db')
-ROOMS_DB_PATH = os.path.join(BASE_DIR, 'rooms.db')
-QUIZ_BANKS_PATH = os.path.join(BASE_DIR, 'quiz_banks.json')
+            if existing:
+                total_score = conn.execute(
+                    'SELECT COALESCE(SUM(points_earned),0) AS total FROM room_results WHERE room_pin=? AND player_name=?',
+                    (pin, player_name)
+                ).fetchone()['total']
+                return jsonify(success=True, alreadyAnswered=True,
+                               isCorrect=bool(existing['is_correct']),
+                               pointsEarned=int(existing['points_earned'] or 0),
+                               correctIndexes=answer_indexes, correctLabels=option_labels,
+                               explanation=q.get('explanation') or '',
+                               answerText='、'.join(option_labels) or '無',
+                               totalScore=total_score)
 
-app = Flask(__name__, static_folder=PROJECT_DIR, static_url_path='')
+            is_correct = 1 if selected == answer_indexes else 0
+            answer_order = 0
+            if is_correct:
+                answered_before = conn.execute(
+                    'SELECT COUNT(*) AS c FROM room_results WHERE room_pin=? AND question_id=?',
+                    (pin, question_id)
+                ).fetchone()['c']
+                answer_order = answered_before + 1
+                time_limit = int(''.join(filter(str.isdigit, q.get('time_label') or '20')) or 20)
+                points = calc_kahoot_score(int(q.get('score') or 1000), time_limit, remain_sec, answer_order)
+            else:
+                points = 0
 
-DEFAULT_FACE = 'images/face/face.png'
-DEFAULT_HAIR = 'images/hair/hair01.png'
-DEFAULT_EYES = 'images/face/eyes01.png'
+            conn.execute('''
+                INSERT INTO room_results
+                (room_pin,player_name,question_id,selected_json,is_correct,points_earned,answer_order,remain_sec,answered_at)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            ''', (pin, player_name, question_id, json.dumps(selected, ensure_ascii=False),
+                  is_correct, points, answer_order, remain_sec, now_ts()))
 
-_quiz_lock = threading.Lock()
+            # ── 淘汰模式處理 ────────────────────────────
+            # fake_answer=1 且答錯 → 把玩家標記為淘汰，積分歸零
+            is_fake_mode = bool(q.get('fake_answer') or 0)
+            newly_eliminated = False
+            if is_fake_mode and not is_correct:
+                conn.execute(
+                    'UPDATE room_players SET is_eliminated=1 WHERE room_pin=? AND player_name=?',
+                    (pin, player_name)
+                )
+                # 所有舊的積分清零（INSERT OR REPLACE 把 points_earned 全設 0）
+                conn.execute(
+                    'UPDATE room_results SET points_earned=0 WHERE room_pin=? AND player_name=?',
+                    (pin, player_name)
+                )
+                newly_eliminated = True
+            # ────────────────────────────────────────────
+
+            total_score = conn.execute(
+                'SELECT COALESCE(SUM(points_earned),0) AS total FROM room_results WHERE room_pin=? AND player_name=?',
+                (pin, player_name)
+            ).fetchone()['total']
+            top5 = conn.execute('''
+                SELECT player_name,COALESCE(SUM(points_earned),0) AS total_score
+                FROM room_results rr
+                JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
+                WHERE rr.room_pin=? AND rp.is_eliminated=0
+                GROUP BY rr.player_name ORDER BY total_score DESC,rr.player_name ASC LIMIT 5
+            ''', (pin,)).fetchall()
+            all_rank = conn.execute('''
+                SELECT rr.player_name,COALESCE(SUM(rr.points_earned),0) AS total_score
+                FROM room_results rr
+                JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
+                WHERE rr.room_pin=? AND rp.is_eliminated=0
+                GROUP BY rr.player_name ORDER BY total_score DESC,rr.player_name ASC
+            ''', (pin,)).fetchall()
+            my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
+            conn.commit()
+
+            return jsonify(success=True, isCorrect=bool(is_correct), pointsEarned=points,
+                           answerOrder=answer_order,
+                           correctIndexes=answer_indexes, correctLabels=option_labels,
+                           explanation=q.get('explanation') or '',
+                           answerText='、'.join(option_labels) or '無',
+                           totalScore=total_score, top5=top5, myRank=my_rank,
+                           showExactRank=bool(my_rank and my_rank <= 5),
+                           eliminated=newly_eliminated,
+                           isFakeMode=is_fake_mode)
+    except Exception as e:
+        return jsonify(success=False, message=f'提交答案失敗：{e}'), 500
 
 
-def log_startup_diagnostics():
+@app.route('/host_finish_question', methods=['POST'])
+def host_finish_question():
     try:
-        files = sorted(os.listdir(PROJECT_DIR))
-    except Exception as exc:
-        files = [f'<listdir failed: {exc}>']
-    print('[QuizArena] BASE_DIR =', BASE_DIR, flush=True)
-    print('[QuizArena] PROJECT_DIR =', PROJECT_DIR, flush=True)
-    print('[QuizArena] index.html exists =', os.path.exists(os.path.join(PROJECT_DIR, 'index.html')), flush=True)
-    print('[QuizArena] app.py exists =', os.path.exists(os.path.join(PROJECT_DIR, 'app.py')), flush=True)
-    print('[QuizArena] project files =', files, flush=True)
+        data = request.get_json() or {}
+        pin = str(data.get('pin', '')).strip()
+        player_name = str(data.get('playerName', '')).strip()
+        with closing(get_conn()) as conn:
+            if not conn.execute(
+                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
+                (pin, player_name)
+            ).fetchone():
+                return jsonify(success=False, message='只有房主可以操作'), 403
+            conn.execute("UPDATE rooms SET phase='explanation' WHERE pin=?", (pin,))
+            conn.commit()
+        return jsonify(success=True, message='已進入解析階段')
+    except Exception as e:
+        return jsonify(success=False, message=f'切換解析階段失敗：{e}'), 500
 
 
-def now_ts():
-    return int(time.time())
+@app.route('/host_skip_explanation', methods=['POST'])
+def host_skip_explanation():
+    try:
+        data = request.get_json() or {}
+        pin = str(data.get('pin', '')).strip()
+        player_name = str(data.get('playerName', '')).strip()
+        with closing(get_conn()) as conn:
+            if not conn.execute(
+                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
+                (pin, player_name)
+            ).fetchone():
+                return jsonify(success=False, message='只有房主可以操作'), 403
+            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
+            if not room:
+                return jsonify(success=False, message='房間不存在'), 404
+            total = conn.execute(
+                'SELECT COUNT(*) AS total FROM room_questions WHERE room_pin=?', (pin,)
+            ).fetchone()['total']
+            next_index = int(room.get('current_question_index') or 0) + 1
+            conn.execute(
+                "UPDATE rooms SET current_question_index=?,phase='question' WHERE pin=?",
+                (next_index, pin)
+            )
+            conn.commit()
+        return jsonify(success=True, message='已進入下一題', finished=next_index >= total)
+    except Exception as e:
+        return jsonify(success=False, message=f'切換下一題失敗：{e}'), 500
 
 
-def host_alive_cutoff(seconds=80):
-    return now_ts() - seconds
+@app.route('/host_end_team_game', methods=['POST'])
+def host_end_team_game():
+    try:
+        data = request.get_json() or {}
+        pin = str(data.get('pin', '')).strip()
+        player_name = str(data.get('playerName', '')).strip()
+        with closing(get_conn()) as conn:
+            if not conn.execute(
+                'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
+                (pin, player_name)
+            ).fetchone():
+                return jsonify(success=False, message='只有房主可以操作'), 403
+            total = conn.execute(
+                'SELECT COUNT(*) AS t FROM room_questions WHERE room_pin=?', (pin,)
+            ).fetchone()['t']
+            conn.execute(
+                "UPDATE rooms SET current_question_index=?,phase='question',status='closed' WHERE pin=?",
+                (total, pin)
+            )
+            conn.commit()
+        return jsonify(success=True, message='遊戲已結束')
+    except Exception as e:
+        return jsonify(success=False, message=f'結束遊戲失敗：{e}'), 500
 
 
-def uid(prefix='id'):
-    return f"{prefix}_{now_ts()}_{random.randint(1000,9999)}"
+@app.route('/host_all_results')
+def host_all_results():
+    try:
+        pin = request.args.get('pin', '').strip()
+        if not pin:
+            return jsonify(success=False, message='缺少 PIN'), 400
+        with closing(get_conn()) as conn:
+            questions = conn.execute(
+                'SELECT question_id,seq,title FROM room_questions WHERE room_pin=? ORDER BY seq ASC', (pin,)
+            ).fetchall()
+            results = conn.execute(
+                'SELECT rr.*,rp.team_id FROM room_results rr JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name WHERE rr.room_pin=? ORDER BY rp.team_id ASC,rr.player_name ASC',
+                (pin,)
+            ).fetchall()
+        q_order = {q['question_id']: q['seq'] for q in questions}
+        q_titles = {q['question_id']: q['title'] for q in questions}
+        enriched = [{
+            'player_name': r['player_name'], 'team_id': r['team_id'],
+            'question_id': r['question_id'],
+            'seq': q_order.get(r['question_id'], 0),
+            'title': q_titles.get(r['question_id'], ''),
+            'selected_json': r['selected_json'],
+            'is_correct': bool(r['is_correct']),
+            'points_earned': int(r['points_earned'] or 0),
+            'answer_order': int(r['answer_order'] or 0),
+        } for r in results]
+        return jsonify(success=True, results=enriched)
+    except Exception as e:
+        return jsonify(success=False, message=f'讀取明細失敗：{e}'), 500
 
 
-def hash_text(text: str) -> str:
-    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+@app.route('/<path:filename>')
+def static_files(filename):
+    return send_from_directory(PROJECT_DIR, filename)
 
 
-def dict_factory(cursor, row):
-    return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
-
-
-def get_conn(path=ROOMS_DB_PATH):
-    conn = sqlite3.connect(path)
-    conn.row_factory = dict_factory
-    conn.execute('PRAGMA foreign_keys = ON')
-    conn.execute('PRAGMA journal_mode = WAL')
-    return conn
-
-
-def ensure_file(path, default_obj):
-    if not os.path.exists(path):
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(default_obj, f, ensure_ascii=False, indent=2)
-
-
-def load_quiz_store():
-    ensure_file(QUIZ_BANKS_PATH, {'users': {}})
-    with open(QUIZ_BANKS_PATH, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    if not isinstance(data, dict) or not isinstance(data.get('users'), dict):
-        data = {'users': {}}
-    return data
-
-
-def save_quiz_store(data):
-    with open(QUIZ_BANKS_PATH, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def load_quiz_banks_for_user(username):
-    with _quiz_lock:
-        return load_quiz_store()['users'].get(username, [])
-
-
-def save_quiz_banks_for_user(username, banks):
-    with _quiz_lock:
-        data = load_quiz_store()
-        data['users'][username] = banks
-        save_quiz_store(data)
-
-
-def validate_pin(pin):
-    return bool(pin and len(pin) == 6 and pin.isdigit())
-
-
-def room_exists(pin):
-    with closing(get_conn()) as conn:
-        return conn.execute('SELECT 1 FROM rooms WHERE pin = ?', (pin,)).fetchone() is not None
-
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
