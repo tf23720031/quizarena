@@ -10,29 +10,27 @@
 </head>
 <body>
   <main class="game-shell">
-
-    <!-- 頂部資訊列 -->
     <header class="game-topbar">
       <img src="images/LOGO.png" alt="logo" class="game-logo">
       <div class="game-badges">
         <span class="badge-pill">PIN <strong id="roomPinText">------</strong></span>
         <span class="badge-pill">玩家 <strong id="playerNameText">-</strong></span>
-        <span class="badge-pill">身分 <strong id="roleText">-</strong></span>
+        <span class="badge-pill">身份 <strong id="roleText">-</strong></span>
         <span class="badge-pill">倒數 <strong id="countdownText">-</strong></span>
-        <span class="badge-pill" id="scoreBadgePill">分數 <strong id="totalScoreText">0</strong></span>
+        <span class="badge-pill" id="scoreBadgePill">總分 <strong id="totalScoreText">0</strong></span>
       </div>
       <div class="topbar-actions">
         <select class="lang-select" id="langSelect" title="語言 / Language">
-          <option value="zh">🌐 中文</option>
-          <option value="en">🌐 English</option>
-          <option value="ja">🌐 日本語</option>
-          <option value="ko">🌐 한국어</option>
-          <option value="es">🌐 Español</option>
+          <option value="zh">繁體中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="es">Español</option>
         </select>
         <button class="icon-btn" id="muteBtn" title="靜音">
           <i class="fa-solid fa-volume-high" id="muteIcon"></i>
         </button>
-        <button class="icon-btn" id="darkModeBtn" title="切換深色模式">
+        <button class="icon-btn" id="darkModeBtn" title="深色模式">
           <i class="fa-solid fa-moon" id="darkModeIcon"></i>
         </button>
         <button class="leave-game-btn" id="leaveGameBtn">
@@ -41,24 +39,18 @@
       </div>
     </header>
 
-    <!-- 主佈局 -->
     <section class="game-layout">
-
-      <!-- 左側：進度 + 排行榜 -->
       <aside class="side-board glass-card">
         <div class="progress-copy" id="progressText">題目載入中...</div>
-        <div class="leaderboard-title">🏅 排行榜</div>
+        <div class="leaderboard-title">排行榜</div>
         <div id="leaderboardList" class="leaderboard-list"></div>
       </aside>
 
-      <!-- 中央主視角 -->
       <section class="main-board glass-card">
-
-        <!-- 房主視角 -->
         <div id="hostView" style="display:none;">
           <div class="host-question-header">
             <span class="question-kicker" id="hostQuestionKicker">Question</span>
-            <h2 class="question-title" id="hostQuestionTitle">等待遊戲開始...</h2>
+            <h2 class="question-title" id="hostQuestionTitle">題目載入中...</h2>
             <p class="question-content" id="hostQuestionContent"></p>
             <img id="hostQuestionImage" class="question-image" alt="" style="display:none;">
             <div id="hostOptionsList" class="options-list host-options-list"></div>
@@ -76,7 +68,6 @@
           </div>
         </div>
 
-        <!-- 玩家視角 -->
         <div id="playerView" style="display:none;">
           <div id="questionWrap">
             <div class="question-kicker" id="questionKicker">Question</div>
@@ -84,19 +75,17 @@
             <p class="question-content" id="questionContent"></p>
             <img id="questionImage" class="question-image" alt="" style="display:none;">
             <div id="optionsList" class="options-list"></div>
-            <button id="submitAnswerBtn" class="submit-btn">提交答案</button>
+            <button id="submitAnswerBtn" class="submit-btn">送出答案</button>
           </div>
         </div>
 
-        <!-- 觀戰模式（被淘汰）-->
         <div id="spectatorView" style="display:none;">
           <div class="spectator-banner">
-            <div class="spectator-icon">💀</div>
-            <h2>你已被淘汰</h2>
-            <p>答錯了淘汰題！積分歸零，目前為觀戰模式。</p>
-            <p class="spectator-hint">你仍可以看到題目、解析和排名，但無法繼續作答。</p>
+            <div class="spectator-icon">👀</div>
+            <h2>你目前是觀戰模式</h2>
+            <p>你仍然可以看到題目、解析與排行榜，但不能再繼續作答。</p>
+            <p class="spectator-hint">你可以先觀察其他玩家的表現，等待本局結束。</p>
           </div>
-          <!-- 觀戰者也看得到題目（唯讀） -->
           <div class="spectator-question-box" id="spectatorQuestionBox" style="display:none;">
             <div class="question-kicker" id="spectatorKicker">Question</div>
             <h2 class="question-title" id="spectatorTitle"></h2>
@@ -106,93 +95,59 @@
           </div>
         </div>
 
-        <!-- 遊戲結束 -->
         <div id="finishWrap" class="finish-wrap" style="display:none;">
-          <h2>🎉 遊戲結束！</h2>
-          <p>感謝參與，最終結果請見結算頁面。</p>
+          <h2>遊戲結束</h2>
+          <p>本局作答已完成，正在整理你的最終排名與得分。</p>
           <div class="finish-score">你的總分：<strong id="finishScoreText">0</strong></div>
         </div>
-
       </section>
 
-      <!-- 右側：玩家頭像 -->
-      <aside class="player-side-panel glass-card">
-        <div class="psp-title"><i class="fa-solid fa-users"></i> 玩家</div>
-        <div id="playerSideList" class="player-side-list"></div>
-        @@ -97,50 +97,58 @@
-            <p class="spectator-hint">你仍可以看到題目、解析和排名，但無法繼續作答。</p>
-          </div>
-          <!-- 觀戰者也看得到題目（唯讀） -->
-          <div class="spectator-question-box" id="spectatorQuestionBox" style="display:none;">
-            <div class="question-kicker" id="spectatorKicker">Question</div>
-            <h2 class="question-title" id="spectatorTitle"></h2>
-            <p class="question-content" id="spectatorContent"></p>
-            <img id="spectatorImage" class="question-image" alt="" style="display:none;">
-            <div id="spectatorOptionsList" class="options-list spectator-options"></div>
-          </div>
-        </div>
-
-        <!-- 遊戲結束 -->
-        <div id="finishWrap" class="finish-wrap" style="display:none;">
-          <h2>🎉 遊戲結束！</h2>
-          <p>感謝參與，最終結果請見結算頁面。</p>
-          <div class="finish-score">你的總分：<strong id="finishScoreText">0</strong></div>
-        </div>
-
-      </section>
-
-      <!-- 右側：玩家頭像 -->
       <aside class="player-side-panel glass-card">
         <div class="psp-title"><i class="fa-solid fa-users"></i> 玩家</div>
         <div id="playerSideList" class="player-side-list"></div>
         <div id="teamChatBox" class="team-chat-box" style="display:none;">
-          <div class="team-chat-title"><i class="fa-solid fa-comments"></i> 隊伍聊天室</div>
+          <div class="team-chat-title"><i class="fa-solid fa-comments"></i> 隊伍聊天</div>
           <div id="teamChatList" class="team-chat-list"></div>
           <form id="teamChatForm" class="team-chat-form">
-            <input id="teamChatInput" type="text" maxlength="120" placeholder="輸入訊息和隊友討論..." />
+            <input id="teamChatInput" type="text" maxlength="120" placeholder="輸入隊伍訊息..." />
             <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
           </form>
         </div>
       </aside>
-
     </section>
   </main>
 
-  <!-- 玩家結果 Overlay -->
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
-      <div class="result-badge" id="resultBadge">答對了！</div>
+      <div class="result-badge" id="resultBadge">答題結果</div>
       <div class="result-score">本題得分：<strong id="earnedScoreText">0</strong></div>
-      <div class="result-answer">正解：<span id="correctAnswerText">A</span></div>
+      <div class="result-answer">正確答案：<span id="correctAnswerText">A</span></div>
       <div class="result-my-score">目前總分：<strong id="myLiveScoreText">0</strong></div>
       <div class="result-rank-box" id="myRankBox" style="display:none;">
-        <strong id="myRankText">你目前第 1 名</strong>
+        <strong id="myRankText">目前排名第 1 名</strong>
       </div>
-      <!-- 淘汰通知 -->
       <div class="eliminated-notice" id="eliminatedNotice" style="display:none;">
         <i class="fa-solid fa-skull"></i>
-        你已被淘汰！積分歸零，進入觀戰模式。
+        你已被淘汰，但仍可觀看題目、解析與排行榜。
       </div>
       <div class="result-top5-title">目前前五名</div>
       <div id="resultTop5List" class="result-top5-list"></div>
       <div class="result-explanation" id="resultExplanation"></div>
       <div class="result-actions">
-        <button class="submit-btn" id="nextQuestionBtn" style="display:none;">繼續觀戰</button>
+        <button class="submit-btn" id="nextQuestionBtn" style="display:none;">繼續觀看下一題</button>
       </div>
     </div>
   </div>
 
-  <!-- 房主解析 Overlay -->
   <div class="result-overlay" id="hostExplanationOverlay">
     <div class="result-card">
-      <div class="result-badge host-badge-label">📊 本題結果</div>
-      <div class="result-answer">正解：<span id="hostCorrectAnswerText">-</span></div>
+      <div class="result-badge host-badge-label">本題解析</div>
+      <div class="result-answer">正確答案：<span id="hostCorrectAnswerText">-</span></div>
       <div class="result-explanation" id="hostExplanationText">-</div>
-      <div class="result-top5-title">目前排行</div>
+      <div class="result-top5-title">目前前五名</div>
       <div id="hostResultTop5List" class="result-top5-list"></div>
-      <!-- 淘汰玩家列表 -->
       <div id="hostEliminatedList" class="host-eliminated-list" style="display:none;">
-        <div class="host-eliminated-title">💀 本題淘汰玩家</div>
+        <div class="host-eliminated-title">本題淘汰玩家</div>
         <div id="hostEliminatedNames"></div>
       </div>
       <div class="result-actions">
@@ -203,28 +158,26 @@
     </div>
   </div>
 
-  <!-- 頒獎台 Overlay -->
   <div class="podium-overlay" id="podiumOverlay" style="display:none;">
     <div class="podium-card">
-      <div class="podium-title">🏆 遊戲結束！最終排名</div>
+      <div class="podium-title">遊戲結束，最終前三名</div>
       <div id="podiumInner" class="podium-inner"></div>
       <button class="submit-btn podium-continue-btn" id="podiumContinueBtn">
-        查看完整結算 <i class="fa-solid fa-chevron-right"></i>
+        查看完整排名 <i class="fa-solid fa-chevron-right"></i>
       </button>
     </div>
   </div>
 
-  <!-- 結算 Overlay -->
   <div class="scoreboard-overlay" id="scoreboardOverlay" style="display:none;">
     <div class="scoreboard-card">
-      <div class="podium-title">📊 完整結算</div>
+      <div class="podium-title">完整排行榜</div>
       <div id="scoreboardWrap"></div>
       <div id="hostDetailSection" style="display:none; margin-top:24px;">
-        <div class="host-detail-title">📋 每人每題明細（房主限定）</div>
+        <div class="host-detail-title">所有玩家作答紀錄</div>
         <div id="hostDetailWrap" class="host-detail-wrap"></div>
       </div>
       <button class="submit-btn" id="backHomeBtn" style="margin-top:24px;">
-        <i class="fa-solid fa-house"></i> 回首頁
+        <i class="fa-solid fa-house"></i> 回到首頁
       </button>
     </div>
   </div>

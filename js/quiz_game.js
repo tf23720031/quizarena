@@ -409,6 +409,14 @@ function renderPlayerSideList(answerStatus = []) {
     </div>`;
   }).join('');
 }
+
+function updateHostAllDoneButton(answerStatus = []) {
+  if (!hostAllDoneSkipBtn) return;
+  const activePlayers = (answerStatus || []).filter(p => !p.is_host && !p.is_eliminated);
+  const allAnswered = activePlayers.length > 0 && activePlayers.every(p => !!p.answered);
+  hostAllDoneSkipBtn.style.display = (isHost && currentPhase === 'question' && allAnswered) ? 'inline-block' : 'none';
+}
+
 function setupTeamChatUI(data) {
   isTeamMode = !!data.isTeamMode;
   myTeamId   = Number(data.myTeamId || 0);
@@ -496,9 +504,7 @@ function renderHostAnswerStatus(items = [], eliminatedThisRound = []) {
         </div>`).join('')
     : '<div class="host-answer-item wait"><span>尚無玩家</span></div>';
 
-  if (hostAllDoneSkipBtn) {
-    hostAllDoneSkipBtn.style.display = (total > 0 && done >= total) ? 'inline-block' : 'none';
-  }
+  updateHostAllDoneButton(items);
 
   /* 顯示本題淘汰名單 */
   if (hostEliminatedList && hostEliminatedNames) {
@@ -776,6 +782,7 @@ function handleState(data) {
   }
 
   renderPlayerSideList(data.answerStatus || []);
+  updateHostAllDoneButton(data.answerStatus || []);
 
   const phaseKey = `${qId}:${phase}`;
 
