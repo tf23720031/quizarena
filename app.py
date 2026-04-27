@@ -842,7 +842,7 @@ def serialize_room(room):
     room = dict(room)
     for key in ['is_private', 'team_mode', 'allow_lobby_join']:
         room[key] = bool(room.get(key, 0))
-    room['room_key_plain'] = room.get('room_key_plain') or ''
+    room['room_key_plain'] = ''
     return room
 
 
@@ -1009,6 +1009,7 @@ def init_rooms_db():
             'status': "TEXT DEFAULT 'waiting'", 'max_players': 'INTEGER DEFAULT 8',
             'team_mode': 'INTEGER DEFAULT 0', 'team_count': 'INTEGER DEFAULT 2',
             'team_size': 'INTEGER DEFAULT 4', 'allow_lobby_join': 'INTEGER DEFAULT 1',
+            'team_play_mode': 'TEXT DEFAULT "classic"',
             'current_question_index': 'INTEGER DEFAULT 0',
             'phase': "TEXT DEFAULT 'question'",
             'game_start_ts': 'INTEGER DEFAULT 0', 'created_at': 'INTEGER'
@@ -1476,6 +1477,9 @@ def create_room():
         room_key = str(data.get('roomKey', '')).strip()
         allow_lobby_join = 1 if (is_private or bool(data.get('allowLobbyJoin', True))) else 0
         team_mode = 1 if bool(data.get('teamMode', False)) else 0
+        team_play_mode = str(data.get('teamPlayMode', 'classic')).strip().lower()
+        if team_play_mode not in {'classic', 'free_assign'}:
+            team_play_mode = 'classic'
         team_count = max(2, int(data.get('teamCount', 2) or 2))
         team_size = max(1, int(data.get('teamSize', 4) or 4))
         max_players = int(data.get('maxPlayers', 8) or 8)
@@ -1500,13 +1504,13 @@ def create_room():
             conn.execute('''
                 INSERT INTO rooms
                 (pin,room_name,bank_id,bank_title,created_by,is_private,room_key_hash,room_key_plain,
-                 status,max_players,team_mode,team_count,team_size,allow_lobby_join,
+                 status,max_players,team_mode,team_count,team_size,team_play_mode,allow_lobby_join,
                  current_question_index,game_start_ts,created_at)
-                VALUES (?,?,?,?,?,?,?,?,'waiting',?,?,?,?,?,0,0,?)
-            ''', (pin, room_name, bank_id, bank_title, created_by, is_private,
+                VALUES (?,?,?,?,?,?,?,?,'waiting',?,?,?,?,?,?,0,0,?)
+                ''', (pin, room_name, bank_id, bank_title, created_by, is_private,
                   hash_text(room_key) if is_private else '',
-                  room_key if is_private else '', max_players,
-                  team_mode, team_count, team_size, allow_lobby_join, now_ts()))
+                   '', max_players,
+                  team_mode, team_count, team_size, team_play_mode, allow_lobby_join, now_ts()))
 
             if team_mode:
                 team_names = data.get('teamNames', [])
@@ -1828,12 +1832,13 @@ def send_message():
             return jsonify(success=False, message='房間不存在'), 404
         if not sender_name or not message:
             return jsonify(success=False, message='訊息不可空白'), 400
+        safe_message = html.escape(message)
         with closing(sqlite3.connect(ROOMS_DB_PATH)) as conn:
             conn.execute('''
                 INSERT INTO room_messages
                 (room_pin,sender_name,message,face,hair,eyes,eyes_offset_y,team_id,created_at)
                 VALUES (?,?,?,?,?,?,?,?,?)
-            ''', (pin, sender_name, message, avatar['face'], avatar['hair'],
+            ''', (pin, sender_name, safe_message, avatar['face'], avatar['hair'],
                   avatar['eyes'], avatar['eyes_offset_y'], team_id, now_ts()))
             conn.commit()
         return jsonify(success=True, message='訊息已送出')
@@ -1921,6 +1926,9 @@ def player_game_state():
                          (now_ts(), pin, player_name))
 
             is_team_mode = bool(room.get('team_mode'))
+            team_play_mode = str(room.get('team_play_mode') or 'classic').strip().lower()
+            if team_play_mode not in {'classic', 'free_assign'}:
+                team_play_mode = 'classic'
             me = conn.execute(
                 'SELECT team_id, is_eliminated FROM room_players WHERE room_pin=? AND player_name=?',
                 (pin, player_name)
@@ -1945,8 +1953,48 @@ def player_game_state():
             current_q = None
             finished = False
             if is_team_mode:
-                current_q = questions[current_index] if 0 <= current_index < total_questions else None
-                finished = (room.get('status') == 'closed') or current_index >= total_questions
+                if team_play_mode == 'free_assign':
+                    team_sub_map = {x['question_id']: x for x in conn.execute('''
+                        SELECT rr.question_id, rr.player_name, rr.is_correct, rr.points_earned
+                        FROM room_results rr
+                        JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
+                        WHERE rr.room_pin=? AND rp.team_id=?
+                    ''', (pin, my_team_id)).fetchall()}
+                    for q in questions:
+                        if q['question_id'] not in team_sub_map:
+                            current_q = q
+                            break
+                    if current_q is None and questions:
+                        current_q = questions[0]
+                    teams = conn.execute(
+                        'SELECT team_id FROM room_teams WHERE room_pin=? ORDER BY team_id ASC', (pin,)
+                    ).fetchall()
+                    all_done = True if teams and total_questions > 0 else False
+                    for t in teams:
+                        done_count = conn.execute('''
+                            SELECT COUNT(*) AS c
+                            FROM room_questions q
+                            WHERE q.room_pin=?
+                              AND EXISTS(
+                                  SELECT 1
+                                  FROM room_results rr
+                                  JOIN room_players rp
+                                    ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
+                                  WHERE rr.room_pin=q.room_pin
+                                    AND rr.question_id=q.question_id
+                                    AND rp.team_id=?
+                              )
+                        ''', (pin, int(t.get('team_id') or 0))).fetchone()['c']
+                        if done_count < total_questions:
+                            all_done = False
+                            break
+                    if all_done and room.get('status') != 'closed':
+                        conn.execute("UPDATE rooms SET status='closed' WHERE pin=?", (pin,))
+                        room['status'] = 'closed'
+                    finished = room.get('status') == 'closed'
+                else:
+                    current_q = questions[current_index] if 0 <= current_index < total_questions else None
+                    finished = (room.get('status') == 'closed') or current_index >= total_questions
             else:
                 current_q = questions[current_index] if 0 <= current_index < total_questions else None
                 finished = current_q is None
@@ -2110,7 +2158,8 @@ def player_game_state():
             myRank=my_rank, showExactRank=bool(my_rank and my_rank <= 5),
             correctAnswerText=correct_answer_text, explanation=explanation_text,
             gameStartTs=int(room.get('game_start_ts') or 0),
-            isTeamMode=is_team_mode
+            isTeamMode=is_team_mode,
+            teamPlayMode=team_play_mode
         )
     except Exception as e:
         return jsonify(success=False, message=f'讀取遊戲狀態失敗：{e}'), 500
@@ -2136,6 +2185,9 @@ def submit_answer():
             if not room:
                 return jsonify(success=False, message='房間不存在'), 404
             is_team_mode = bool(room.get('team_mode'))
+            team_play_mode = str(room.get('team_play_mode') or 'classic').strip().lower()
+            if team_play_mode not in {'classic', 'free_assign'}:
+                team_play_mode = 'classic'
             if not is_team_mode and (room.get('phase') or 'question') != 'question':
                 return jsonify(success=False, message='本題已結束作答'), 400
 
@@ -2194,13 +2246,17 @@ def submit_answer():
                 is_correct = 1 if selected == answer_indexes else 0
             answer_order = 0
             if is_correct:
-                answered_before = conn.execute(
-                    'SELECT COUNT(*) AS c FROM room_results WHERE room_pin=? AND question_id=?',
-                    (pin, question_id)
-                ).fetchone()['c']
-                answer_order = answered_before + 1
-                time_limit = int(''.join(filter(str.isdigit, q.get('time_label') or '20')) or 20)
-                points = calc_kahoot_score(int(q.get('score') or 1000), time_limit, remain_sec, answer_order)
+                if is_team_mode and team_play_mode == 'free_assign':
+                    answer_order = 1
+                    points = int(q.get('score') or 1000)
+                else:
+                    answered_before = conn.execute(
+                        'SELECT COUNT(*) AS c FROM room_results WHERE room_pin=? AND question_id=?',
+                        (pin, question_id)
+                    ).fetchone()['c']
+                    answer_order = answered_before + 1
+                    time_limit = int(''.join(filter(str.isdigit, q.get('time_label') or '20')) or 20)
+                    points = calc_kahoot_score(int(q.get('score') or 1000), time_limit, remain_sec, answer_order)
             else:
                 points = 0
 
