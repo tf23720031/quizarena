@@ -1,3 +1,4 @@
+window.AudioManager = AudioManager;
 const AudioManager = (() => {
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   let ctx = null;
