@@ -1073,6 +1073,7 @@ def record_room_winner(conn, pin):
         return
 
     record_user_win(room, winner_name, int(winner.get('total_score') or 0))
+    save_teacher_report_snapshot_for_pin(conn, pin)
 
 
 def load_quiz_store():
@@ -1196,7 +1197,247 @@ def serialize_room(room):
     return room
 
 
+def build_teacher_report_from_conn(conn, pin):
+    room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
+    if not room:
+        return None
+    questions = conn.execute(
+        'SELECT question_id,seq,title,content FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
+        (pin,)
+    ).fetchall()
+    players = conn.execute('''
+        SELECT player_name, team_id, is_host
+        FROM room_players
+        WHERE room_pin=? AND NOT (player_name LIKE '__host_%__' AND is_host=1)
+        ORDER BY team_id ASC, player_name ASC
+    ''', (pin,)).fetchall()
+    results = conn.execute('''
+        SELECT rr.*, rp.team_id
+        FROM room_results rr
+        JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
+        WHERE rr.room_pin=?
+        ORDER BY rp.team_id ASC, rr.player_name ASC, rr.question_id ASC
+    ''', (pin,)).fetchall()
+
+    q_order = {q['question_id']: int(q['seq'] or 0) for q in questions}
+    q_titles = {q['question_id']: q['title'] or '' for q in questions}
+    per_player = {
+        player['player_name']: {
+            'playerName': player['player_name'],
+            'teamId': int(player.get('team_id') or 0),
+            'answered': 0,
+            'correct': 0,
+            'totalScore': 0,
+        }
+        for player in players
+    }
+    per_question = {
+        q['question_id']: {
+            'questionId': q['question_id'],
+            'seq': int(q['seq'] or 0),
+            'title': q['title'] or '',
+            'content': q['content'] or '',
+            'answered': 0,
+            'correct': 0,
+        }
+        for q in questions
+    }
+
+    enriched = []
+    for row in results:
+        player_name = row['player_name']
+        if player_name not in per_player:
+            per_player[player_name] = {
+                'playerName': player_name,
+                'teamId': int(row.get('team_id') or 0),
+                'answered': 0,
+                'correct': 0,
+                'totalScore': 0,
+            }
+        is_correct = bool(row.get('is_correct'))
+        points = int(row.get('points_earned') or 0)
+        per_player[player_name]['answered'] += 1
+        per_player[player_name]['correct'] += 1 if is_correct else 0
+        per_player[player_name]['totalScore'] += points
+        if row['question_id'] in per_question:
+            per_question[row['question_id']]['answered'] += 1
+            per_question[row['question_id']]['correct'] += 1 if is_correct else 0
+        enriched.append({
+            'playerName': player_name,
+            'teamId': int(row.get('team_id') or 0),
+            'questionId': row['question_id'],
+            'seq': q_order.get(row['question_id'], 0),
+            'title': q_titles.get(row['question_id'], ''),
+            'isCorrect': is_correct,
+            'pointsEarned': points,
+            'answerOrder': int(row.get('answer_order') or 0),
+        })
+
+    player_summaries = sorted(per_player.values(), key=lambda item: (-item['totalScore'], item['playerName'].lower()))
+    for item in player_summaries:
+        item['accuracy'] = round((item['correct'] / item['answered']) * 100, 1) if item['answered'] else 0
+    question_stats = sorted(per_question.values(), key=lambda item: item['seq'])
+    for item in question_stats:
+        item['accuracy'] = round((item['correct'] / item['answered']) * 100, 1) if item['answered'] else 0
+
+    return {
+        'room': {
+            'pin': room.get('pin'),
+            'roomName': room.get('room_name') or '',
+            'bankTitle': room.get('bank_title') or '',
+            'createdBy': room.get('created_by') or '',
+            'status': room.get('status') or '',
+            'createdAt': int(room.get('created_at') or 0),
+        },
+        'questions': question_stats,
+        'players': player_summaries,
+        'results': enriched,
+    }
+
+
+def save_teacher_report_snapshot(report):
+    if not report or not report.get('room'):
+        return
+    room = report['room']
+    pin = str(room.get('pin') or '').strip()
+    if not pin:
+        return
+    created_by = str(room.get('createdBy') or '').strip()
+    saved_at = now_ts()
+    payload = json.dumps(report, ensure_ascii=False)
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    INSERT INTO teacher_report_history
+                    (pin, room_name, bank_title, created_by, report_json, created_at, saved_at)
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s)
+                    ON CONFLICT(pin) DO UPDATE SET
+                        room_name=EXCLUDED.room_name,
+                        bank_title=EXCLUDED.bank_title,
+                        created_by=EXCLUDED.created_by,
+                        report_json=EXCLUDED.report_json,
+                        saved_at=EXCLUDED.saved_at
+                ''', (
+                    pin,
+                    room.get('roomName') or '',
+                    room.get('bankTitle') or '',
+                    created_by,
+                    payload,
+                    int(room.get('createdAt') or saved_at),
+                    saved_at,
+                ))
+            conn.commit()
+        return
+    with closing(sqlite3.connect(USERS_DB_PATH)) as history_conn:
+        history_conn.execute('''
+            INSERT INTO teacher_report_history
+            (pin, room_name, bank_title, created_by, report_json, created_at, saved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(pin) DO UPDATE SET
+                room_name=excluded.room_name,
+                bank_title=excluded.bank_title,
+                created_by=excluded.created_by,
+                report_json=excluded.report_json,
+                saved_at=excluded.saved_at
+        ''', (
+            pin,
+            room.get('roomName') or '',
+            room.get('bankTitle') or '',
+            created_by,
+            payload,
+            int(room.get('createdAt') or saved_at),
+            saved_at,
+        ))
+        history_conn.commit()
+
+
+def save_teacher_report_snapshot_for_pin(conn, pin):
+    report = build_teacher_report_from_conn(conn, pin)
+    if report and (report.get('players') or report.get('results')):
+        save_teacher_report_snapshot(report)
+
+
+def load_teacher_report_snapshot(pin):
+    pin = str(pin or '').strip()
+    if not pin:
+        return None
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT report_json, saved_at FROM teacher_report_history WHERE pin=%s LIMIT 1', (pin,))
+                row = cur.fetchone()
+        if not row:
+            return None
+        report = row.get('report_json')
+        if isinstance(report, str):
+            report = json.loads(report)
+        report['fromHistory'] = True
+        report['savedAt'] = int(row.get('saved_at') or 0)
+        return report
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.row_factory = dict_factory
+        row = conn.execute('SELECT report_json, saved_at FROM teacher_report_history WHERE pin=? LIMIT 1', (pin,)).fetchone()
+    if not row:
+        return None
+    report = json.loads(row.get('report_json') or '{}')
+    report['fromHistory'] = True
+    report['savedAt'] = int(row.get('saved_at') or 0)
+    return report
+
+
+def list_teacher_report_history(username=''):
+    username = str(username or '').strip()
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                if username:
+                    cur.execute('''
+                        SELECT pin, room_name, bank_title, created_by, created_at, saved_at
+                        FROM teacher_report_history
+                        WHERE created_by=%s
+                        ORDER BY saved_at DESC, id DESC
+                        LIMIT 50
+                    ''', (username,))
+                else:
+                    cur.execute('''
+                        SELECT pin, room_name, bank_title, created_by, created_at, saved_at
+                        FROM teacher_report_history
+                        ORDER BY saved_at DESC, id DESC
+                        LIMIT 50
+                    ''')
+                rows = cur.fetchall()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            if username:
+                rows = conn.execute('''
+                    SELECT pin, room_name, bank_title, created_by, created_at, saved_at
+                    FROM teacher_report_history
+                    WHERE created_by=?
+                    ORDER BY saved_at DESC, id DESC
+                    LIMIT 50
+                ''', (username,)).fetchall()
+            else:
+                rows = conn.execute('''
+                    SELECT pin, room_name, bank_title, created_by, created_at, saved_at
+                    FROM teacher_report_history
+                    ORDER BY saved_at DESC, id DESC
+                    LIMIT 50
+                ''').fetchall()
+    return [{
+        'pin': row.get('pin') or '',
+        'roomName': row.get('room_name') or '',
+        'bankTitle': row.get('bank_title') or '',
+        'createdBy': row.get('created_by') or '',
+        'createdAt': int(row.get('created_at') or 0),
+        'savedAt': int(row.get('saved_at') or 0),
+        'savedAtText': time.strftime('%Y-%m-%d %H:%M', time.localtime(int(row.get('saved_at') or now_ts()))),
+    } for row in rows]
+
+
 def delete_room_fully(conn, pin):
+    save_teacher_report_snapshot_for_pin(conn, pin)
     conn.execute('DELETE FROM room_results WHERE room_pin = ?', (pin,))
     conn.execute('DELETE FROM room_questions WHERE room_pin = ?', (pin,))
     conn.execute('DELETE FROM room_messages WHERE room_pin = ?', (pin,))
@@ -1301,6 +1542,19 @@ def init_postgres_users_db():
                     recorded_at BIGINT
                 )
             ''')
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS teacher_report_history (
+                    id SERIAL PRIMARY KEY,
+                    pin TEXT UNIQUE NOT NULL,
+                    room_name TEXT,
+                    bank_title TEXT,
+                    created_by TEXT,
+                    report_json JSONB NOT NULL,
+                    created_at BIGINT,
+                    saved_at BIGINT
+                )
+            ''')
+            c.execute('CREATE INDEX IF NOT EXISTS idx_teacher_report_history_created_by ON teacher_report_history(created_by)')
         conn.commit()
 
 
@@ -1405,6 +1659,18 @@ def init_users_db():
                 winner_username TEXT,
                 winner_score INTEGER DEFAULT 0,
                 recorded_at INTEGER
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS teacher_report_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pin TEXT UNIQUE NOT NULL,
+                room_name TEXT,
+                bank_title TEXT,
+                created_by TEXT,
+                report_json TEXT NOT NULL,
+                created_at INTEGER,
+                saved_at INTEGER
             )
         ''')
         conn.commit()
@@ -2994,103 +3260,28 @@ def teacher_report_api():
         if not pin:
             return jsonify(success=False, message='缺少 PIN'), 400
         with closing(get_conn()) as conn:
-            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
-            if not room:
-                return jsonify(success=False, message='找不到這個房間'), 404
-            questions = conn.execute(
-                'SELECT question_id,seq,title,content FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
-                (pin,)
-            ).fetchall()
-            players = conn.execute('''
-                SELECT player_name, team_id, is_host
-                FROM room_players
-                WHERE room_pin=? AND NOT (player_name LIKE '__host_%__' AND is_host=1)
-                ORDER BY team_id ASC, player_name ASC
-            ''', (pin,)).fetchall()
-            results = conn.execute('''
-                SELECT rr.*, rp.team_id
-                FROM room_results rr
-                JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
-                WHERE rr.room_pin=?
-                ORDER BY rp.team_id ASC, rr.player_name ASC, rr.question_id ASC
-            ''', (pin,)).fetchall()
+            live_report = build_teacher_report_from_conn(conn, pin)
+        if live_report:
+            live_report['success'] = True
+            live_report['fromHistory'] = False
+            return jsonify(live_report)
 
-        q_order = {q['question_id']: int(q['seq'] or 0) for q in questions}
-        q_titles = {q['question_id']: q['title'] or '' for q in questions}
-        per_player = {
-            player['player_name']: {
-                'playerName': player['player_name'],
-                'teamId': int(player.get('team_id') or 0),
-                'answered': 0,
-                'correct': 0,
-                'totalScore': 0,
-            }
-            for player in players
-        }
-        per_question = {
-            q['question_id']: {
-                'questionId': q['question_id'],
-                'seq': int(q['seq'] or 0),
-                'title': q['title'] or '',
-                'content': q['content'] or '',
-                'answered': 0,
-                'correct': 0,
-            }
-            for q in questions
-        }
-
-        enriched = []
-        for row in results:
-            player_name = row['player_name']
-            if player_name not in per_player:
-                per_player[player_name] = {
-                    'playerName': player_name,
-                    'teamId': int(row.get('team_id') or 0),
-                    'answered': 0,
-                    'correct': 0,
-                    'totalScore': 0,
-                }
-            is_correct = bool(row.get('is_correct'))
-            points = int(row.get('points_earned') or 0)
-            per_player[player_name]['answered'] += 1
-            per_player[player_name]['correct'] += 1 if is_correct else 0
-            per_player[player_name]['totalScore'] += points
-            if row['question_id'] in per_question:
-                per_question[row['question_id']]['answered'] += 1
-                per_question[row['question_id']]['correct'] += 1 if is_correct else 0
-            enriched.append({
-                'playerName': player_name,
-                'teamId': int(row.get('team_id') or 0),
-                'questionId': row['question_id'],
-                'seq': q_order.get(row['question_id'], 0),
-                'title': q_titles.get(row['question_id'], ''),
-                'isCorrect': is_correct,
-                'pointsEarned': points,
-                'answerOrder': int(row.get('answer_order') or 0),
-            })
-
-        player_summaries = sorted(per_player.values(), key=lambda item: (-item['totalScore'], item['playerName'].lower()))
-        for item in player_summaries:
-            item['accuracy'] = round((item['correct'] / item['answered']) * 100, 1) if item['answered'] else 0
-        question_stats = sorted(per_question.values(), key=lambda item: item['seq'])
-        for item in question_stats:
-            item['accuracy'] = round((item['correct'] / item['answered']) * 100, 1) if item['answered'] else 0
-
-        return jsonify(
-            success=True,
-            room={
-                'pin': room.get('pin'),
-                'roomName': room.get('room_name') or '',
-                'bankTitle': room.get('bank_title') or '',
-                'createdBy': room.get('created_by') or '',
-                'status': room.get('status') or '',
-            },
-            questions=question_stats,
-            players=player_summaries,
-            results=enriched,
-        )
+        saved_report = load_teacher_report_snapshot(pin)
+        if not saved_report:
+            return jsonify(success=False, message='找不到這個房間或歷史報表'), 404
+        saved_report['success'] = True
+        return jsonify(saved_report)
     except Exception as e:
         return jsonify(success=False, message=f'讀取老師報表失敗：{e}'), 500
+
+
+@app.route('/teacher_report_history')
+def teacher_report_history_api():
+    try:
+        username = request.args.get('username', '').strip()
+        return jsonify(success=True, reports=list_teacher_report_history(username))
+    except Exception as e:
+        return jsonify(success=False, message=f'讀取建房紀錄失敗：{e}'), 500
 
 
 @app.route('/<path:filename>')

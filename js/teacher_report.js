@@ -26,12 +26,52 @@ async function api(url) {
   return data;
 }
 
+function renderHistory(reports) {
+  const list = $("reportHistoryList");
+  if (!list) return;
+  if (!reports.length) {
+    list.innerHTML = `
+      <article class="history-card">
+        <strong>目前沒有歷史報表</strong>
+        <span>遊戲結束或房間被刪除前，系統會自動保存報表快照。</span>
+      </article>
+    `;
+    return;
+  }
+
+  list.innerHTML = reports.map((report) => `
+    <button class="history-card history-button" type="button" data-pin="${escapeHtml(report.pin)}">
+      <strong>${escapeHtml(report.roomName || report.bankTitle || report.pin)}</strong>
+      <span>PIN ${escapeHtml(report.pin)} · ${escapeHtml(report.savedAtText || "")}</span>
+    </button>
+  `).join("");
+
+  list.querySelectorAll("[data-pin]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $("reportPinInput").value = btn.dataset.pin || "";
+      loadReport(btn.dataset.pin || "");
+    });
+  });
+}
+
+async function loadHistory() {
+  const username = localStorage.getItem("currentUser") || "";
+  const query = username ? `?username=${encodeURIComponent(username)}` : "";
+  try {
+    const data = await api(`/teacher_report_history${query}`);
+    renderHistory(data.reports || []);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function renderReport(data) {
   latestReport = data;
   $("downloadCsvBtn").disabled = false;
   $("reportRoomName").textContent = data.room?.roomName || data.room?.pin || "-";
   $("reportPlayerCount").textContent = String((data.players || []).length);
   $("reportQuestionCount").textContent = String((data.questions || []).length);
+  if (data.fromHistory) showToast("已載入歷史報表");
 
   $("studentReportList").innerHTML = `
     <table class="report-table">
@@ -75,8 +115,8 @@ function renderReport(data) {
   `).join("") || `<article class="question-card"><h3>沒有題目資料</h3></article>`;
 }
 
-async function loadReport() {
-  const pin = $("reportPinInput").value.trim();
+async function loadReport(pinOverride = "") {
+  const pin = String(pinOverride || $("reportPinInput").value || "").trim();
   if (!/^\d{6}$/.test(pin)) {
     showToast("請輸入 6 位數 PIN");
     return;
@@ -85,6 +125,7 @@ async function loadReport() {
   try {
     const data = await api(`/teacher_report?pin=${encodeURIComponent(pin)}`);
     renderReport(data);
+    loadHistory();
   } catch (error) {
     showToast(error.message);
   }
@@ -132,8 +173,11 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-$("loadReportBtn")?.addEventListener("click", loadReport);
+$("loadReportBtn")?.addEventListener("click", () => loadReport());
 $("downloadCsvBtn")?.addEventListener("click", downloadCsv);
+$("refreshHistoryBtn")?.addEventListener("click", loadHistory);
 $("reportPinInput")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") loadReport();
 });
+
+loadHistory();

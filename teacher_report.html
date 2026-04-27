@@ -19,12 +19,20 @@
     </header>
 
     <section class="tool-card report-search">
-      <label for="reportPinInput">輸入房間 PIN</label>
+      <label for="reportPinInput">輸入房間 PIN，或從下方建房紀錄選擇</label>
       <div class="report-search-row">
         <input id="reportPinInput" maxlength="6" inputmode="numeric" placeholder="例如 123456">
         <button id="loadReportBtn" class="tool-btn primary"><i class="fa-solid fa-magnifying-glass-chart"></i> 查看報表</button>
         <button id="downloadCsvBtn" class="tool-btn" disabled><i class="fa-solid fa-file-csv"></i> 匯出 CSV</button>
       </div>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2>建房紀錄</h2>
+        <button id="refreshHistoryBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> 重新整理</button>
+      </div>
+      <div id="reportHistoryList" class="history-list"></div>
     </section>
 
     <section class="summary-grid">

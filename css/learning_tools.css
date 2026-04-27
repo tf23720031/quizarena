@@ -134,6 +134,44 @@ h2 {
   margin-top: 14px;
 }
 
+.history-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.history-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  color: #4d5572;
+  text-align: left;
+  border: 1px solid rgba(124, 123, 255, 0.18);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.history-button {
+  cursor: pointer;
+}
+
+.history-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(83, 92, 143, 0.12);
+}
+
+.history-card strong {
+  color: #293150;
+  font-weight: 900;
+}
+
+.history-card span {
+  color: #7880a5;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
 .question-card {
   padding: 16px;
   border: 1px solid rgba(124, 123, 255, 0.16);
