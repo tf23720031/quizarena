@@ -173,7 +173,31 @@ body.dark-mode::before {
 .psl-item.eliminated { opacity: .4; }
 .psl-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .psl-icon { flex-shrink: 0; }
-
+.team-chat-box { margin-top: 12px; border-top: 1px dashed rgba(200,120,160,.35); padding-top: 10px; }
+.team-chat-title { font-weight: 900; color: var(--text-title); margin-bottom: 8px; }
+.team-chat-list {
+  max-height: 180px; overflow-y: auto;
+  display: grid; gap: 6px; margin-bottom: 8px;
+}
+.team-chat-item {
+  background: var(--leader-bg);
+  border-radius: 12px; padding: 6px 8px;
+  font-size: .82rem;
+}
+.team-chat-head {
+  display: flex; justify-content: space-between; gap: 8px;
+  font-weight: 800; color: var(--text-title);
+}
+.team-chat-msg { margin-top: 4px; color: var(--text-main); word-break: break-word; }
+.team-chat-form { display: flex; gap: 6px; }
+.team-chat-form input {
+  flex: 1; border: 1px solid rgba(200,120,160,.3); border-radius: 999px;
+  padding: 8px 10px; background: rgba(255,255,255,.85); color: var(--text-main);
+}
+.team-chat-form button {
+  border: none; border-radius: 999px; padding: 0 12px;
+  background: linear-gradient(135deg,#ff8fb9,#ff6cae); color: #fff;
+}
 /* ── mini avatar ── */
 .mini-avatar { position: relative; flex-shrink: 0; overflow: hidden; }
 .ma-layer { position: absolute; left: 50%; transform: translateX(-50%); width: 100%; bottom: 0; pointer-events: none; }
