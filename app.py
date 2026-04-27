@@ -408,8 +408,11 @@ def lobby_rooms():
             if stale:
                 conn.commit()
             rows = conn.execute('''
-                SELECT r.*, COUNT(p.id) AS player_count,
-                       GROUP_CONCAT(p.player_name,'||') AS player_names
+                SELECT r.*,
+                       COUNT(CASE WHEN NOT (p.player_name LIKE '__host_%__' AND p.is_host=1)
+                                  THEN p.id END) AS player_count,
+                       GROUP_CONCAT(CASE WHEN NOT (p.player_name LIKE '__host_%__' AND p.is_host=1)
+                                         THEN p.player_name END, '||') AS player_names
                 FROM rooms r LEFT JOIN room_players p ON p.room_pin=r.pin
                 WHERE r.status!='closed' AND r.allow_lobby_join=1
                   AND EXISTS(SELECT 1 FROM room_players hp WHERE hp.room_pin=r.pin
@@ -584,7 +587,8 @@ def join_room():
                 return jsonify(success=False, message='房間目前不可加入'), 400
 
             count = conn.execute(
-                'SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?', (pin,)
+                "SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?"
+                " AND NOT (player_name LIKE '__host_%__' AND is_host=1)", (pin,)
             ).fetchone()['total']
             if count >= int(room.get('max_players', 8) or 8):
                 return jsonify(success=False, message='房間已滿'), 400
@@ -708,7 +712,8 @@ def leave_room():
                 conn.commit()
                 return jsonify(success=True, message='房間已無房主，房間已刪除', roomDeleted=True)
             remaining = conn.execute(
-                'SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?', (pin,)
+                "SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?"
+                " AND NOT (player_name LIKE '__host_%__' AND is_host=1)", (pin,)
             ).fetchone()['total']
             if remaining == 0:
                 delete_room_fully(conn, pin)
@@ -873,10 +878,21 @@ def player_game_state():
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
                 return jsonify(success=False, message='房間不存在'), 404
-            host_exists = conn.execute(
-                'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
-                (pin, host_alive_cutoff())
-            ).fetchone()
+
+            # 遊戲進行中：只要房間 status=playing 且任何 is_host=1 存在就繼續
+            # 等待室：需要 last_seen 在存活範圍內
+            room_status = (room.get('status') or 'waiting')
+            if room_status == 'playing':
+                host_exists = conn.execute(
+                    'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 LIMIT 1',
+                    (pin,)
+                ).fetchone()
+            else:
+                host_exists = conn.execute(
+                    'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
+                    (pin, host_alive_cutoff())
+                ).fetchone()
+
             if not host_exists:
                 delete_room_fully(conn, pin)
                 conn.commit()
