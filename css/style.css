@@ -1522,3 +1522,50 @@ body.dark-mode .lang-switcher:hover {
     grid-template-columns: 1fr;
   }
 }
+body:not(.dark-mode) .friends-dock-btn {
+  background: linear-gradient(135deg, #ff8fbd 0%, #ffb6d2 55%, #ffc8dd 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(255, 120, 170, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+}
+
+body:not(.dark-mode) .friends-fab-mini,
+body:not(.dark-mode) .friends-close-btn,
+body:not(.dark-mode) .friends-rank-medal,
+body:not(.dark-mode) .friends-request-icon-wrap,
+body:not(.dark-mode) .friends-avatar-badge {
+  background: linear-gradient(135deg, #ff8fbd 0%, #c79cff 100%) !important;
+  color: #ffffff !important;
+}
+
+body:not(.dark-mode) .lobby-shell {
+  background: rgba(255, 245, 249, 0.58) !important;
+  border: 2px solid rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 18px 38px rgba(255, 135, 180, 0.16) !important;
+}
+
+body:not(.dark-mode) .lobby-header h2 {
+  color: #e45f7a !important;
+}
+
+body:not(.dark-mode) .lobby-header p {
+  color: #e86f86 !important;
+}
+
+body:not(.dark-mode) .empty-lobby {
+  color: #a875ff !important;
+  background: rgba(255, 238, 246, 0.72) !important;
+  border: 1px solid rgba(255, 190, 215, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+body:not(.dark-mode) .room-card {
+  background: linear-gradient(180deg, rgba(255, 248, 251, 0.92), rgba(255, 232, 243, 0.82)) !important;
+  border-color: rgba(255, 200, 220, 0.65) !important;
+  box-shadow: 0 12px 28px rgba(255, 130, 175, 0.15) !important;
+}
+
+body:not(.dark-mode) .room-top h3,
+body:not(.dark-mode) .room-pin {
+  color: #f0629a !important;
+}
