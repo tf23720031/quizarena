@@ -494,6 +494,83 @@ def build_friends_overview(username):
     }
 
 
+def describe_client_device(user_agent):
+    ua = str(user_agent or '').lower()
+    if 'iphone' in ua:
+        return 'iPhone'
+    if 'ipad' in ua:
+        return 'iPad'
+    if 'android' in ua and 'mobile' in ua:
+        return 'Android 手機'
+    if 'android' in ua:
+        return 'Android 平板'
+    if 'windows' in ua:
+        return 'Windows 電腦'
+    if 'macintosh' in ua or 'mac os' in ua:
+        return 'Mac 電腦'
+    if 'linux' in ua:
+        return 'Linux 裝置'
+    return '未知裝置'
+
+
+def get_pending_friend_requests(username):
+    if not username:
+        return []
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.row_factory = dict_factory
+        rows = conn.execute('''
+            SELECT id, requester, addressee, requester_device, created_at, status
+            FROM user_friend_requests
+            WHERE addressee=? AND status='pending'
+            ORDER BY created_at DESC, id DESC
+        ''', (username,)).fetchall()
+    return rows
+
+
+def get_pending_friend_request_between(user_a, user_b):
+    if not user_a or not user_b:
+        return None
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.row_factory = dict_factory
+        return conn.execute('''
+            SELECT id, requester, addressee, requester_device, created_at, status
+            FROM user_friend_requests
+            WHERE status='pending'
+              AND (
+                (requester=? AND addressee=?)
+                OR
+                (requester=? AND addressee=?)
+              )
+            ORDER BY id DESC
+            LIMIT 1
+        ''', (user_a, user_b, user_b, user_a)).fetchone()
+
+
+def serialize_friend_requests(rows):
+    serialized = []
+    for row in rows or []:
+        serialized.append({
+            'id': int(row.get('id') or 0),
+            'requester': str(row.get('requester') or '').strip(),
+            'addressee': str(row.get('addressee') or '').strip(),
+            'device': str(row.get('requester_device') or '未知裝置').strip() or '未知裝置',
+            'createdAt': int(row.get('created_at') or 0),
+            'createdAtText': time.strftime('%Y-%m-%d %H:%M', time.localtime(int(row.get('created_at') or now_ts()))),
+            'status': str(row.get('status') or 'pending').strip() or 'pending',
+        })
+    return serialized
+
+
+def build_friend_request_summary(username):
+    rows = get_pending_friend_requests(username)
+    requests = serialize_friend_requests(rows)
+    return {
+        'currentUser': username,
+        'pendingCount': len(requests),
+        'requests': requests,
+    }
+
+
 def record_room_winner(conn, pin):
     room = conn.execute('SELECT pin, room_name, bank_id, bank_title FROM rooms WHERE pin=?', (pin,)).fetchone()
     if not room:
@@ -698,6 +775,27 @@ def init_users_db():
                 UNIQUE(requester, addressee)
             )
         ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS user_friend_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                requester TEXT NOT NULL,
+                addressee TEXT NOT NULL,
+                requester_device TEXT,
+                status TEXT DEFAULT 'pending',
+                created_at INTEGER,
+                responded_at INTEGER
+            )
+        ''')
+        c.execute('PRAGMA table_info(user_friend_requests)')
+        req_cols = {row[1] for row in c.fetchall()}
+        for col, typ in [
+            ('requester_device', 'TEXT'),
+            ('status', "TEXT DEFAULT 'pending'"),
+            ('created_at', 'INTEGER'),
+            ('responded_at', 'INTEGER'),
+        ]:
+            if col not in req_cols:
+                c.execute(f'ALTER TABLE user_friend_requests ADD COLUMN {col} {typ}')
         c.execute('''
             CREATE TABLE IF NOT EXISTS user_stats (
                 username TEXT PRIMARY KEY,
@@ -948,8 +1046,17 @@ def friends_overview_api():
     return jsonify(success=True, **overview)
 
 
-@app.route('/add_friend', methods=['POST'])
-def add_friend_api():
+@app.route('/friend_requests_summary')
+def friend_requests_summary_api():
+    username = str(request.args.get('username', '')).strip()
+    if not username:
+        return jsonify(success=False, message='缺少使用者帳號'), 400
+    summary = build_friend_request_summary(username)
+    return jsonify(success=True, **summary)
+
+
+@app.route('/send_friend_request', methods=['POST'])
+def send_friend_request_api():
     try:
         data = request.get_json() or {}
         username = str(data.get('username', '')).strip()
@@ -963,15 +1070,90 @@ def add_friend_api():
 
         a, b = sorted([username, friend_name], key=lambda item: item.lower())
         with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            existing_friend = conn.execute('''
+                SELECT 1 FROM user_friendships
+                WHERE requester=? AND addressee=? AND status='accepted'
+                LIMIT 1
+            ''', (a, b)).fetchone()
+            if existing_friend:
+                return jsonify(success=False, message='你們已經是好友了'), 400
+
+            pending = conn.execute('''
+                SELECT id, requester, addressee
+                FROM user_friend_requests
+                WHERE status='pending'
+                  AND (
+                    (requester=? AND addressee=?)
+                    OR
+                    (requester=? AND addressee=?)
+                  )
+                ORDER BY id DESC
+                LIMIT 1
+            ''', (username, friend_name, friend_name, username)).fetchone()
+            if pending:
+                if str(pending[1]) == friend_name and str(pending[2]) == username:
+                    return jsonify(success=False, message='對方已向你送出申請，請到申請紀錄接受'), 400
+                return jsonify(success=False, message='好友申請已送出，請等待對方回應'), 400
+
             conn.execute('''
-                INSERT OR IGNORE INTO user_friendships (requester, addressee, status, created_at)
-                VALUES (?, ?, 'accepted', ?)
-            ''', (a, b, now_ts()))
+                INSERT INTO user_friend_requests
+                (requester, addressee, requester_device, status, created_at)
+                VALUES (?, ?, ?, 'pending', ?)
+            ''', (username, friend_name, describe_client_device(request.user_agent.string), now_ts()))
             conn.commit()
-        overview = build_friends_overview(username)
-        return jsonify(success=True, message='好友已加入', **overview)
+        summary = build_friend_request_summary(friend_name)
+        return jsonify(success=True, message='好友申請已送出', **summary)
     except Exception as e:
         return jsonify(success=False, message=f'加入好友失敗：{e}'), 500
+
+
+@app.route('/respond_friend_request', methods=['POST'])
+def respond_friend_request_api():
+    try:
+        data = request.get_json() or {}
+        username = str(data.get('username', '')).strip()
+        request_id = int(data.get('requestId', 0) or 0)
+        action = str(data.get('action', '')).strip().lower()
+        if not username or request_id <= 0:
+            return jsonify(success=False, message='缺少申請資訊'), 400
+        if action not in {'accept', 'reject'}:
+            return jsonify(success=False, message='不支援的操作'), 400
+
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            row = conn.execute('''
+                SELECT id, requester, addressee, status
+                FROM user_friend_requests
+                WHERE id=? AND addressee=?
+                LIMIT 1
+            ''', (request_id, username)).fetchone()
+            if not row:
+                return jsonify(success=False, message='找不到這筆好友申請'), 404
+            if str(row.get('status') or '') != 'pending':
+                return jsonify(success=False, message='這筆申請已處理過'), 400
+
+            conn.execute('''
+                UPDATE user_friend_requests
+                SET status=?, responded_at=?
+                WHERE id=?
+            ''', ('accepted' if action == 'accept' else 'rejected', now_ts(), request_id))
+
+            if action == 'accept':
+                a, b = sorted([str(row.get('requester') or '').strip(), username], key=lambda item: item.lower())
+                conn.execute('''
+                    INSERT OR IGNORE INTO user_friendships (requester, addressee, status, created_at)
+                    VALUES (?, ?, 'accepted', ?)
+                ''', (a, b, now_ts()))
+            conn.commit()
+
+        return jsonify(
+            success=True,
+            message='已接受好友申請' if action == 'accept' else '已忽略好友申請',
+            overview=build_friends_overview(username),
+            requestSummary=build_friend_request_summary(username)
+        )
+    except Exception as e:
+        return jsonify(success=False, message=f'處理好友申請失敗：{e}'), 500
 
 
 @app.route('/copy_quiz_bank', methods=['POST'])
