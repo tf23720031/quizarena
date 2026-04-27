@@ -17,18 +17,6 @@ DEFAULT_EYES = 'images/face/eyes01.png'
 _quiz_lock = threading.Lock()
 
 
-def log_startup_diagnostics():
-    try:
-        files = sorted(os.listdir(PROJECT_DIR))
-    except Exception as exc:
-        files = [f'<listdir failed: {exc}>']
-    print('[QuizArena] BASE_DIR =', BASE_DIR, flush=True)
-    print('[QuizArena] PROJECT_DIR =', PROJECT_DIR, flush=True)
-    print('[QuizArena] index.html exists =', os.path.exists(os.path.join(PROJECT_DIR, 'index.html')), flush=True)
-    print('[QuizArena] app.py exists =', os.path.exists(os.path.join(PROJECT_DIR, 'app.py')), flush=True)
-    print('[QuizArena] project files =', files, flush=True)
-
-
 def now_ts():
     return int(time.time())
 
@@ -272,24 +260,11 @@ def init_rooms_db():
 init_users_db()
 init_rooms_db()
 ensure_file(QUIZ_BANKS_PATH, {'users': {}})
-log_startup_diagnostics()
 
 
 @app.route('/')
 def home():
     return send_from_directory(PROJECT_DIR, 'index.html')
-
-
-@app.route('/__debug_routes')
-def debug_routes():
-    return jsonify(
-        success=True,
-        base_dir=BASE_DIR,
-        project_dir=PROJECT_DIR,
-        index_exists=os.path.exists(os.path.join(PROJECT_DIR, 'index.html')),
-        files=sorted(os.listdir(PROJECT_DIR)),
-        routes=sorted(str(rule) for rule in app.url_map.iter_rules())
-    )
 
 
 for page in ['create_home.html', 'player_join.html', 'waiting_room.html',
