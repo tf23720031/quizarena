@@ -219,26 +219,39 @@
     const achievements = Array.isArray(data.achievements) ? data.achievements : [];
     state.achievements = achievements;
     achievementCount.textContent = `${Number(data.unlockedCount || 0)}/${Number(data.totalCount || achievements.length || 0)}`;
+    const user = getCurrentUser();
+    const seenKey = user ? `seenAchievements:${user}` : "";
+    let seenItems = [];
+    try {
+      seenItems = seenKey ? JSON.parse(localStorage.getItem(seenKey) || "[]") : [];
+    } catch (error) {
+      seenItems = [];
+    }
+    const seen = new Set(Array.isArray(seenItems) ? seenItems : []);
+    const visibleAchievements = achievements.filter((item) => !item.unlocked || !seen.has(item.id));
 
-    if (!achievements.length) {
+    if (!visibleAchievements.length) {
       achievementsList.innerHTML = `
         <article class="achievement-card is-empty">
           <i class="fa-solid fa-award"></i>
           <div>
-            <strong>尚未載入成就</strong>
-            <span>登入後就能追蹤你的成就進度。</span>
+            <strong>目前沒有新的成就</strong>
+            <span>新的挑戰解鎖後會出現在這裡。</span>
           </div>
         </article>
       `;
       return;
     }
 
-    achievementsList.innerHTML = achievements.map((item) => {
+    const newlyUnlocked = [];
+    achievementsList.innerHTML = visibleAchievements.map((item) => {
       const progress = Math.max(0, Math.min(100, Number(item.progress || 0)));
       const current = Number(item.rawCurrent ?? item.current ?? 0);
       const target = Number(item.target || 1);
+      const isNewUnlock = item.unlocked && !seen.has(item.id);
+      if (isNewUnlock) newlyUnlocked.push(item.id);
       return `
-        <article class="achievement-card ${item.unlocked ? "is-unlocked" : ""}">
+        <article class="achievement-card ${item.unlocked ? "is-unlocked" : ""} ${isNewUnlock ? "is-new-unlock" : ""}" data-achievement-id="${escapeHtml(item.id)}">
           <div class="achievement-icon"><i class="fa-solid ${escapeHtml(item.icon || "fa-award")}"></i></div>
           <div class="achievement-body">
             <div class="achievement-title-row">
@@ -253,6 +266,17 @@
         </article>
       `;
     }).join("");
+
+    if (newlyUnlocked.length && seenKey) {
+      setTimeout(() => {
+        newlyUnlocked.forEach((id) => seen.add(id));
+        localStorage.setItem(seenKey, JSON.stringify([...seen]));
+        achievementsList.querySelectorAll(".achievement-card.is-new-unlock").forEach((card) => {
+          card.classList.add("is-clearing");
+        });
+        setTimeout(() => renderAchievementsSummary(data), 620);
+      }, 1200);
+    }
   }
 
   async function loadAchievementsSummary() {
