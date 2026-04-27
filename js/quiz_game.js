@@ -79,7 +79,10 @@ const scoreboardWrap    = document.getElementById('scoreboardWrap');
 const hostDetailSection = document.getElementById('hostDetailSection');
 const hostDetailWrap    = document.getElementById('hostDetailWrap');
 const playerSideList    = document.getElementById('playerSideList');
-
+const teamChatBox       = document.getElementById('teamChatBox');
+const teamChatList      = document.getElementById('teamChatList');
+const teamChatForm      = document.getElementById('teamChatForm');
+const teamChatInput     = document.getElementById('teamChatInput');
 /* ── state ── */
 let currentQuestion      = null;
 let currentQuestionId    = null;
@@ -95,6 +98,9 @@ let isInternalNavigation = false;
 let gameFinished         = false;
 let lastHandledPhaseQid  = null;
 let hostFinishedQuestion = false;
+let isTeamMode           = false;
+let myTeamId             = 0;
+let latestTeamMsgCount   = 0;
 
 const getPlayerName = () => (playerProfile?.name || '').trim();
 
@@ -403,7 +409,48 @@ function renderPlayerSideList(answerStatus = []) {
     </div>`;
   }).join('');
 }
+function setupTeamChatUI(data) {
+  isTeamMode = !!data.isTeamMode;
+  myTeamId   = Number(data.myTeamId || 0);
+  const canUseTeamChat = isTeamMode && !isHost && myTeamId > 0;
+  if (teamChatBox) teamChatBox.style.display = canUseTeamChat ? 'block' : 'none';
+  if (!canUseTeamChat && teamChatList) {
+    teamChatList.innerHTML = '';
+    latestTeamMsgCount = 0;
+  }
+}
 
+function renderTeamMessages(messages = []) {
+  if (!teamChatList) return;
+  if (!messages.length) {
+    teamChatList.innerHTML = '<div class="team-chat-item">目前沒有隊伍訊息</div>';
+    latestTeamMsgCount = 0;
+    return;
+  }
+  teamChatList.innerHTML = messages.map(m => `
+    <div class="team-chat-item">
+      <div class="team-chat-head">
+        <span>${m.sender_name || '-'}</span>
+        <span>${new Date((m.created_at || Date.now() / 1000) * 1000).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div class="team-chat-msg">${m.message || ''}</div>
+    </div>
+  `).join('');
+  if (messages.length > latestTeamMsgCount) {
+    teamChatList.scrollTop = teamChatList.scrollHeight;
+  }
+  latestTeamMsgCount = messages.length;
+}
+
+async function loadTeamMessages() {
+  if (!isTeamMode || isHost || myTeamId <= 0 || !pin) return;
+  try {
+    const data = await api(`/team_messages?pin=${encodeURIComponent(pin)}&teamId=${encodeURIComponent(myTeamId)}`);
+    renderTeamMessages(data.messages || []);
+  } catch (e) {
+    console.warn('[team_messages] load failed:', e.message);
+  }
+}
 /* ══════════════════════════════════════
    房主視角
    ══════════════════════════════════════ */
@@ -823,7 +870,8 @@ async function loadState(force = false) {
       totalScoreText.textContent  = isEliminated ? 0 : (data.totalScore ?? 0);
       finishScoreText.textContent = isEliminated ? 0 : (data.totalScore ?? 0);
     }
-
+      setupTeamChatUI(data);
+    await loadTeamMessages();
     renderLeaderboard(data.leaderboard || []);
 
     if (data.finished) {
@@ -839,7 +887,11 @@ async function loadState(force = false) {
     else showView('player');
 
     handleState(data);
-
+if ((!data.answerStatus || !data.answerStatus.length) && data.players?.length) {
+      renderPlayerSideList((data.players || []).map(p => ({
+        ...p, answered: 0, is_correct: 0
+      })));
+    }
   } catch (e) {
     showToast('載入失敗：' + e.message);
     console.error('[loadState error]', e);
@@ -963,7 +1015,30 @@ function leaveRoomOnUnload() {
 /* ── 事件 ── */
 submitAnswerBtn?.addEventListener('click', () => submitAnswer(false));
 nextQuestionBtn?.addEventListener('click', closePlayerResult);
-
+teamChatForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = (teamChatInput?.value || '').trim();
+  if (!msg || !isTeamMode || isHost || myTeamId <= 0) return;
+  try {
+    await api('/send_message', {
+      method: 'POST',
+      body: JSON.stringify({
+        pin,
+        senderName: getPlayerName(),
+        message: msg,
+        teamId: myTeamId,
+        face: playerProfile.face,
+        hair: playerProfile.hair,
+        eyes: playerProfile.eyes,
+        eyesOffsetY: playerProfile.eyesOffsetY || 0
+      })
+    });
+    if (teamChatInput) teamChatInput.value = '';
+    await loadTeamMessages();
+  } catch (e2) {
+    showToast(e2.message);
+  }
+});
 hostSkipExplanationBtn?.addEventListener('click', async () => {
   closeHostExplanation();
   AudioManager?.click();
