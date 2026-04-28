@@ -125,6 +125,12 @@ async function api(url, opts = {}) {
 }
 
 function avatarHtml(p, size = 48) {
+  const avatarUrl = p.avatar_url || p.avatarUrl || '';
+  if (avatarUrl) {
+    return `<div class="mini-avatar photo-avatar" style="width:${size}px;height:${size}px;">
+      <img src="${avatarUrl}" class="ma-photo">
+    </div>`;
+  }
   const face = p.face || 'images/face/face.png';
   const hair = p.hair || 'images/hair/hair01.png';
   const eyes = p.eyes || 'images/face/eyes01.png';
@@ -134,6 +140,11 @@ function avatarHtml(p, size = 48) {
     <img src="${eyes}" class="ma-layer ma-eyes" style="transform:translateX(-50%) translateY(${oy}px)">
     <img src="${hair}" class="ma-layer ma-hair">
   </div>`;
+}
+
+function displayPlayerName(p) {
+  const title = p.user_title || p.userTitle || '';
+  return title ? `${p.player_name}・${title}` : p.player_name;
 }
 
 /* ══════════════════════════════════════
@@ -374,7 +385,7 @@ function renderLeaderboard(items = []) {
   leaderboardList.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="leader-item ${it.player_name === me ? 'mine' : ''}">
-          <span>${i + 1}. ${it.player_name}</span>
+          <span>${i + 1}. ${displayPlayerName(it)}</span>
           <strong>${it.total_score}</strong>
         </div>`).join('')
     : '<div class="leader-item"><span>尚無資料</span><strong>0</strong></div>';
@@ -386,7 +397,7 @@ function renderTop5(el, items = []) {
   el.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="result-top5-item ${it.player_name === me ? 'mine' : ''}">
-          <span>${i + 1}. ${it.player_name}</span>
+          <span>${i + 1}. ${displayPlayerName(it)}</span>
           <strong>${it.total_score}</strong>
         </div>`).join('')
     : '<div class="result-top5-item"><span>-</span></div>';
@@ -409,7 +420,7 @@ function renderPlayerSideList(answerStatus = []) {
     }
     return `<div class="psl-item ${p.answered ? 'done' : 'wait'} ${eliminated ? 'eliminated' : ''}">
       ${avatarHtml(p, 36)}
-      <span class="psl-name">${p.player_name}</span>
+      <span class="psl-name">${displayPlayerName(p)}</span>
       <span class="psl-icon">${icon}</span>
     </div>`;
   }).join('');
@@ -499,13 +510,10 @@ function renderHostQuestion(q, answeredCount, totalQuestions) {
   else { hostQuestionImage.style.display = 'none'; }
 
   if (hostOptionsList) {
-    const correctIndexes = q.correct_indexes || [];
     hostOptionsList.innerHTML = (q.options || []).map((opt, idx) => {
-      const ok = correctIndexes.includes(idx);
-      return `<div class="option-btn host-option ${ok ? 'host-correct-option' : ''}">
+      return `<div class="option-btn host-option">
         <span class="option-letter">${String.fromCharCode(65 + idx)}</span>
         <span>${opt.text}</span>
-        ${ok ? '<span class="correct-tag">✓ 正解</span>' : ''}
       </div>`;
     }).join('');
   }
@@ -522,7 +530,7 @@ function renderHostAnswerStatus(items = [], eliminatedThisRound = []) {
     ? players.map(it => `
         <div class="host-answer-item ${it.is_eliminated ? 'eliminated-item' : it.answered ? 'done' : 'wait'}">
           ${avatarHtml(it, 34)}
-          <span>${it.player_name}</span>
+          <span>${displayPlayerName(it)}</span>
           <strong class="${it.is_eliminated ? 'ans-wrong' : it.answered ? (it.is_correct ? 'ans-correct' : 'ans-wrong') : 'ans-wait'}">
             ${it.is_eliminated ? '💀 已淘汰' : it.answered ? (it.is_correct ? '✓ 正確' : '✗ 錯誤') : '等待中'}
           </strong>
@@ -557,7 +565,7 @@ function renderHostBreakdown(items = []) {
 }
 
 function openHostExplanation({ correctText, explanation, top5, eliminatedNames = [] }) {
-  if (hostCorrectAnswerText) hostCorrectAnswerText.textContent = correctText || '-';
+  if (hostCorrectAnswerText) hostCorrectAnswerText.textContent = '已為投影模式隱藏';
   if (hostExplanationText)   hostExplanationText.textContent   = explanation || '本題未提供解析。';
   renderTop5(hostResultTop5List, top5 || []);
   if (hostEliminatedList && hostEliminatedNames) {
@@ -1095,11 +1103,15 @@ teamChatForm?.addEventListener('submit', async (e) => {
         pin,
         senderName: getPlayerName(),
         message: msg,
+        username: localStorage.getItem('currentUser') || '',
         teamId: myTeamId,
         face: playerProfile.face,
         hair: playerProfile.hair,
         eyes: playerProfile.eyes,
-        eyesOffsetY: playerProfile.eyesOffsetY || 0
+        eyesOffsetY: playerProfile.eyesOffsetY || 0,
+        avatarUrl: playerProfile.avatarUrl || '',
+        county: playerProfile.county || '',
+        title: playerProfile.title || ''
       })
     });
     if (teamChatInput) teamChatInput.value = '';

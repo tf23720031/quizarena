@@ -4,6 +4,7 @@
   let memberModal;
   let addFriendModal;
   let friendRequestsModal;
+  let profileModal;
 
   const state = {
     rooms: [],
@@ -12,6 +13,8 @@
     friendRequests: [],
     pendingFriendCount: 0,
     achievements: [],
+    profileSummary: null,
+    profileAvatarDraft: "",
   };
 
   const $ = (id) => document.getElementById(id);
@@ -89,15 +92,24 @@
   function updateAuthUI() {
     const user = getCurrentUser();
     const loginStatus = $("loginStatus");
+    const loginSubStatus = $("loginSubStatus");
     const loginBtn = $("loginBtn");
     const logoutBtn = $("logoutBtn");
+    const profileBtn = $("profileBtn");
     const friendsShell = $("friendsShell");
     const friendsDockBtn = $("friendsDockBtn");
     const openAddFriendBtn = $("openAddFriendBtn");
 
     if (loginStatus) loginStatus.textContent = user || "尚未登入";
+    if (loginSubStatus) {
+      const profile = state.profileSummary || {};
+      loginSubStatus.textContent = user
+        ? `${profile.title || "新手冒險家"}${profile.county ? `・${profile.county}` : ""}`
+        : "登入後可編輯個人檔案";
+    }
     loginBtn?.classList.toggle("d-none", !!user);
     logoutBtn?.classList.toggle("d-none", !user);
+    profileBtn?.classList.toggle("d-none", !user);
 
     if (friendsShell) {
       friendsShell.style.display = user ? "block" : "none";
@@ -105,6 +117,86 @@
     }
     if (friendsDockBtn) friendsDockBtn.style.display = user ? "flex" : "none";
     if (openAddFriendBtn) openAddFriendBtn.style.display = user ? "inline-flex" : "none";
+  }
+
+  function renderProfileSummary(data = {}) {
+    state.profileSummary = data;
+    const user = getCurrentUser();
+    const username = data.username || user || "玩家";
+    const title = data.title || "新手冒險家";
+    const county = data.county || "未設定縣市";
+    const favoriteCategory = data.favoriteCategory || "尚未設定擅長領域";
+    const avatarUrl = data.avatarUrl || "images/face/face.png";
+    const unlocked = Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements : [];
+
+    const setText = (id, value) => {
+      const el = $(id);
+      if (el) el.textContent = value;
+    };
+
+    const avatarPreview = $("profileAvatarPreview");
+    if (avatarPreview) avatarPreview.src = state.profileAvatarDraft || avatarUrl;
+
+    setText("profileUsernameText", username);
+    setText("profileTitleText", title);
+    setText("profileWinsText", String(Number(data.wins || 0)));
+    setText("profileAchievementsText", `${Number(data.unlockedCount || 0)} / ${Number(data.totalAchievementCount || 0)}`);
+    setText("profileFriendsText", String(Number(data.friendCount || 0)));
+    setText("profileWrongBookText", String(Number(data.wrongBookCount || 0)));
+    setText("profileUnlockedBadge", `${unlocked.length} 個`);
+
+    const countyBadge = $("profileCountyBadge");
+    if (countyBadge) countyBadge.textContent = county;
+    const categoryBadge = $("profileFavCategoryBadge");
+    if (categoryBadge) categoryBadge.textContent = favoriteCategory;
+
+    const countySelect = $("profileCountySelect");
+    if (countySelect && Array.isArray(data.counties)) {
+      countySelect.innerHTML = ['<option value="">請選擇縣市</option>']
+        .concat(data.counties.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`))
+        .join("");
+      countySelect.value = data.county || "";
+    }
+
+    const bioInput = $("profileBioInput");
+    if (bioInput) bioInput.value = data.bio || "";
+    const favoriteInput = $("profileFavoriteCategoryInput");
+    if (favoriteInput) favoriteInput.value = data.favoriteCategory || "";
+
+    const unlockedWrap = $("profileUnlockedAchievements");
+    if (unlockedWrap) {
+      unlockedWrap.innerHTML = unlocked.length
+        ? unlocked.map((item) => `
+          <article class="profile-achievement-item">
+            <div class="profile-achievement-icon"><i class="fa-solid ${escapeHtml(item.icon || "fa-award")}"></i></div>
+            <div class="profile-achievement-copy">
+              <strong>${escapeHtml(item.title || "已解鎖成就")}</strong>
+              <p>${escapeHtml(item.description || "持續挑戰，收集更多成就。")}</p>
+            </div>
+          </article>
+        `).join("")
+        : `<div class="profile-empty-state">目前還沒有已解鎖成就，先去打一場吧。</div>`;
+    }
+
+    updateAuthUI();
+  }
+
+  async function loadProfileSummary() {
+    const user = getCurrentUser();
+    if (!user) {
+      state.profileSummary = null;
+      state.profileAvatarDraft = "";
+      updateAuthUI();
+      return null;
+    }
+    const data = await api(`/profile_summary?username=${encodeURIComponent(user)}`);
+    if (!state.profileAvatarDraft) {
+      renderProfileSummary(data);
+    } else {
+      const merged = { ...data, avatarUrl: state.profileAvatarDraft };
+      renderProfileSummary(merged);
+    }
+    return data;
   }
 
   function renderFriendsOverview(data = {}) {
@@ -296,6 +388,67 @@
         achievementsList.innerHTML = `<article class="achievement-card is-empty"><div><strong>成就載入失敗</strong><span>${escapeHtml(error.message)}</span></div></article>`;
       }
     }
+  }
+
+  function openProfileModal() {
+    if (!getCurrentUser()) {
+      showToast("請先登入");
+      openLoginModal();
+      return;
+    }
+    state.profileAvatarDraft = "";
+    loadProfileSummary().then(() => profileModal?.show()).catch((error) => {
+      showToast(error.message);
+    });
+  }
+
+  async function handleProfileAvatarInput(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      showToast("頭像請控制在 1MB 內");
+      event.target.value = "";
+      return;
+    }
+    state.profileAvatarDraft = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("讀取頭像失敗"));
+      reader.readAsDataURL(file);
+    });
+    renderProfileSummary({ ...(state.profileSummary || {}), avatarUrl: state.profileAvatarDraft });
+  }
+
+  function clearProfileAvatar() {
+    state.profileAvatarDraft = "";
+    const avatarInput = $("profileAvatarInput");
+    if (avatarInput) avatarInput.value = "";
+    renderProfileSummary({ ...(state.profileSummary || {}), avatarUrl: "" });
+  }
+
+  async function saveProfile() {
+    const user = getCurrentUser();
+    if (!user) {
+      showToast("請先登入");
+      return;
+    }
+    const payload = {
+      username: user,
+      avatarUrl: state.profileAvatarDraft || state.profileSummary?.avatarUrl || "",
+      county: $("profileCountySelect")?.value || "",
+      favoriteCategory: $("profileFavoriteCategoryInput")?.value.trim() || "",
+      bio: $("profileBioInput")?.value.trim() || "",
+    };
+
+    const data = await api("/save_profile", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    state.profileAvatarDraft = "";
+    renderProfileSummary(data.profile || {});
+    showToast(data.message || "個人資料已更新");
+    await loadFriendsOverview();
+    await loadAchievementsSummary();
   }
 
   function toggleFriendsDrawer(forceOpen = null) {
@@ -551,7 +704,7 @@
 
       setCurrentUser(data.username);
       memberModal?.hide();
-      updateAuthUI();
+      await loadProfileSummary();
       await loadFriendsOverview();
       await loadFriendRequestSummary();
       await loadAchievementsSummary();
@@ -622,6 +775,8 @@
     clearCurrentUser();
     state.friendRequests = [];
     state.achievements = [];
+    state.profileSummary = null;
+    state.profileAvatarDraft = "";
     renderFriendRequestBadge(0);
     renderAchievementsSummary({ unlockedCount: 0, totalCount: 0, achievements: [] });
     updateAuthUI();
@@ -655,6 +810,10 @@
 
     $("loginBtn")?.addEventListener("click", openLoginModal);
     $("logoutBtn")?.addEventListener("click", handleLogout);
+    $("profileBtn")?.addEventListener("click", openProfileModal);
+    $("loginStatusCard")?.addEventListener("click", () => {
+      if (getCurrentUser()) openProfileModal();
+    });
     $("createQuizBtn")?.addEventListener("click", handleCreateQuizClick);
     $("wrongBookBtn")?.addEventListener("click", handleWrongBookClick);
     $("teacherReportBtn")?.addEventListener("click", handleTeacherReportClick);
@@ -662,6 +821,11 @@
     $("loginForm")?.addEventListener("submit", handleLogin);
     $("registerForm")?.addEventListener("submit", handleRegister);
     $("addFriendBtn")?.addEventListener("click", handleAddFriend);
+    $("profileAvatarInput")?.addEventListener("change", handleProfileAvatarInput);
+    $("clearProfileAvatarBtn")?.addEventListener("click", clearProfileAvatar);
+    $("saveProfileBtn")?.addEventListener("click", () => {
+      saveProfile().catch((error) => showToast(error.message));
+    });
 
     $("friendsDockBtn")?.addEventListener("click", () => {
       toggleFriendsDrawer(true);
@@ -705,6 +869,7 @@
     memberModal = getModal("memberModal");
     addFriendModal = getModal("addFriendModal");
     friendRequestsModal = getModal("friendRequestsModal");
+    profileModal = getModal("profileModal");
   }
 
   function init() {
@@ -715,10 +880,12 @@
     loadFriendsOverview();
     loadFriendRequestSummary();
     loadAchievementsSummary();
+    loadProfileSummary();
     setInterval(loadLobby, 8000);
     setInterval(loadFriendsOverview, 15000);
     setInterval(loadFriendRequestSummary, 15000);
     setInterval(loadAchievementsSummary, 15000);
+    setInterval(loadProfileSummary, 15000);
   }
 
   if (document.readyState === "loading") {

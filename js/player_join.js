@@ -117,8 +117,29 @@ const state = {
   hairIndex: 0,
   eyeIndex: 0,
   eyesOffsetY: 0,
-  context: getJoinContext()
+  context: getJoinContext(),
+  profileSummary: null
 };
+
+async function loadProfileSummary() {
+  const username = localStorage.getItem("currentUser") || "";
+  if (!username) return null;
+  try {
+    const data = await api(`/profile_summary?username=${encodeURIComponent(username)}`);
+    state.profileSummary = data;
+    const hint = document.getElementById("profileSyncHint");
+    const hintText = document.getElementById("profileSyncText");
+    if (hint && hintText) {
+      hint.style.display = "block";
+      hintText.textContent = data.avatarUrl
+        ? `已套用 ${data.title || "個人稱號"}、${data.county || "未設定縣市"} 與上傳頭像`
+        : `已套用 ${data.title || "個人稱號"} 與 ${data.county || "未設定縣市"}`;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 function populateRoomInfo() {
   const room = state.context?.room;
@@ -234,11 +255,15 @@ async function joinRoom() {
     pin: context.room.pin,
     roomKey: context.roomKey || "",
     player: {
+      username: localStorage.getItem("currentUser") || "",
       name: playerName,
       face: "images/face/face.png",
       hair: HAIRS[state.hairIndex],
       eyes: EYES[state.eyeIndex],
       eyesOffsetY: state.eyesOffsetY,
+      avatarUrl: state.profileSummary?.avatarUrl || "",
+      county: state.profileSummary?.county || "",
+      title: state.profileSummary?.title || "",
       isHost: isHost
     }
   };
@@ -291,6 +316,7 @@ joinRoomBtn?.addEventListener("click", joinRoom);
 
 populateRoomInfo();
 syncAvatarImages();
+loadProfileSummary();
 
 // ── 房主在選頭像期間發 heartbeat，防止房間被系統刪除 ──────
 (function startHostHeartbeat() {

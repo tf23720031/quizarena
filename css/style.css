@@ -351,6 +351,14 @@ body.dark-mode .btn-close {
   text-overflow: ellipsis;
 }
 
+.status-subline {
+  display: block;
+  margin-top: 2px;
+  color: #a56b87;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 /* ════════════════════════════════════════
    通用按鈕
    ════════════════════════════════════════ */
@@ -1495,6 +1503,183 @@ body.dark-mode .friends-fab-mini {
 .member-message {
   color: #ff6fa4;
   font-weight: 700;
+}
+
+.profile-modal-shell {
+  color: #33405f;
+}
+
+.profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  flex: 0 0 auto;
+}
+
+.profile-avatar {
+  width: 112px;
+  height: 112px;
+  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.85);
+  border-radius: 24px;
+  background: linear-gradient(135deg, #ffe4ef, #eef4ff);
+  box-shadow: 0 16px 36px rgba(103, 92, 190, 0.2);
+}
+
+.profile-avatar-clear {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff7d9d, #ff5b7d);
+  box-shadow: 0 8px 18px rgba(255, 91, 125, 0.28);
+}
+
+.profile-kicker {
+  color: #8c7dff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.profile-earned-title {
+  margin: 8px 0 10px;
+  color: #ff6f9f;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.profile-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.profile-stat-card,
+.profile-edit-card,
+.profile-achievements-card {
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 16px 30px rgba(75, 84, 160, 0.12);
+}
+
+.profile-stat-card span {
+  display: block;
+  color: #7c84a6;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.profile-stat-card strong {
+  color: #45507d;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.profile-unlocked-list {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.profile-achievement-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 248, 218, 0.96), rgba(255, 255, 255, 0.88));
+}
+
+.profile-achievement-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #ffffff;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffb62e, #ff6f9f);
+}
+
+.profile-achievement-copy strong {
+  display: block;
+  color: #37405f;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.profile-achievement-copy p {
+  margin: 4px 0 0;
+  color: #7c84a6;
+  font-size: 0.82rem;
+}
+
+.profile-empty-state {
+  padding: 18px;
+  color: #7c84a6;
+  text-align: center;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+body.dark-mode .status-subline {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+body.dark-mode .profile-stat-card,
+body.dark-mode .profile-edit-card,
+body.dark-mode .profile-achievements-card,
+body.dark-mode .profile-empty-state,
+body.dark-mode .profile-achievement-item {
+  color: #eaf2ff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode .profile-stat-card span,
+body.dark-mode .profile-achievement-copy p {
+  color: rgba(234, 242, 255, 0.66);
+}
+
+body.dark-mode .profile-stat-card strong,
+body.dark-mode .profile-achievement-copy strong,
+body.dark-mode .profile-earned-title {
+  color: #ffffff;
 }
 
 /* ════════════════════════════════════════

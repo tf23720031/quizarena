@@ -24,6 +24,7 @@
           <div class="login-status-text">
             <span class="status-label">目前登入帳號</span>
             <strong id="loginStatus" class="status-name">尚未登入</strong>
+            <span id="loginSubStatus" class="status-subline">登入後可編輯個人檔案</span>
           </div>
         </div>
 
@@ -33,6 +34,10 @@
 
         <button class="custom-btn btn-logout d-none" id="logoutBtn">
           <i class="fa-solid fa-right-from-bracket"></i> 登出
+        </button>
+
+        <button class="custom-btn btn-play d-none" id="profileBtn">
+          <i class="fa-solid fa-user-gear"></i> 個人資料
         </button>
 
         <button class="custom-btn btn-create" id="createQuizBtn">
@@ -255,6 +260,93 @@
 
             <button type="submit" class="btn modal-ok-btn w-100 p-3">註冊</button>
           </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+      <div class="modal-content cute-modal profile-modal-shell">
+        <div class="modal-body p-4 p-lg-5">
+          <div class="profile-head">
+            <div class="profile-hero">
+              <div class="profile-avatar-wrap">
+                <img id="profileAvatarPreview" class="profile-avatar" alt="avatar" src="images/face/face.png">
+                <button type="button" class="profile-avatar-clear" id="clearProfileAvatarBtn" title="移除頭像">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div class="profile-hero-copy">
+                <div class="profile-kicker">PLAYER PROFILE</div>
+                <h4 id="profileUsernameText" class="m-0">玩家</h4>
+                <p id="profileTitleText" class="profile-earned-title">新手冒險家</p>
+                <div class="profile-meta-line">
+                  <span id="profileCountyBadge" class="badge-qa">未設定縣市</span>
+                  <span id="profileFavCategoryBadge" class="badge-qa">尚未設定擅長領域</span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="profile-stats-grid">
+            <article class="profile-stat-card">
+              <span>勝場</span>
+              <strong id="profileWinsText">0</strong>
+            </article>
+            <article class="profile-stat-card">
+              <span>已解鎖成就</span>
+              <strong id="profileAchievementsText">0 / 0</strong>
+            </article>
+            <article class="profile-stat-card">
+              <span>好友數</span>
+              <strong id="profileFriendsText">0</strong>
+            </article>
+            <article class="profile-stat-card">
+              <span>錯題收藏</span>
+              <strong id="profileWrongBookText">0</strong>
+            </article>
+          </div>
+
+          <div class="row g-4 mt-1">
+            <div class="col-lg-5">
+              <div class="profile-edit-card">
+                <div class="section-label mb-3">編輯檔案</div>
+                <label class="form-label pink-text">上傳頭像</label>
+                <input type="file" id="profileAvatarInput" class="form-control member-input" accept="image/png,image/jpeg,image/webp">
+
+                <label class="form-label pink-text mt-3">所在縣市</label>
+                <select id="profileCountySelect" class="form-select member-input">
+                  <option value="">請選擇縣市</option>
+                </select>
+
+                <label class="form-label pink-text mt-3">擅長領域</label>
+                <input type="text" id="profileFavoriteCategoryInput" class="form-control member-input" maxlength="40" placeholder="例如：歷史、英文、自然">
+
+                <label class="form-label pink-text mt-3">個人簡介</label>
+                <textarea id="profileBioInput" class="form-control member-input" rows="4" maxlength="180" placeholder="寫一句你的遊戲風格或自我介紹"></textarea>
+
+                <div class="d-flex justify-content-end mt-3">
+                  <button type="button" class="custom-btn btn-create" id="saveProfileBtn">
+                    <i class="fa-solid fa-floppy-disk"></i> 儲存個人資料
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-7">
+              <div class="profile-achievements-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div>
+                    <div class="section-label">已解鎖成就</div>
+                    <div class="small-text">這裡只顯示你已經拿到的成就與目前稱號。</div>
+                  </div>
+                  <span id="profileUnlockedBadge" class="badge-qa">0 個</span>
+                </div>
+                <div id="profileUnlockedAchievements" class="profile-unlocked-list"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
