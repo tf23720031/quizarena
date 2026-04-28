@@ -1,272 +1,107 @@
 {
   "banks": [
     {
-      "id": "system_science_mix",
-      "title": "系統題庫：自然科學挑戰",
-      "gameMode": "individual",
+      "title": "🔬 自然科學挑戰",
+      "category": "自然科學",
+      "description": "生物、物理、化學基礎概念",
       "questions": [
-        {
-          "id": "science_easy_1",
-          "title": "植物的能量來源",
-          "content": "植物進行光合作用時，最主要是利用哪一種能量來源？",
-          "type": "single",
-          "category": "自然科學",
-          "difficulty": "easy",
-          "time": "20 秒",
-          "score": 500,
-          "explanation": "光合作用主要利用太陽光提供能量，把二氧化碳和水轉成葡萄糖與氧氣。",
-          "options": [
-            { "text": "太陽光", "correct": true },
-            { "text": "風力", "correct": false },
-            { "text": "土壤中的鹽分", "correct": false },
-            { "text": "月光", "correct": false }
-          ]
-        },
-        {
-          "id": "science_medium_1",
-          "title": "水的三態",
-          "content": "下列哪些屬於水在自然界中常見的狀態？",
-          "type": "multiple",
-          "category": "自然科學",
-          "difficulty": "medium",
-          "time": "30 秒",
-          "score": 1000,
-          "explanation": "水可在自然界中以固態、液態、氣態存在，像冰、液態水、水蒸氣。",
-          "options": [
-            { "text": "冰", "correct": true },
-            { "text": "液態水", "correct": true },
-            { "text": "水蒸氣", "correct": true },
-            { "text": "等離子水", "correct": false }
-          ]
-        },
-        {
-          "id": "science_hard_1",
-          "title": "食物鏈判斷",
-          "content": "在草原生態系中，如果草大量減少，最先直接受到影響的通常是哪一類生物？",
-          "type": "single",
-          "category": "自然科學",
-          "difficulty": "hard",
-          "time": "30 秒",
-          "score": 1000,
-          "explanation": "初級消費者直接吃草，因此草減少時，最先直接受影響的是草食動物。",
-          "options": [
-            { "text": "草食動物", "correct": true },
-            { "text": "分解者", "correct": false },
-            { "text": "頂級掠食者", "correct": false },
-            { "text": "雲層", "correct": false }
-          ]
-        },
-        {
-          "id": "science_easy_2",
-          "title": "行星知識",
-          "content": "地球繞著哪一個天體公轉？",
-          "type": "single",
-          "category": "自然科學",
-          "difficulty": "easy",
-          "time": "20 秒",
-          "score": 500,
-          "explanation": "地球會繞著太陽公轉，形成一年四季與年度循環。",
-          "options": [
-            { "text": "太陽", "correct": true },
-            { "text": "月亮", "correct": false },
-            { "text": "火星", "correct": false },
-            { "text": "木星", "correct": false }
-          ]
-        },
-        {
-          "id": "science_medium_2",
-          "title": "人體器官功能",
-          "content": "人體中負責將血液送往全身的器官是什麼？",
-          "type": "single",
-          "category": "自然科學",
-          "difficulty": "medium",
-          "time": "20 秒",
-          "score": 1000,
-          "explanation": "心臟會收縮與舒張，把血液循環送往全身。",
-          "options": [
-            { "text": "心臟", "correct": true },
-            { "text": "肺臟", "correct": false },
-            { "text": "肝臟", "correct": false },
-            { "text": "腎臟", "correct": false }
-          ]
-        }
+        {"question":"光合作用的主要原料是什麼？","options":["二氧化碳和水","氧氣和水","氮氣和二氧化碳","葡萄糖和水"],"answer":0,"time":15},
+        {"question":"人體最大的器官是？","options":["肝臟","皮膚","肺臟","大腦"],"answer":1,"time":15},
+        {"question":"水的化學式是？","options":["CO₂","H₂O","O₂","NaCl"],"answer":1,"time":10},
+        {"question":"地球距離太陽最近的時候稱為？","options":["遠日點","近日點","冬至","夏至"],"answer":1,"time":15},
+        {"question":"聲音在哪種介質中傳播最快？","options":["空氣","水","真空","固體（鐵）"],"answer":3,"time":15},
+        {"question":"DNA的雙螺旋結構由誰發現？","options":["愛因斯坦","沃森與克里克","達爾文","巴斯德"],"answer":1,"time":20},
+        {"question":"原子核由哪兩種粒子組成？","options":["電子與質子","質子與中子","電子與中子","質子與光子"],"answer":1,"time":15}
       ]
     },
     {
-      "id": "system_history_mix",
-      "title": "系統題庫：世界歷史冒險",
-      "gameMode": "individual",
+      "title": "🌍 世界歷史冒險",
+      "category": "歷史",
+      "description": "古今中外重要歷史事件",
       "questions": [
-        {
-          "id": "history_easy_1",
-          "title": "金字塔文明",
-          "content": "金字塔最著名地代表哪一個古代文明？",
-          "type": "single",
-          "category": "歷史",
-          "difficulty": "easy",
-          "time": "20 秒",
-          "score": 500,
-          "explanation": "金字塔是古埃及文明最具代表性的建築之一。",
-          "options": [
-            { "text": "古埃及", "correct": true },
-            { "text": "古希臘", "correct": false },
-            { "text": "古印度", "correct": false },
-            { "text": "古羅馬", "correct": false }
-          ]
-        },
-        {
-          "id": "history_medium_1",
-          "title": "工業革命影響",
-          "content": "工業革命帶來了哪些明顯改變？",
-          "type": "multiple",
-          "category": "歷史",
-          "difficulty": "medium",
-          "time": "30 秒",
-          "score": 1000,
-          "explanation": "工業革命帶來機器生產、城市化加速，也改變了勞動方式與交通效率。",
-          "options": [
-            { "text": "機器大量取代手工", "correct": true },
-            { "text": "城市人口增加", "correct": true },
-            { "text": "交通運輸效率提升", "correct": true },
-            { "text": "人類停止使用金屬", "correct": false }
-          ]
-        },
-        {
-          "id": "history_hard_1",
-          "title": "文藝復興判斷",
-          "content": "文藝復興強調重新重視人的價值與古典文化，這個說法正確嗎？",
-          "type": "tf",
-          "category": "歷史",
-          "difficulty": "hard",
-          "time": "20 秒",
-          "score": 1000,
-          "explanation": "文藝復興重視人文精神，提倡重新理解希臘羅馬古典文化，因此此敘述正確。",
-          "options": [
-            { "text": "是", "correct": true },
-            { "text": "否", "correct": false }
-          ]
-        },
-        {
-          "id": "history_easy_2",
-          "title": "長城所在",
-          "content": "萬里長城最著名地位於哪一個國家？",
-          "type": "single",
-          "category": "歷史",
-          "difficulty": "easy",
-          "time": "20 秒",
-          "score": 500,
-          "explanation": "萬里長城是中國歷史上著名的大型防禦工程。",
-          "options": [
-            { "text": "中國", "correct": true },
-            { "text": "日本", "correct": false },
-            { "text": "韓國", "correct": false },
-            { "text": "印度", "correct": false }
-          ]
-        },
-        {
-          "id": "history_medium_2",
-          "title": "大航海時代",
-          "content": "大航海時代帶來了哪些影響？",
-          "type": "multiple",
-          "category": "歷史",
-          "difficulty": "medium",
-          "time": "30 秒",
-          "score": 1000,
-          "explanation": "大航海時代促進洲際交流、貿易擴張，也改變了世界政治與經濟結構。",
-          "options": [
-            { "text": "促進洲際交流", "correct": true },
-            { "text": "帶動海外貿易", "correct": true },
-            { "text": "完全停止殖民行為", "correct": false },
-            { "text": "改變世界地理認知", "correct": true }
-          ]
-        }
+        {"question":"第一次世界大戰的導火線是什麼？","options":["珍珠港事件","薩拉熱窩暗殺事件","拿破崙入侵俄羅斯","德軍進攻波蘭"],"answer":1,"time":20},
+        {"question":"羅馬帝國的第一位皇帝是？","options":["凱薩","屋大維（奧古斯都）","馬庫斯·奧勒留","卡利古拉"],"answer":1,"time":20},
+        {"question":"中國四大發明不包括哪一項？","options":["火藥","印刷術","指南針","望遠鏡"],"answer":3,"time":15},
+        {"question":"法國大革命爆發於哪一年？","options":["1776","1789","1804","1848"],"answer":1,"time":15},
+        {"question":"萬里長城主要建於哪個朝代？","options":["秦朝","漢朝","唐朝","明朝"],"answer":3,"time":15},
+        {"question":"美國獨立宣言簽署於哪一年？","options":["1765","1776","1787","1812"],"answer":1,"time":15}
       ]
     },
     {
-      "id": "system_english_mix",
-      "title": "系統題庫：英文單字與文法",
-      "gameMode": "individual",
+      "title": "📚 英文單字與文法",
+      "category": "英文",
+      "description": "英文常用單字與基礎文法",
       "questions": [
-        {
-          "id": "english_easy_1",
-          "title": "基本單字",
-          "content": "單字 \"apple\" 的中文意思最接近哪一個？",
-          "type": "single",
-          "category": "英文",
-          "difficulty": "easy",
-          "time": "20 秒",
-          "score": 500,
-          "explanation": "apple 是蘋果，屬於常見基礎英文單字。",
-          "options": [
-            { "text": "蘋果", "correct": true },
-            { "text": "香蕉", "correct": false },
-            { "text": "汽車", "correct": false },
-            { "text": "學校", "correct": false }
-          ]
-        },
-        {
-          "id": "english_medium_1",
-          "title": "動詞時態",
-          "content": "下列哪些句子使用了過去式？",
-          "type": "multiple",
-          "category": "英文",
-          "difficulty": "medium",
-          "time": "30 秒",
-          "score": 1000,
-          "explanation": "含有 went、played 這類過去式動詞的句子，表示動作發生在過去。",
-          "options": [
-            { "text": "She went home early.", "correct": true },
-            { "text": "They played soccer yesterday.", "correct": true },
-            { "text": "I am reading now.", "correct": false },
-            { "text": "He will call me tomorrow.", "correct": false }
-          ]
-        },
-        {
-          "id": "english_hard_1",
-          "title": "文法概念",
-          "content": "\"If I were you\" 使用的是假設語氣，這個說法正確嗎？",
-          "type": "tf",
-          "category": "英文",
-          "difficulty": "hard",
-          "time": "20 秒",
-          "score": 1000,
-          "explanation": "If I were you 是英文常見的假設語氣，用來表示與事實不同的假設。",
-          "options": [
-            { "text": "是", "correct": true },
-            { "text": "否", "correct": false }
-          ]
-        },
-        {
-          "id": "english_easy_2",
-          "title": "日常單字",
-          "content": "單字 \"teacher\" 的意思是哪一個？",
-          "type": "single",
-          "category": "英文",
-          "difficulty": "easy",
-          "time": "20 秒",
-          "score": 500,
-          "explanation": "teacher 指的是老師，是常見的職業英文單字。",
-          "options": [
-            { "text": "老師", "correct": true },
-            { "text": "醫生", "correct": false },
-            { "text": "警察", "correct": false },
-            { "text": "工程師", "correct": false }
-          ]
-        },
-        {
-          "id": "english_medium_2",
-          "title": "填空挑戰",
-          "content": "I ___ to school every day. 請填入最適合的一個英文單字。",
-          "type": "fill",
-          "category": "英文",
-          "difficulty": "medium",
-          "time": "20 秒",
-          "score": 1000,
-          "explanation": "主詞是 I，表示日常習慣時，常用原形動詞 go。",
-          "options": [
-            { "text": "go", "correct": true }
-          ]
-        }
+        {"question":"Which word means 'very happy'?","options":["Sad","Elated","Tired","Angry"],"answer":1,"time":15},
+        {"question":"She ___ to school every day.","options":["go","goes","going","gone"],"answer":1,"time":15},
+        {"question":"What is the past tense of 'run'?","options":["Runned","Ran","Running","Run"],"answer":1,"time":10},
+        {"question":"Which sentence is correct?","options":["I is a student","He are tall","They were here","She were happy"],"answer":2,"time":20},
+        {"question":"What does 'benevolent' mean?","options":["Cruel","Kind and generous","Shy","Intelligent"],"answer":1,"time":20},
+        {"question":"Choose the correct word: I have ___ seen that movie.","options":["yet","already","since","for"],"answer":1,"time":15}
+      ]
+    },
+    {
+      "title": "🔢 數學腦力激盪",
+      "category": "數學",
+      "description": "算術、代數、幾何基礎題",
+      "questions": [
+        {"question":"7 × 8 = ?","options":["54","56","63","48"],"answer":1,"time":10},
+        {"question":"三角形內角和是幾度？","options":["90°","180°","270°","360°"],"answer":1,"time":10},
+        {"question":"√144 = ?","options":["11","12","13","14"],"answer":1,"time":15},
+        {"question":"2³ = ?","options":["6","8","9","12"],"answer":1,"time":10},
+        {"question":"一個圓的面積公式是？","options":["2πr","πr²","πd","2πr²"],"answer":1,"time":15},
+        {"question":"如果 x + 5 = 12，x = ?","options":["5","6","7","8"],"answer":2,"time":15},
+        {"question":"質數是只能被 1 和自己整除的數，以下哪個是質數？","options":["9","15","17","21"],"answer":2,"time":15}
+      ]
+    },
+    {
+      "title": "🌐 地理探索",
+      "category": "地理",
+      "description": "世界地理、地形、國家知識",
+      "questions": [
+        {"question":"世界上面積最大的國家是？","options":["美國","中國","俄羅斯","加拿大"],"answer":2,"time":15},
+        {"question":"尼羅河流經哪個大洲？","options":["亞洲","非洲","歐洲","美洲"],"answer":1,"time":10},
+        {"question":"台灣最高峰是？","options":["玉山","雪山","秀姑巒山","合歡山"],"answer":0,"time":15},
+        {"question":"澳洲的首都是？","options":["雪梨","墨爾本","坎培拉","布里斯本"],"answer":2,"time":15},
+        {"question":"世界上最長的山脈是？","options":["喜馬拉雅山脈","安第斯山脈","阿爾卑斯山脈","洛磯山脈"],"answer":1,"time":15},
+        {"question":"地中海位於哪兩大洲之間？","options":["亞洲與非洲","歐洲與非洲","歐洲與亞洲","美洲與歐洲"],"answer":1,"time":15}
+      ]
+    },
+    {
+      "title": "🎨 藝術與文化",
+      "category": "藝文",
+      "description": "音樂、美術、文學常識",
+      "questions": [
+        {"question":"《蒙娜麗莎》是哪位畫家的作品？","options":["米開朗基羅","達文西","拉斐爾","波提切利"],"answer":1,"time":15},
+        {"question":"貝多芬的第九交響曲最後樂章名稱是？","options":["命運","歡樂頌","月光","英雄"],"answer":1,"time":20},
+        {"question":"《哈利波特》的作者是？","options":["J.R.R. Tolkien","C.S. Lewis","J.K. Rowling","Roald Dahl"],"answer":2,"time":10},
+        {"question":"油畫（Oil painting）最早起源於哪個地區？","options":["義大利","法國","荷蘭/法蘭德斯","西班牙"],"answer":2,"time":20},
+        {"question":"畢卡索是哪種藝術風格的代表人物？","options":["印象派","立體主義","超現實主義","野獸派"],"answer":1,"time":15}
+      ]
+    },
+    {
+      "title": "💻 資訊科技入門",
+      "category": "資訊",
+      "description": "電腦基礎、程式邏輯、網路概念",
+      "questions": [
+        {"question":"HTML 的全名是？","options":["Hyper Text Markup Language","High Tech Modern Language","Home Tool Management Layer","Hyper Transfer Markup Logic"],"answer":0,"time":20},
+        {"question":"CPU 的中文名稱是？","options":["記憶體","中央處理器","硬碟","顯示卡"],"answer":1,"time":10},
+        {"question":"1 GB 等於多少 MB？","options":["100","512","1024","2048"],"answer":2,"time":15},
+        {"question":"下列哪個是程式語言？","options":["HTTP","Python","HTML","Wi-Fi"],"answer":1,"time":10},
+        {"question":"WWW 代表什麼？","options":["World Wide Web","World Wide Wire","Web Wide World","Wide World Website"],"answer":0,"time":10},
+        {"question":"下列哪個排序演算法的最佳時間複雜度為 O(n)？","options":["泡沫排序","插入排序","快速排序","合併排序"],"answer":1,"time":25}
+      ]
+    },
+    {
+      "title": "🏃 體育與健康",
+      "category": "健康體育",
+      "description": "運動規則、健康知識",
+      "questions": [
+        {"question":"籃球比賽每隊上場幾人？","options":["5","6","7","11"],"answer":0,"time":10},
+        {"question":"奧運會每幾年舉辦一次？","options":["2年","3年","4年","5年"],"answer":2,"time":10},
+        {"question":"人體共有幾塊骨頭（成人）？","options":["186","206","226","256"],"answer":1,"time":15},
+        {"question":"馬拉松全程距離約為？","options":["21公里","30公里","42.195公里","50公里"],"answer":2,"time":15},
+        {"question":"足球比賽每隊上場幾人？","options":["9","10","11","12"],"answer":2,"time":10}
       ]
     }
   ]

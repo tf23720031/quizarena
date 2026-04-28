@@ -304,7 +304,48 @@ function renderBankList() {
   }).join('');
 
   myWrap.innerHTML = myBanks.length ? renderCards(myBanks) : '<div class="no-title">你目前還沒有自訂題庫。</div>';
-  suggestedWrap.innerHTML = suggestedBanks.length ? renderCards(suggestedBanks) : '<div class="no-title">目前沒有系統建議題庫。</div>';
+  // Render suggested banks with category badges + Kahoot link
+  if (suggestedBanks.length) {
+    const categoryColors = {
+      '自然科學': '#d4f5e0:#1e7a47',
+      '歷史': '#fff1c7:#8a5b00',
+      '英文': '#dff0ff:#2a6cb8',
+      '數學': '#f0e0ff:#7a4cb8',
+      '地理': '#ffe4c8:#a85020',
+      '藝文': '#ffd6e7:#a8205a',
+      '資訊': '#e0f0ff:#2060a0',
+      '健康體育': '#ddfff0:#1a8060',
+    };
+    const catHtml = (bank) => {
+      const cat = bank.category || '';
+      const [bg, col] = (categoryColors[cat] || '#e8e8e8:#444').split(':');
+      return cat ? `<span class="question-chip py-1 px-2" style="background:${bg};color:${col};border-radius:8px">${cat}</span>` : '';
+    };
+    const renderSuggested = (list) => list.map((bank) => {
+      const index = state.quizBanks.findIndex((item) => item.id === bank.id);
+      return `
+        <article class="bank-card suggested-bank ${state.currentBankIndex === index ? 'active' : ''}" data-index="${index}">
+          <div class="bank-top">
+            <div>
+              <strong>${escapeHtml(bank.title || '未命名題庫')}</strong>
+              <div class="small-muted">${(bank.questions || []).length} 題</div>
+            </div>
+            <div class="d-flex flex-wrap gap-1">${catHtml(bank)}</div>
+          </div>
+          <div class="bank-tools">
+            <button class="tool-btn copy-bank-btn" data-id="${bank.id}">複製使用</button>
+          </div>
+        </article>`;
+    }).join('');
+    suggestedWrap.innerHTML = renderSuggested(suggestedBanks)
+      + `<a href="https://kahoot.com/schools-u/" target="_blank" rel="noopener" class="kahoot-link-card">
+          <img src="https://kahoot.com/files/2021/02/kahoot-logo.png" alt="Kahoot" style="height:22px;object-fit:contain;">
+          <div><strong>瀏覽更多 Kahoot! 題目</strong><span>點此前往 Kahoot 平台，探索數萬份現成題庫</span></div>
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </a>`;
+  } else {
+    suggestedWrap.innerHTML = '<div class="no-title">目前沒有系統建議題庫。</div>';
+  }
 
   const wrongBook = state.quizBanks.find((bank) => bank.isWrongBook);
   $('wrongBookQuickWrap').style.display = wrongBook?.questions?.length ? 'block' : 'none';

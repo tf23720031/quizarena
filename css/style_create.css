@@ -1002,3 +1002,39 @@ body::before {
     min-width: 0 !important;
   }
 }
+
+/* ── Kahoot 外部連結卡 ── */
+.kahoot-link-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, rgba(70,135,255,0.08), rgba(255,100,100,0.06));
+  border: 1.5px solid rgba(70,135,255,0.22);
+  border-radius: 14px;
+  text-decoration: none;
+  color: #2060a0;
+  font-size: 0.85rem;
+  transition: background 0.18s, transform 0.18s;
+}
+.kahoot-link-card:hover {
+  background: linear-gradient(135deg, rgba(70,135,255,0.15), rgba(255,100,100,0.1));
+  transform: translateY(-1px);
+  color: #1a4e8f;
+}
+.kahoot-link-card strong { display: block; font-weight: 800; }
+.kahoot-link-card span { font-size: 0.78rem; color: #6080a0; }
+.kahoot-link-card > div { flex: 1; min-width: 0; }
+.kahoot-link-card i { color: #5080c0; font-size: 0.9rem; flex-shrink: 0; }
+
+/* Suggested bank card style */
+.suggested-bank { border-left: 3px solid rgba(67,198,172,0.5); }
+
+body.dark-mode .kahoot-link-card {
+  background: rgba(70,135,255,0.08);
+  border-color: rgba(70,135,255,0.2);
+  color: #80b0e0;
+}
+body.dark-mode .kahoot-link-card strong { color: #a0c8f0; }
+body.dark-mode .kahoot-link-card span { color: #6090b8; }

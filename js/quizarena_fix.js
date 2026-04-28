@@ -217,3 +217,105 @@ document.addEventListener('DOMContentLoaded', function () {
   setInterval(_fixFriendsLayout, 3000);
 
 });
+
+/* ── Nav 頭像同步 ── */
+(function() {
+  function _syncNavAvatar() {
+    var saved = localStorage.getItem('qa_avatar_draft') || '';
+    var savedAppearance = {};
+    try { savedAppearance = JSON.parse(localStorage.getItem('qa_nav_appearance') || '{}'); } catch(e){}
+
+    var sets = [
+      { face: 'navFaceImg', eye: 'navEyeImg', hair: 'navHairImg', photo: 'navPhotoImg' },
+      { face: 'mobileNavFaceImg', eye: 'mobileNavEyeImg', hair: 'mobileNavHairImg', photo: 'mobileNavPhotoImg' }
+    ];
+    sets.forEach(function(s) {
+      var faceEl  = document.getElementById(s.face);
+      var eyeEl   = document.getElementById(s.eye);
+      var hairEl  = document.getElementById(s.hair);
+      var photoEl = document.getElementById(s.photo);
+      if (!faceEl) return;
+
+      if (saved) {
+        if (photoEl) { photoEl.src = saved; photoEl.style.display = 'block'; }
+      } else {
+        if (photoEl) { photoEl.style.display = 'none'; }
+        if (savedAppearance.face) faceEl.src = savedAppearance.face;
+        if (savedAppearance.hair) hairEl.src = savedAppearance.hair;
+        if (savedAppearance.eyes) {
+          eyeEl.src = savedAppearance.eyes;
+          var offset = Number(savedAppearance.eyesOffsetY || 0);
+          eyeEl.style.transform = 'translateX(-50%) translateY(' + offset + 'px)';
+        }
+      }
+    });
+  }
+  _syncNavAvatar();
+  setInterval(_syncNavAvatar, 1500);
+
+  /* 儲存外觀後同步 nav */
+  var _saveBtnObs = setInterval(function() {
+    var saveBtn = document.getElementById('saveProfileBtn');
+    if (saveBtn && !saveBtn.dataset.navBound) {
+      saveBtn.dataset.navBound = '1';
+      saveBtn.addEventListener('click', function() {
+        setTimeout(_syncNavAvatar, 800);
+      });
+    }
+    /* 把外觀 draft 儲存到 localStorage 供 nav 使用 */
+    var profileModal = document.getElementById('profileModal');
+    if (profileModal && !profileModal.dataset.appearanceBound) {
+      profileModal.dataset.appearanceBound = '1';
+      profileModal.addEventListener('hidden.bs.modal', function() {
+        /* 從 index.js 的 state 讀取 (若存在) */
+        setTimeout(_syncNavAvatar, 300);
+      });
+    }
+  }, 600);
+
+  /* 攔截 saveProfile API 回應後更新 nav 外觀 */
+  var _origFetch = window.fetch;
+  window.fetch = function() {
+    var p = _origFetch.apply(this, arguments);
+    var url = arguments[0] || '';
+    if (typeof url === 'string' && url.includes('/save_profile')) {
+      p.then(function(r) {
+        return r.clone().json().then(function(data) {
+          if (data && data.profile) {
+            var prof = data.profile;
+            localStorage.setItem('qa_nav_appearance', JSON.stringify({
+              face: prof.face || 'images/face/face.png',
+              hair: prof.hair || 'images/hair/hair01.png',
+              eyes: prof.eyes || 'images/face/eyes01.png',
+              eyesOffsetY: prof.eyesOffsetY || 0
+            }));
+            if (!prof.avatarUrl) localStorage.removeItem('qa_avatar_draft');
+            else localStorage.setItem('qa_avatar_draft', prof.avatarUrl);
+            setTimeout(_syncNavAvatar, 100);
+          }
+        }).catch(function(){});
+      }).catch(function(){});
+    }
+    return p;
+  };
+
+  /* Also load from profile_summary on page load */
+  var user = localStorage.getItem('currentUser') || '';
+  if (user) {
+    fetch('/profile_summary?username=' + encodeURIComponent(user))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data && data.success !== false) {
+          localStorage.setItem('qa_nav_appearance', JSON.stringify({
+            face: data.face || 'images/face/face.png',
+            hair: data.hair || 'images/hair/hair01.png',
+            eyes: data.eyes || 'images/face/eyes01.png',
+            eyesOffsetY: data.eyesOffsetY || 0
+          }));
+          if (data.avatarUrl) localStorage.setItem('qa_avatar_draft', data.avatarUrl);
+          else localStorage.removeItem('qa_avatar_draft');
+          _syncNavAvatar();
+        }
+      }).catch(function(){});
+  }
+})();
