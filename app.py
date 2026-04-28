@@ -850,22 +850,40 @@ def get_user_profile(username):
         ''', (username,)).fetchone()
 
 
-def build_player_title(username, wins=0, friend_count=0, unlocked_count=0):
+def build_player_title(username, wins=0, friend_count=0, unlocked_count=0, wrong_book_count=0, bank_count=0):
+    # Wins-based titles (highest priority)
+    if wins >= 50:
+        return '⚡ 閃電戰神'
     if wins >= 25:
-        return '傳說冠軍'
+        return '💎 傳說冠軍'
     if wins >= 10:
-        return '競技場之星'
+        return '👑 競技場之星'
     if wins >= 5:
-        return '常勝旅人'
+        return '🏆 常勝旅人'
+    if wins >= 3:
+        return '🥇 三連佳績'
     if wins >= 1:
-        return '首勝新秀'
-    if unlocked_count >= 6:
-        return '成就收藏家'
+        return '🌟 首勝新秀'
+    # Achievement-based titles
+    if unlocked_count >= 8:
+        return '🏅 成就達人'
+    if unlocked_count >= 5:
+        return '✨ 成就收藏家'
+    # Social titles
+    if friend_count >= 10:
+        return '🦋 社交達人'
     if friend_count >= 5:
-        return '派對召集人'
+        return '🎉 派對召集人'
+    if friend_count >= 3:
+        return '👥 三人同行'
     if friend_count >= 1:
-        return '好友同行'
-    return '冒險起步者'
+        return '🤝 好友同行'
+    # Learning titles
+    if wrong_book_count >= 10:
+        return '📚 錯題蒐集家'
+    if bank_count >= 3:
+        return '📝 題庫大師'
+    return '🌱 冒險起步者'
 
 
 def build_profile_summary(username):
@@ -915,7 +933,7 @@ def build_profile_summary(username):
         'wins': int(wins or 0),
         'friendCount': len(friends),
         'wrongBookCount': len((wrong_book or {}).get('items', [])),
-        'title': build_player_title(username, wins=wins, friend_count=len(friends), unlocked_count=len(unlocked)),
+        'title': build_player_title(username, wins=wins, friend_count=len(friends), unlocked_count=len(unlocked), wrong_book_count=len((wrong_book or {}).get('items', [])), bank_count=0),
         'achievements': achievements.get('achievements', []),
         'unlockedAchievements': unlocked,
         'unlockedCount': achievements.get('unlockedCount', 0),
@@ -967,7 +985,7 @@ ACHIEVEMENTS = [
     },
     {
         'id': 'social_circle',
-        'title': '鈭箸除?拙振',
+        'title': '三人同行',
         'description': '新增 3 位好友',
         'icon': 'fa-users',
         'metric': 'friends',
@@ -989,6 +1007,38 @@ ACHIEVEMENTS = [
         'metric': 'wins',
         'target': 25,
     },
+    {
+        'id': 'wrong_collector',
+        'title': '錯題蒐集家',
+        'description': '收藏 10 題錯題',
+        'icon': 'fa-book-bookmark',
+        'metric': 'wrong_book',
+        'target': 10,
+    },
+    {
+        'id': 'speed_demon',
+        'title': '閃電答題',
+        'description': '累積 50 場勝利',
+        'icon': 'fa-bolt',
+        'metric': 'wins',
+        'target': 50,
+    },
+    {
+        'id': 'quiz_master',
+        'title': '題庫大師',
+        'description': '建立 3 個題庫',
+        'icon': 'fa-wand-magic-sparkles',
+        'metric': 'banks',
+        'target': 3,
+    },
+    {
+        'id': 'social_butterfly',
+        'title': '社交達人',
+        'description': '新增 10 位好友',
+        'icon': 'fa-star',
+        'metric': 'friends',
+        'target': 10,
+    },
 ]
 
 
@@ -999,10 +1049,14 @@ def build_achievement_summary(username):
 
     friends = get_friend_usernames(username)
     wins = get_user_wins_map([username]).get(username, 0)
+    wrong_book_data = build_wrong_book_detail(username)
+    wrong_book_count = len((wrong_book_data or {}).get('items', []))
     metrics = {
         'registered': 1 if get_user_exists(username) else 0,
         'friends': len(friends),
         'wins': wins,
+        'wrong_book': wrong_book_count,
+        'banks': 0,  # TODO: count user banks
     }
 
     achievements = []
@@ -1550,6 +1604,100 @@ def load_teacher_report_snapshot(pin):
     report['fromHistory'] = True
     report['savedAt'] = int(row.get('saved_at') or 0)
     return report
+
+
+def list_teacher_report_history_full(username=''):
+    """Return full report data (players list) for all historical rooms."""
+    username = str(username or '').strip()
+    rows = []
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                if username:
+                    cur.execute('''
+                        SELECT pin, room_name, bank_title, created_by, report_json, created_at, saved_at
+                        FROM teacher_report_history
+                        WHERE created_by=%s
+                        ORDER BY saved_at DESC, id DESC
+                        LIMIT 200
+                    ''', (username,))
+                else:
+                    cur.execute('''
+                        SELECT pin, room_name, bank_title, created_by, report_json, created_at, saved_at
+                        FROM teacher_report_history
+                        ORDER BY saved_at DESC, id DESC
+                        LIMIT 200
+                    ''')
+                rows = cur.fetchall()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            if username:
+                rows = conn.execute('''
+                    SELECT pin, room_name, bank_title, created_by, report_json, created_at, saved_at
+                    FROM teacher_report_history
+                    WHERE created_by=?
+                    ORDER BY saved_at DESC, id DESC
+                    LIMIT 200
+                ''', (username,)).fetchall()
+            else:
+                rows = conn.execute('''
+                    SELECT pin, room_name, bank_title, created_by, report_json, created_at, saved_at
+                    FROM teacher_report_history
+                    ORDER BY saved_at DESC, id DESC
+                    LIMIT 200
+                ''').fetchall()
+
+    result = []
+    for row in rows:
+        try:
+            report = row.get('report_json') or '{}'
+            if isinstance(report, str):
+                report = json.loads(report)
+        except Exception:
+            report = {}
+        room_data = report.get('room') or {}
+        players_raw = report.get('players') or []
+        results_raw = report.get('results') or []
+        questions_raw = report.get('questions') or []
+
+        # Build players with correct/wrong counts
+        players = []
+        for p in players_raw:
+            players.append({
+                'username': p.get('playerName') or p.get('username') or p.get('name') or '',
+                'displayName': p.get('displayName') or p.get('playerName') or '',
+                'correct': int(p.get('correct') or 0),
+                'wrong': int(p.get('answered', 0)) - int(p.get('correct') or 0),
+                'score': int(p.get('totalScore') or 0),
+                'wins': 1 if p == (players_raw[0] if players_raw else None) else 0,
+                'rank': players_raw.index(p) + 1 if p in players_raw else 0,
+            })
+
+        # Build wrong questions from question_stats
+        wrong_questions = []
+        for q in questions_raw:
+            answered = int(q.get('answered') or 0)
+            correct = int(q.get('correct') or 0)
+            wrong_count = answered - correct
+            if wrong_count > 0:
+                wrong_questions.append({
+                    'question': q.get('title') or q.get('content') or '',
+                    'count': wrong_count,
+                    'total_attempts': answered,
+                })
+
+        result.append({
+            'pin': row.get('pin') or room_data.get('pin') or '',
+            'quiz_bank_title': row.get('bank_title') or room_data.get('bankTitle') or '',
+            'room_name': row.get('room_name') or room_data.get('roomName') or '',
+            'created_by': row.get('created_by') or room_data.get('createdBy') or '',
+            'game_mode': room_data.get('gameMode') or 'individual',
+            'created_at': time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(int(row.get('created_at') or row.get('saved_at') or 0))),
+            'players': players,
+            'wrong_questions': wrong_questions,
+        })
+    return result
 
 
 def list_teacher_report_history(username=''):
@@ -3582,22 +3730,28 @@ def host_all_results():
 
 @app.route('/teacher_report')
 def teacher_report_api():
+    """Load ALL historical room reports for the teacher dashboard (no PIN needed)."""
     try:
+        username = request.args.get('username', '').strip()
         pin = request.args.get('pin', '').strip()
-        if not pin:
-            return jsonify(success=False, message='請提供 PIN'), 400
-        with closing(get_conn()) as conn:
-            live_report = build_teacher_report_from_conn(conn, pin)
-        if live_report:
-            live_report['success'] = True
-            live_report['fromHistory'] = False
-            return jsonify(live_report)
 
-        saved_report = load_teacher_report_snapshot(pin)
-        if not saved_report:
-            return jsonify(success=False, message='找不到教師報表'), 404
-        saved_report['success'] = True
-        return jsonify(saved_report)
+        # Single-room lookup (legacy / detail view)
+        if pin:
+            with closing(get_conn()) as conn:
+                live_report = build_teacher_report_from_conn(conn, pin)
+            if live_report:
+                live_report['success'] = True
+                live_report['fromHistory'] = False
+                return jsonify(live_report)
+            saved_report = load_teacher_report_snapshot(pin)
+            if not saved_report:
+                return jsonify(success=False, message='找不到教師報表'), 404
+            saved_report['success'] = True
+            return jsonify(saved_report)
+
+        # No PIN → return all historical snapshots as a flat rooms list
+        history = list_teacher_report_history_full(username)
+        return jsonify(success=True, rooms=history)
     except Exception as e:
         return jsonify(success=False, message=f'取得教師報表失敗：{e}'), 500
 

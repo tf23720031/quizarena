@@ -673,3 +673,11 @@ body.dark-mode .tr-placeholder p { color: #b890a8 !important; }
 /* ── Update login-status-card padding for avatar ── */
 .login-status-card { align-items: center; }
 .status-label { display: none; }  /* 移除「目前登入帳號」文字 */
+
+/* ── 套用按鈕 ── */
+.btn-apply {
+  background: linear-gradient(135deg, #43c6ac, #1a9e89);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(67,198,172,0.28);
+}
+.btn-apply:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(67,198,172,0.38); }

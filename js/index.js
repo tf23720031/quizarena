@@ -741,7 +741,7 @@
     if (registerFormBox) registerFormBox.style.display = isLogin ? "none" : "block";
   }
 
-  function renderProfileSummary(data = {}) {
+  function renderProfileSummary(data = {}, opts = {}) {
     state.profileSummary = data;
     const currentUser = getCurrentUser();
     const viewedUser = state.profileViewer || data.username || currentUser;
@@ -758,8 +758,10 @@
       if (el) el.textContent = value;
     };
 
-    initProfileAppearanceDraft(data);
-    renderProfileAppearanceDraft();
+    if (!opts.skipAppearance) {
+      initProfileAppearanceDraft(data);
+      renderProfileAppearanceDraft();
+    }
 
     setText("profileUsernameText", username);
     setText("profileTitleText", title);
@@ -835,7 +837,10 @@
     if (state.profileAvatarDraft) {
       data.avatarUrl = state.profileAvatarDraft;
     }
-    renderProfileSummary(data);
+    // Don't overwrite appearance draft while user is editing (modal open)
+    const modalEl = document.getElementById('profileModal');
+    const isModalOpen = modalEl && modalEl.classList.contains('show');
+    renderProfileSummary(data, { skipAppearance: isModalOpen && state.profileAppearanceDraft !== null });
     return data;
   }
 
@@ -933,8 +938,8 @@
   async function handleProfileAvatarInput(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) {
-      showToast("頭像檔案需小於 1MB");
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("頭像檔案需小於 2MB");
       event.target.value = "";
       return;
     }
@@ -947,6 +952,14 @@
     if (state.profileAppearanceDraft) {
       state.profileAppearanceDraft.avatarUrl = state.profileAvatarDraft;
     }
+    // Directly update photo previews to show uploaded image immediately
+    const photoPreview = document.getElementById('profilePhotoPreview');
+    if (photoPreview) {
+      photoPreview.src = state.profileAvatarDraft;
+      photoPreview.style.display = 'block';
+    }
+    const avatarFilename = document.getElementById('profileAvatarFilename');
+    if (avatarFilename && file.name) avatarFilename.textContent = file.name;
     renderProfileAppearanceDraft();
   }
 
@@ -1033,6 +1046,18 @@
       if (!state.profileSummary) return;
       initProfileAppearanceDraft(state.profileSummary);
       renderProfileAppearanceDraft();
+    });
+    $("profileApplyAvatarBtn")?.addEventListener("click", () => {
+      // Save current draft appearance to localStorage so it persists
+      if (state.profileAppearanceDraft) {
+        localStorage.setItem('qa_nav_appearance', JSON.stringify({
+          face: state.profileAppearanceDraft.face,
+          hair: state.profileAppearanceDraft.hair,
+          eyes: state.profileAppearanceDraft.eyes,
+          eyesOffsetY: state.profileAppearanceDraft.eyesOffsetY,
+        }));
+      }
+      showToast('外觀已套用，記得儲存個人資料！');
     });
     $("saveProfileBtn")?.addEventListener("click", () => {
       saveProfile().catch((error) => showToast(error.message));

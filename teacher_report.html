@@ -13,7 +13,7 @@
   <style>
     .tr-shell { max-width: 1200px; margin: 0 auto; padding: 36px 20px 60px; }
     .tr-hero {
-      background: linear-gradient(135deg, #43c6ac 0%, #1a9e89 55%, #0e7c6a 100%);
+      background: linear-gradient(135deg, #6c8fff 0%, #a875ff 55%, #7c5ce0 100%);
       border-radius: 28px; padding: 30px 36px; color: #fff;
       display: flex; align-items: center; gap: 20px;
       box-shadow: 0 16px 40px rgba(67,198,172,0.28); margin-bottom: 28px;
@@ -130,19 +130,20 @@
     .tr-badge { background:rgba(67,198,172,0.15); color:#1a9e89; border-radius:999px; padding:3px 12px; font-size:0.78rem; font-weight:700; }
 
     /* dark mode */
-    body.dark-mode .tr-filter { background:rgba(255,255,255,0.06); }
+    body.dark-mode .tr-filter { background:rgba(255,255,255,0.88); }
     body.dark-mode .tr-filter input,
-    body.dark-mode .tr-filter select { background:rgba(255,255,255,0.08); color:#f0b8d8; border-color:rgba(255,133,193,0.2); }
+    body.dark-mode .tr-filter select { background:rgba(255,255,255,0.95); color:#1a3a6a; border-color:rgba(100,140,200,0.3); }
+    body.dark-mode .tr-filter label { color:#3a5a8a; }
     body.dark-mode .tr-stat-card,
     body.dark-mode .tr-chart-card,
-    body.dark-mode .tr-table-card { background:rgba(255,255,255,0.06) !important; border-color:rgba(255,133,193,0.12) !important; }
-    body.dark-mode .tr-stat-value,
+    body.dark-mode .tr-table-card { background:rgba(255,255,255,0.92) !important; border-color:rgba(100,140,200,0.3) !important; }
+    body.dark-mode .tr-stat-value { color:#1a3a6a !important; }
+    body.dark-mode .tr-stat-label { color:#3a5a8a !important; }
     body.dark-mode .tr-section-head h2,
     body.dark-mode .tr-chart-title,
-    body.dark-mode .tr-table-title { color:#f5cce0 !important; }
-    body.dark-mode .tr-stat-label { color:#c4a0ba !important; }
-    body.dark-mode .tr-table th { color:#f0b8d8; background:rgba(255,255,255,0.06); }
-    body.dark-mode .tr-table td { color:#e8c0d5; border-bottom-color:rgba(255,133,193,0.1); }
+    body.dark-mode .tr-table-title { color:#1a3a6a !important; }
+    body.dark-mode .tr-table th { color:#1a3a6a; background:rgba(200,220,255,0.3); }
+    body.dark-mode .tr-table td { color:#223a5a; border-bottom-color:rgba(100,140,200,0.15); }
     body.dark-mode .btn-clear { background:rgba(255,255,255,0.08); color:#d4a0c0; }
 
     @media(max-width:600px){ .tr-hero { flex-direction:column; align-items:flex-start; padding:22px 20px; } }
@@ -180,8 +181,6 @@
   </aside>
 
   <div class="tr-shell">
-    <a href="index.html" class="tr-back"><i class="fa-solid fa-arrow-left"></i> 回首頁</a>
-
     <div class="tr-hero">
       <div class="tr-hero-icon"><i class="fa-solid fa-chart-column"></i></div>
       <div>
@@ -339,9 +338,8 @@
     /* ── Load all rooms ── */
     document.getElementById('trLoadBtn').addEventListener('click', function() {
       var user = localStorage.getItem('currentUser') || '';
-      if (!user) { _toast('請先登入'); return; }
       _toast('載入中...');
-      fetch('/teacher_report?username=' + encodeURIComponent(user))
+      fetch('/teacher_report' + (user ? '?username=' + encodeURIComponent(user) : ''))
         .then(function(r){ return r.json(); })
         .then(function(data){
           if (data.success === false) { _toast(data.message || '載入失敗'); return; }
