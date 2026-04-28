@@ -1,1 +1,34 @@
-<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>老師看報表｜QuizArena</title><link rel="stylesheet" href="css/bootstrap.min.css"><link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/quizarena_fix.css"></head><body class="teacher-page"><main class="container py-5"><div class="qa-panel"><div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4"><div><h1 class="fw-bold mb-2">老師看報表</h1><p class="mb-0 text-secondary">快速查看題目表現、玩家答題狀況與常錯題。</p></div><div class="d-flex gap-2"><span class="lang-switcher-slot"></span><button id="darkModeBtn" class="custom-btn btn-auth">🌙</button><a class="custom-btn btn-join text-decoration-none" href="index.html">回首頁</a></div></div><section class="row g-3"><div class="col-md-4"><div class="profile-stat-card"><span>總答題數</span><strong id="totalAnswers">0</strong></div></div><div class="col-md-4"><div class="profile-stat-card"><span>平均正確率</span><strong id="avgCorrect">0%</strong></div></div><div class="col-md-4"><div class="profile-stat-card"><span>需要複習題目</span><strong id="weakQuestions">0</strong></div></div></section><div id="teacherReportList" class="mt-4"></div></div></main><script src="js/i18n.js"></script><script src="js/quizarena_fix.js"></script><script>fetch('/teacher_report_summary').then(r=>r.json()).then(d=>{totalAnswers.textContent=d.totalAnswers||0;avgCorrect.textContent=(d.avgCorrectRate||0)+'%';weakQuestions.textContent=(d.weakQuestions||[]).length;teacherReportList.innerHTML=(d.weakQuestions||[]).map(q=>`<article class="qa-panel mb-3"><b>${q.title||'題目'}</b><div class="small text-secondary">正確率 ${q.correctRate||0}%｜作答 ${q.answerCount||0} 次</div></article>`).join('')||'<div class="text-center py-5">目前還沒有報表資料。</div>'}).catch(()=>teacherReportList.innerHTML='<div class="text-center py-5">報表資料載入失敗；沒有後端資料時會先顯示空狀態。</div>')</script></body></html>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>老師看報表</title>
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/quizarena_fix.css">
+</head>
+<body>
+<div class="qa-page-shell">
+  <div class="qa-inner">
+    <div class="qa-page-card">
+      <h1 class="qa-page-title">老師看報表</h1>
+      <p class="qa-page-sub">查看學生答題率、排行榜與錯誤率。</p>
+
+      <div class="qa-grid">
+        <div class="qa-mini-card">
+          <h3>班級答對率</h3>
+          <p>之後可以串接圖表。</p>
+        </div>
+
+        <div class="qa-mini-card">
+          <h3>學生排行榜</h3>
+          <p>依照總分與答題速度排序。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/quizarena_fix.js"></script>
+</body>
+</html>
