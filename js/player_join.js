@@ -344,3 +344,83 @@ loadProfileSummary();
   setInterval(beat, 20000);
 })();
 updatePartTabs();
+
+function applyProfileAppearanceToJoin(data = {}) {
+  const hairIndex = HAIRS.indexOf(data.hair || "");
+  const eyeIndex = EYES.indexOf(data.eyes || "");
+  state.hairIndex = hairIndex >= 0 ? hairIndex : 0;
+  state.eyeIndex = eyeIndex >= 0 ? eyeIndex : 0;
+  state.eyesOffsetY = Number(data.eyesOffsetY || 0);
+  eyeSlider.value = String(state.eyesOffsetY);
+  syncAvatarImages();
+  updatePartTabs();
+}
+
+async function loadProfileSummary() {
+  const username = localStorage.getItem("currentUser") || "";
+  if (!username) return null;
+  try {
+    const data = await api(`/profile_summary?username=${encodeURIComponent(username)}`);
+    state.profileSummary = data;
+    applyProfileAppearanceToJoin(data);
+    const preferredName = data.displayName || data.username || "";
+    if (preferredName && (!playerNameInput.value.trim() || playerNameInput.value.startsWith("PLAYER_"))) {
+      playerNameInput.value = preferredName;
+      updateNamePreview();
+    }
+    const hint = document.getElementById("profileSyncHint");
+    const hintText = document.getElementById("profileSyncText");
+    if (hint && hintText) {
+      hint.style.display = "block";
+      hintText.textContent = `${preferredName || "玩家"} ・ ${data.title || "冒險起步者"}${data.county ? ` ・ ${data.county}` : ""}`;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function populateRoomInfo() {
+  const room = state.context?.room;
+  if (!room?.pin) {
+    showToast("找不到待加入的房間，請重新從首頁進入。");
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 1600);
+    return;
+  }
+
+  roomNameText.textContent = room.room_name || room.display_name || "-";
+  roomPinText.textContent = room.pin || "------";
+  roomBankText.textContent = room.bank_title || "-";
+  roomModeText.textContent = room.team_mode ? "團隊模式" : "個人模式";
+
+  const lastPlayerName = getLastPlayerName();
+  playerNameInput.value =
+    lastPlayerName ||
+    state.profileSummary?.displayName ||
+    state.profileSummary?.username ||
+    `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
+  updateNamePreview();
+}
+
+function resetAvatar() {
+  if (state.profileSummary) {
+    applyProfileAppearanceToJoin(state.profileSummary);
+    state.currentPart = "hair";
+    updatePartTabs();
+    return;
+  }
+  state.hairIndex = 0;
+  state.eyeIndex = 0;
+  state.eyesOffsetY = 0;
+  state.currentPart = "hair";
+  eyeSlider.value = "0";
+  syncAvatarImages();
+  updatePartTabs();
+}
+
+loadProfileSummary().then(() => {
+  populateRoomInfo();
+  updateNamePreview();
+});

@@ -15,7 +15,43 @@
     achievements: [],
     profileSummary: null,
     profileAvatarDraft: "",
+    profileViewer: "",
+    profileMode: "self",
+    profileAppearanceDraft: null,
   };
+
+  const HAIRS = [
+    "images/hair/hair01.png",
+    "images/hair/hair02.png",
+    "images/hair/hair03.png",
+    "images/hair/hair04.png",
+    "images/hair/hair05.png",
+    "images/hair/hair06.png",
+    "images/hair/hair09.png",
+    "images/hair/hair10.png",
+    "images/hair/hair11.png",
+    "images/hair/hair12.png",
+    "images/hair/hair13.png",
+    "images/hair/hair14.png",
+    "images/hair/hair15.png",
+    "images/hair/hair16.png",
+    "images/hair/hair17.png",
+  ];
+
+  const EYES = [
+    "images/face/eyes01.png",
+    "images/face/eyes02.png",
+    "images/face/eyes03.png",
+    "images/face/eyes04.png",
+    "images/face/eyes05.png",
+    "images/face/eyes06.png",
+    "images/face/eyes07.png",
+    "images/face/eyes08.png",
+    "images/face/eyes09.png",
+    "images/face/eyes10.png",
+    "images/face/eyes11.png",
+    "images/face/eyes12.png",
+  ];
 
   const $ = (id) => document.getElementById(id);
 
@@ -63,6 +99,94 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
+  }
+
+  function normalizeEyesOffset(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(-12, Math.min(12, num));
+  }
+
+  function getAvatarAppearance(data = {}) {
+    return {
+      avatarUrl: data.avatarUrl || "",
+      face: data.face || "images/face/face.png",
+      hair: HAIRS.includes(data.hair) ? data.hair : HAIRS[0],
+      eyes: EYES.includes(data.eyes) ? data.eyes : EYES[0],
+      eyesOffsetY: normalizeEyesOffset(data.eyesOffsetY),
+    };
+  }
+
+  function syncAvatarStage(rootId, appearance) {
+    const root = $(rootId);
+    if (!root) return;
+    const face = root.querySelector(".face-layer");
+    const hair = root.querySelector(".hair-layer");
+    const eyes = root.querySelector(".eye-layer");
+    const photo = root.querySelector(".profile-photo-preview");
+    if (face) face.src = appearance.face;
+    if (hair) hair.src = appearance.hair;
+    if (eyes) {
+      eyes.src = appearance.eyes;
+      eyes.style.transform = `translateX(-50%) translateY(${appearance.eyesOffsetY}px)`;
+    }
+    if (photo) {
+      photo.src = appearance.avatarUrl || "";
+      photo.style.display = appearance.avatarUrl ? "block" : "none";
+    }
+  }
+
+  function buildFriendAvatarHtml(item = {}) {
+    const avatarUrl = item.avatarUrl || item.avatar_url || "";
+    if (avatarUrl) {
+      return `<div class="friends-avatar-stack is-photo"><img src="${escapeHtml(avatarUrl)}" alt=""></div>`;
+    }
+    const eyesOffsetY = normalizeEyesOffset(item.eyesOffsetY ?? item.eyes_offset_y ?? 0);
+    return `
+      <div class="friends-avatar-stack">
+        <img class="avatar-layer face-layer" src="${escapeHtml(item.face || "images/face/face.png")}" alt="">
+        <img class="avatar-layer eye-layer" src="${escapeHtml(item.eyes || EYES[0])}" alt="" style="transform:translateX(-50%) translateY(${eyesOffsetY}px)">
+        <img class="avatar-layer hair-layer" src="${escapeHtml(item.hair || HAIRS[0])}" alt="">
+      </div>
+    `;
+  }
+
+  function buildDisplayName(data = {}) {
+    return data.displayName || data.username || "";
+  }
+
+  function initProfileAppearanceDraft(data = {}) {
+    state.profileAppearanceDraft = {
+      currentPart: "hair",
+      ...getAvatarAppearance(data),
+    };
+    const slider = $("profileEyeSlider");
+    if (slider) slider.value = String(state.profileAppearanceDraft.eyesOffsetY);
+  }
+
+  function renderProfileAppearanceDraft() {
+    const appearance = state.profileAppearanceDraft;
+    if (!appearance) return;
+    syncAvatarStage("profileAvatarPreview", {
+      ...appearance,
+      avatarUrl: state.profileAvatarDraft || appearance.avatarUrl,
+    });
+    syncAvatarStage("profileAvatarBuilderStage", appearance);
+    $("profileHairTabBtn")?.classList.toggle("active", appearance.currentPart === "hair");
+    $("profileEyeTabBtn")?.classList.toggle("active", appearance.currentPart === "eye");
+  }
+
+  function mutateProfileAppearance(direction) {
+    const appearance = state.profileAppearanceDraft;
+    if (!appearance) return;
+    if (appearance.currentPart === "hair") {
+      const index = HAIRS.indexOf(appearance.hair);
+      appearance.hair = HAIRS[(index + direction + HAIRS.length) % HAIRS.length];
+    } else {
+      const index = EYES.indexOf(appearance.eyes);
+      appearance.eyes = EYES[(index + direction + EYES.length) % EYES.length];
+    }
+    renderProfileAppearanceDraft();
   }
 
   async function api(url, options = {}) {
@@ -800,6 +924,246 @@
     if (registerFormBox) registerFormBox.style.display = isLogin ? "none" : "block";
   }
 
+  function renderProfileSummary(data = {}) {
+    state.profileSummary = data;
+    const currentUser = getCurrentUser();
+    const viewedUser = state.profileViewer || data.username || currentUser;
+    const isSelf = viewedUser === currentUser;
+    const username = data.username || currentUser || "玩家";
+    const displayName = buildDisplayName(data) || username;
+    const title = data.title || "冒險起步者";
+    const county = data.county || "未設定縣市";
+    const favoriteCategory = data.favoriteCategory || "尚未設定常玩分類";
+    const unlocked = Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements : [];
+
+    const setText = (id, value) => {
+      const el = $(id);
+      if (el) el.textContent = value;
+    };
+
+    initProfileAppearanceDraft(data);
+    renderProfileAppearanceDraft();
+
+    setText("profileUsernameText", username);
+    setText("profileTitleText", title);
+    setText("profileWinsText", String(Number(data.wins || 0)));
+    setText("profileAchievementsText", `${Number(data.unlockedCount || 0)} / ${Number(data.totalAchievementCount || 0)}`);
+    setText("profileFriendsText", String(Number(data.friendCount || 0)));
+    setText("profileWrongBookText", String(Number(data.wrongBookCount || 0)));
+    setText("profileUnlockedBadge", `${unlocked.length} 項`);
+
+    if ($("profileCountyBadge")) $("profileCountyBadge").textContent = county;
+    if ($("profileFavCategoryBadge")) $("profileFavCategoryBadge").textContent = favoriteCategory;
+    if ($("profileDisplayNameInput")) $("profileDisplayNameInput").value = displayName;
+
+    const countySelect = $("profileCountySelect");
+    if (countySelect && Array.isArray(data.counties)) {
+      countySelect.innerHTML = ['<option value="">請選擇縣市</option>']
+        .concat(data.counties.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`))
+        .join("");
+      countySelect.value = data.county || "";
+    }
+    if ($("profileBioInput")) $("profileBioInput").value = data.bio || "";
+    if ($("profileFavoriteCategoryInput")) $("profileFavoriteCategoryInput").value = data.favoriteCategory || "";
+
+    [
+      "profileDisplayNameInput",
+      "profileAvatarInput",
+      "clearProfileAvatarBtn",
+      "profileCountySelect",
+      "profileFavoriteCategoryInput",
+      "profileBioInput",
+      "saveProfileBtn",
+      "profileHairTabBtn",
+      "profileEyeTabBtn",
+      "profilePrevBtn",
+      "profileNextBtn",
+      "profileEyeSlider",
+      "profileRandomAvatarBtn",
+      "profileResetAvatarBtn",
+    ].forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      if ("disabled" in el) el.disabled = !isSelf;
+      if (id === "saveProfileBtn") el.style.display = isSelf ? "" : "none";
+    });
+
+    const unlockedWrap = $("profileUnlockedAchievements");
+    if (unlockedWrap) {
+      unlockedWrap.innerHTML = unlocked.length
+        ? unlocked.map((item) => `
+          <article class="profile-achievement-item">
+            <div class="profile-achievement-icon"><i class="fa-solid ${escapeHtml(item.icon || "fa-award")}"></i></div>
+            <div class="profile-achievement-copy">
+              <strong>${escapeHtml(item.title || "成就")}</strong>
+              <p>${escapeHtml(item.description || "這項成就已解鎖")}</p>
+            </div>
+          </article>
+        `).join("")
+        : `<div class="profile-empty-state">目前還沒有解鎖成就。</div>`;
+    }
+
+    updateAuthUI();
+  }
+
+  async function loadProfileSummary() {
+    const viewer = state.profileViewer || getCurrentUser();
+    if (!viewer) {
+      state.profileSummary = null;
+      state.profileAvatarDraft = "";
+      updateAuthUI();
+      return null;
+    }
+    const data = await api(`/profile_summary?username=${encodeURIComponent(viewer)}`);
+    if (state.profileAvatarDraft) {
+      data.avatarUrl = state.profileAvatarDraft;
+    }
+    renderProfileSummary(data);
+    return data;
+  }
+
+  function renderFriendsOverview(data = {}) {
+    const friendsRecords = $("friendsRecords");
+    const friendsList = $("friendsList");
+    if (!friendsRecords || !friendsList) return;
+
+    const records = Array.isArray(data.records) ? data.records : [];
+    const hasWins = records.some((item) => Number(item.wins || 0) > 0);
+
+    if (!records.length) {
+      friendsRecords.innerHTML = `
+        <article class="friends-empty-card">
+          <i class="fa-solid fa-user-group"></i>
+          <strong>還沒有好友</strong>
+          <span>登入後可以開始加好友，也能在這裡看大家的勝場排行。</span>
+        </article>
+      `;
+    } else if (!hasWins) {
+      friendsRecords.innerHTML = records.map((item) => `
+        <article class="friends-record-card is-empty" data-username="${escapeHtml(item.username)}">
+          <div class="friends-empty-user">
+            ${buildFriendAvatarHtml(item)}
+            <div>
+              <div class="friends-record-name">${escapeHtml(item.displayName || item.username)}</div>
+              <div class="friends-record-rank">尚無勝場紀錄</div>
+              <div class="friends-record-meta">
+                ${item.title ? `<span class="friends-record-chip">${escapeHtml(item.title)}</span>` : ""}
+                ${item.county ? `<span class="friends-record-chip">${escapeHtml(item.county)}</span>` : ""}
+              </div>
+            </div>
+          </div>
+        </article>
+      `).join("");
+    } else {
+      friendsRecords.innerHTML = records.map((item, index) => `
+        <article class="friends-record-card ${index === 0 ? "is-top" : ""}" data-username="${escapeHtml(item.username)}">
+          <div class="friends-record-top">
+            <div class="friends-record-left">
+              <div class="friends-rank-medal">${index + 1}</div>
+              ${buildFriendAvatarHtml(item)}
+              <div>
+                <div class="friends-record-rank">${index === 0 ? "NO.1 WINNER" : `RANK ${index + 1}`}</div>
+                <div class="friends-record-name">${escapeHtml(item.displayName || item.username)}</div>
+                <div class="friends-record-meta">
+                  ${item.title ? `<span class="friends-record-chip">${escapeHtml(item.title)}</span>` : ""}
+                  ${item.county ? `<span class="friends-record-chip">${escapeHtml(item.county)}</span>` : ""}
+                </div>
+              </div>
+            </div>
+            <div class="friends-record-wins">${Number(item.wins || 0)} 勝</div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    friendsRecords.querySelectorAll(".friends-record-card[data-username]").forEach((card) => {
+      card.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        const username = card.dataset.username || "";
+        if (username) openProfileModal(username, "viewer");
+      });
+    });
+
+    const friends = Array.isArray(data.friends) ? data.friends : [];
+    friendsList.textContent = friends.length
+      ? `好友列表：${friends.join("、")}`
+      : "好友列表目前還是空的，快去邀請朋友一起玩吧。";
+  }
+
+  function openProfileModal(username = "", mode = "self") {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      showToast("請先登入");
+      openLoginModal();
+      return;
+    }
+    state.profileViewer = username || currentUser;
+    state.profileMode = mode;
+    state.profileAvatarDraft = "";
+    loadProfileSummary().then(() => profileModal?.show()).catch((error) => {
+      showToast(error.message);
+    });
+  }
+
+  function clearProfileAvatar() {
+    state.profileAvatarDraft = "";
+    const avatarInput = $("profileAvatarInput");
+    if (avatarInput) avatarInput.value = "";
+    if (state.profileAppearanceDraft) state.profileAppearanceDraft.avatarUrl = "";
+    renderProfileAppearanceDraft();
+  }
+
+  async function handleProfileAvatarInput(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) {
+      showToast("頭像檔案需小於 1MB");
+      event.target.value = "";
+      return;
+    }
+    state.profileAvatarDraft = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("讀取頭像失敗"));
+      reader.readAsDataURL(file);
+    });
+    if (state.profileAppearanceDraft) {
+      state.profileAppearanceDraft.avatarUrl = state.profileAvatarDraft;
+    }
+    renderProfileAppearanceDraft();
+  }
+
+  async function saveProfile() {
+    const user = getCurrentUser();
+    if (!user) {
+      showToast("請先登入");
+      return;
+    }
+    const payload = {
+      username: user,
+      displayName: $("profileDisplayNameInput")?.value.trim() || user,
+      avatarUrl: state.profileAvatarDraft || state.profileAppearanceDraft?.avatarUrl || state.profileSummary?.avatarUrl || "",
+      county: $("profileCountySelect")?.value || "",
+      favoriteCategory: $("profileFavoriteCategoryInput")?.value.trim() || "",
+      bio: $("profileBioInput")?.value.trim() || "",
+      face: state.profileAppearanceDraft?.face || "images/face/face.png",
+      hair: state.profileAppearanceDraft?.hair || HAIRS[0],
+      eyes: state.profileAppearanceDraft?.eyes || EYES[0],
+      eyesOffsetY: state.profileAppearanceDraft?.eyesOffsetY ?? 0,
+    };
+
+    const data = await api("/save_profile", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    state.profileAvatarDraft = "";
+    state.profileViewer = user;
+    renderProfileSummary(data.profile || {});
+    showToast(data.message || "個人資料已更新");
+    await loadFriendsOverview();
+    await loadAchievementsSummary();
+  }
+
   function bindEvents() {
     $("startBtn")?.addEventListener("click", handlePinJoin);
     $("pinInput")?.addEventListener("keydown", (event) => {
@@ -823,6 +1187,36 @@
     $("addFriendBtn")?.addEventListener("click", handleAddFriend);
     $("profileAvatarInput")?.addEventListener("change", handleProfileAvatarInput);
     $("clearProfileAvatarBtn")?.addEventListener("click", clearProfileAvatar);
+    $("profileHairTabBtn")?.addEventListener("click", () => {
+      if (!state.profileAppearanceDraft) return;
+      state.profileAppearanceDraft.currentPart = "hair";
+      renderProfileAppearanceDraft();
+    });
+    $("profileEyeTabBtn")?.addEventListener("click", () => {
+      if (!state.profileAppearanceDraft) return;
+      state.profileAppearanceDraft.currentPart = "eye";
+      renderProfileAppearanceDraft();
+    });
+    $("profilePrevBtn")?.addEventListener("click", () => mutateProfileAppearance(-1));
+    $("profileNextBtn")?.addEventListener("click", () => mutateProfileAppearance(1));
+    $("profileEyeSlider")?.addEventListener("input", (event) => {
+      if (!state.profileAppearanceDraft) return;
+      state.profileAppearanceDraft.eyesOffsetY = normalizeEyesOffset(event.target.value);
+      renderProfileAppearanceDraft();
+    });
+    $("profileRandomAvatarBtn")?.addEventListener("click", () => {
+      if (!state.profileAppearanceDraft) return;
+      state.profileAppearanceDraft.hair = HAIRS[Math.floor(Math.random() * HAIRS.length)];
+      state.profileAppearanceDraft.eyes = EYES[Math.floor(Math.random() * EYES.length)];
+      state.profileAppearanceDraft.eyesOffsetY = Math.floor(Math.random() * 11) - 5;
+      if ($("profileEyeSlider")) $("profileEyeSlider").value = String(state.profileAppearanceDraft.eyesOffsetY);
+      renderProfileAppearanceDraft();
+    });
+    $("profileResetAvatarBtn")?.addEventListener("click", () => {
+      if (!state.profileSummary) return;
+      initProfileAppearanceDraft(state.profileSummary);
+      renderProfileAppearanceDraft();
+    });
     $("saveProfileBtn")?.addEventListener("click", () => {
       saveProfile().catch((error) => showToast(error.message));
     });
@@ -870,6 +1264,10 @@
     addFriendModal = getModal("addFriendModal");
     friendRequestsModal = getModal("friendRequestsModal");
     profileModal = getModal("profileModal");
+    $("profileModal")?.addEventListener("hidden.bs.modal", () => {
+      state.profileViewer = getCurrentUser();
+      state.profileAvatarDraft = "";
+    });
   }
 
   function init() {

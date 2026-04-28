@@ -385,7 +385,7 @@ function renderLeaderboard(items = []) {
   leaderboardList.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="leader-item ${it.player_name === me ? 'mine' : ''}">
-          <span>${i + 1}. ${displayPlayerName(it)}</span>
+          <span style="display:flex;align-items:center;gap:10px;">${avatarHtml(it, 34)} <span>${i + 1}. ${displayPlayerName(it)}</span></span>
           <strong>${it.total_score}</strong>
         </div>`).join('')
     : '<div class="leader-item"><span>尚無資料</span><strong>0</strong></div>';
@@ -397,7 +397,7 @@ function renderTop5(el, items = []) {
   el.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="result-top5-item ${it.player_name === me ? 'mine' : ''}">
-          <span>${i + 1}. ${displayPlayerName(it)}</span>
+          <span style="display:flex;align-items:center;gap:10px;">${avatarHtml(it, 30)} <span>${i + 1}. ${displayPlayerName(it)}</span></span>
           <strong>${it.total_score}</strong>
         </div>`).join('')
     : '<div class="result-top5-item"><span>-</span></div>';

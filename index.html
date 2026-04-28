@@ -272,7 +272,12 @@
           <div class="profile-head">
             <div class="profile-hero">
               <div class="profile-avatar-wrap">
-                <img id="profileAvatarPreview" class="profile-avatar" alt="avatar" src="images/face/face.png">
+                <div id="profileAvatarPreview" class="profile-avatar profile-avatar-stage">
+                  <img id="profileFacePreview" class="avatar-layer face-layer" alt="face" src="images/face/face.png">
+                  <img id="profileEyesPreview" class="avatar-layer eye-layer" alt="eyes" src="images/face/eyes01.png">
+                  <img id="profileHairPreview" class="avatar-layer hair-layer" alt="hair" src="images/hair/hair01.png">
+                  <img id="profilePhotoPreview" class="profile-photo-preview" alt="avatar photo" src="">
+                </div>
                 <button type="button" class="profile-avatar-clear" id="clearProfileAvatarBtn" title="移除頭像">
                   <i class="fa-solid fa-xmark"></i>
                 </button>
@@ -314,7 +319,33 @@
               <div class="profile-edit-card">
                 <div class="section-label mb-3">編輯檔案</div>
                 <label class="form-label pink-text">上傳頭像</label>
+                <input type="text" id="profileDisplayNameInput" class="form-control member-input mb-3" maxlength="20" placeholder="進房時會先帶入這個名字">
                 <input type="file" id="profileAvatarInput" class="form-control member-input" accept="image/png,image/jpeg,image/webp">
+                <div class="profile-avatar-builder mt-3">
+                  <div class="profile-avatar-builder-stage">
+                    <div id="profileAvatarBuilderStage" class="profile-builder-preview">
+                      <img id="profileBuilderFace" class="avatar-layer face-layer" alt="face" src="images/face/face.png">
+                      <img id="profileBuilderEyes" class="avatar-layer eye-layer" alt="eyes" src="images/face/eyes01.png">
+                      <img id="profileBuilderHair" class="avatar-layer hair-layer" alt="hair" src="images/hair/hair01.png">
+                    </div>
+                  </div>
+                  <div class="profile-avatar-builder-controls">
+                    <div class="tab-switch profile-builder-tabs">
+                      <button type="button" class="switch-btn active" id="profileHairTabBtn">髮型</button>
+                      <button type="button" class="switch-btn" id="profileEyeTabBtn">眼睛</button>
+                    </div>
+                    <div class="profile-builder-row">
+                      <button type="button" class="circle-arrow" id="profilePrevBtn"><i class="fa-solid fa-chevron-left"></i></button>
+                      <button type="button" class="circle-arrow" id="profileNextBtn"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <label class="form-label pink-text mt-2 mb-1">眼睛上下微調</label>
+                    <input type="range" min="-12" max="12" value="0" id="profileEyeSlider" class="form-range">
+                    <div class="profile-builder-row profile-builder-actions">
+                      <button type="button" class="mini-btn" id="profileRandomAvatarBtn"><i class="fa-solid fa-dice"></i> 隨機</button>
+                      <button type="button" class="mini-btn" id="profileResetAvatarBtn"><i class="fa-solid fa-rotate-left"></i> 重設</button>
+                    </div>
+                  </div>
+                </div>
 
                 <label class="form-label pink-text mt-3">所在縣市</label>
                 <select id="profileCountySelect" class="form-select member-input">

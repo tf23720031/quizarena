@@ -1016,6 +1016,24 @@ body.dark-mode #darkModeBtn {
   gap: 12px;
 }
 
+.friends-avatar-stack {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border: 3px solid rgba(255, 255, 255, 0.82);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffe4ef, #eef4ff);
+  box-shadow: 0 10px 20px rgba(103, 92, 190, 0.14);
+}
+
+.friends-avatar-stack.is-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .friends-rank-medal,
 .friends-avatar-badge {
   width: 46px;
@@ -1045,6 +1063,22 @@ body.dark-mode #darkModeBtn {
   font-weight: 900;
 }
 
+.friends-record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.friends-record-chip {
+  padding: 4px 10px;
+  color: #66708f;
+  font-size: 0.73rem;
+  font-weight: 800;
+  border-radius: 999px;
+  background: rgba(124, 132, 166, 0.12);
+}
+
 .friends-record-wins {
   min-width: 80px;
   padding: 6px 10px;
@@ -1053,6 +1087,10 @@ body.dark-mode #darkModeBtn {
   text-align: center;
   border-radius: 999px;
   background: rgba(100, 104, 223, 0.1);
+}
+
+.friends-record-card {
+  cursor: context-menu;
 }
 
 .friends-list-text {
@@ -1540,6 +1578,46 @@ body.dark-mode .friends-fab-mini {
   box-shadow: 0 16px 36px rgba(103, 92, 190, 0.2);
 }
 
+.profile-avatar-stage,
+.profile-builder-preview,
+.friends-avatar-stack {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-avatar-stage .avatar-layer,
+.profile-builder-preview .avatar-layer,
+.friends-avatar-stack .avatar-layer {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.profile-avatar-stage .face-layer,
+.profile-builder-preview .face-layer,
+.friends-avatar-stack .face-layer { z-index: 1; }
+
+.profile-avatar-stage .hair-layer,
+.profile-builder-preview .hair-layer,
+.friends-avatar-stack .hair-layer { z-index: 2; }
+
+.profile-avatar-stage .eye-layer,
+.profile-builder-preview .eye-layer,
+.friends-avatar-stack .eye-layer { z-index: 3; }
+
+.profile-photo-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 4;
+  display: none;
+}
+
 .profile-avatar-clear {
   position: absolute;
   top: -8px;
@@ -1574,6 +1652,34 @@ body.dark-mode .friends-fab-mini {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.profile-avatar-builder {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.profile-builder-preview {
+  width: 140px;
+  height: 140px;
+  margin: 0 auto;
+  border: 3px solid rgba(255, 255, 255, 0.84);
+  border-radius: 28px;
+  background: linear-gradient(135deg, #ffe4ef, #eef4ff);
+  box-shadow: 0 14px 26px rgba(103, 92, 190, 0.16);
+}
+
+.profile-builder-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.profile-builder-actions {
+  margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 .profile-stats-grid {
@@ -1680,6 +1786,17 @@ body.dark-mode .profile-stat-card strong,
 body.dark-mode .profile-achievement-copy strong,
 body.dark-mode .profile-earned-title {
   color: #ffffff;
+}
+
+body.dark-mode .profile-builder-preview,
+body.dark-mode .friends-avatar-stack {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode .friends-record-chip {
+  color: rgba(234, 242, 255, 0.82);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ════════════════════════════════════════

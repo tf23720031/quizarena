@@ -1,4 +1,4 @@
-﻿from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify
 import os, sqlite3, json, hashlib, random, time, threading, shutil, html, re
 import urllib.parse, urllib.request
 
@@ -25,8 +25,6 @@ app = Flask(__name__, static_folder=PROJECT_DIR, static_url_path='')
 DEFAULT_FACE = 'images/face/face.png'
 DEFAULT_HAIR = 'images/hair/hair01.png'
 DEFAULT_EYES = 'images/face/eyes01.png'
-HAIR_ASSETS = [f'images/hair/hair{num:02d}.png' for num in [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17]]
-EYE_ASSETS = [f'images/face/eyes{num:02d}.png' for num in range(1, 13)]
 
 _quiz_lock = threading.Lock()
 
@@ -50,7 +48,7 @@ ROOMS_DB_PATH = os.path.join(DATA_DIR, 'rooms.db')
 QUIZ_BANKS_PATH = os.path.join(DATA_DIR, 'quiz_banks.json')
 DEFAULT_BANKS_PATH = os.path.join(BASE_DIR, 'default_quiz_banks.json')
 
-DEFAULT_CATEGORY = '蝬?'
+DEFAULT_CATEGORY = '綜合'
 DEFAULT_DIFFICULTY = 'medium'
 VALID_DIFFICULTIES = {'easy', 'medium', 'hard'}
 VALID_QUESTION_TYPES = {'single', 'multiple', 'tf', 'fill'}
@@ -108,7 +106,7 @@ def use_postgres_user_store():
 def get_pg_conn():
     url = get_database_url()
     if not url or psycopg2 is None:
-        raise RuntimeError('DATABASE_URL is not configured or psycopg2-binary is unavailable')
+        raise RuntimeError('DATABASE_URL 尚未設定，或 requirements.txt 尚未安裝 psycopg2-binary。')
     return psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
 
 
@@ -308,7 +306,7 @@ def build_wrong_book_for_user(username):
 
     return {
         'id': 'wrong_book',
-        'title': '錯題本',
+        'title': '我的錯題本',
         'gameMode': 'individual',
         'questions': questions,
         'updatedAt': int(rows[0].get('last_wrong_at') or now_ts()),
@@ -396,7 +394,7 @@ def _legacy_build_wrong_book_for_user(username):
             options = []
         questions.append(normalize_question({
             'id': f"wrong_{row.get('source_bank_id')}_{row.get('question_id')}",
-            'title': row.get('title') or '錯題',
+            'title': row.get('title') or '未命名題目',
             'content': row.get('content') or '',
             'type': row.get('type') or 'single',
             'options': options,
@@ -410,7 +408,7 @@ def _legacy_build_wrong_book_for_user(username):
 
     return {
         'id': 'wrong_book',
-        'title': '錯題本',
+        'title': '我的錯題本',
         'gameMode': 'individual',
         'questions': questions,
         'updatedAt': int(rows[0].get('last_wrong_at') or now_ts()),
@@ -533,29 +531,29 @@ def fetch_wikipedia_summary(topic):
 
 
 def build_local_fallback_quiz_bank(topic, category, difficulty, count):
-    topic = str(topic or '綜合主題').strip() or '綜合主題'
+    topic = str(topic or '綜合學習').strip() or '綜合學習'
     category = normalize_category(category)
     difficulty = normalize_difficulty(difficulty)
     questions = []
     option_templates = [
-        ['核心概念', '常見迷思', '延伸應用', '歷史背景'],
-        ['主要原因', '次要原因', '錯誤敘述', '情境案例'],
-        ['標準答案', '近似說法', '混淆選項', '反向概念'],
-        ['關鍵步驟', '常犯錯誤', '補充知識', '跨域聯想'],
-        ['定義說明', '例外情況', '實務應用', '比較觀點']
+        ['了解基本概念', '完全無關的敘述', '只看表面文字', '隨機猜測答案'],
+        ['先理解定義再判斷', '忽略題目條件', '只背答案不理解', '把所有選項都當正確'],
+        ['能應用在實際情境', '只存在於單一情況', '不能被說明', '沒有任何用途'],
+        ['比較差異與用途', '只看字數長短', '依照選項順序決定', '完全不用閱讀題目'],
+        ['確認關鍵條件', '直接排除正確答案', '只選最短選項', '不需要解析']
     ]
     for i in range(max(1, int(count or 5))):
         opts = option_templates[i % len(option_templates)]
         questions.append({
             'id': uid('question'),
-            'title': f'{topic} 題目 {i + 1}',
-            'content': f'以下哪一項最符合「{topic}」的重點？',
+            'title': f'{topic}觀念題 {i + 1}',
+            'content': f'關於「{topic}」，下列哪一個說法最合理？',
             'type': 'single',
             'difficulty': difficulty,
             'category': category,
             'time': '20 秒',
             'score': 1000,
-            'explanation': f'這題使用 {topic} 的本地備援題庫內容，可再依需求自行調整。',
+            'explanation': f'本題重點是理解「{topic}」的核心概念，並能排除不符合題意的選項。',
             'options': [
                 {'text': opts[0], 'correct': True},
                 {'text': opts[1], 'correct': False},
@@ -565,7 +563,7 @@ def build_local_fallback_quiz_bank(topic, category, difficulty, count):
         })
     return normalize_bank({
         'id': uid('bank'),
-        'title': f'{topic} 憿澈',
+        'title': f'{topic} 題庫',
         'gameMode': 'individual',
         'questions': questions,
         'updatedAt': now_ts(),
@@ -575,13 +573,13 @@ def build_local_fallback_quiz_bank(topic, category, difficulty, count):
 def extract_json_array(text):
     text = str(text or '').strip()
     if not text:
-        raise RuntimeError('AI 沒有回傳任何內容')
+        raise RuntimeError('AI 沒有回傳文字內容。')
     fenced = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text)
     if fenced:
         text = fenced.group(1).strip()
     match = re.search(r'\[[\s\S]*\]', text)
     if not match:
-        raise RuntimeError('AI 回傳內容中找不到 JSON 陣列')
+        raise RuntimeError('AI 回傳格式錯誤，找不到 JSON 題目陣列。')
     return json.loads(match.group(0))
 
 
@@ -610,18 +608,18 @@ def normalize_ai_generated_question(raw, idx, category, difficulty):
                 if opt['text'] == answer_text:
                     opt['correct'] = True
     if len(normalized_options) < 2:
-        normalized_options = [{'text': '甇?Ⅱ', 'correct': True}, {'text': '?航炊', 'correct': False}]
+        normalized_options = [{'text': '正確', 'correct': True}, {'text': '錯誤', 'correct': False}]
     if not any(opt.get('correct') for opt in normalized_options):
         normalized_options[0]['correct'] = True
     return normalize_question({
         'id': str(raw.get('id') or uid('question')),
-        'title': str(raw.get('title') or raw.get('question') or f'AI 憿 {idx + 1}').strip(),
-        'content': str(raw.get('content') or raw.get('question') or raw.get('title') or f'AI 憿 {idx + 1}').strip(),
+        'title': str(raw.get('title') or raw.get('question') or f'AI 題目 {idx + 1}').strip(),
+        'content': str(raw.get('content') or raw.get('question') or raw.get('title') or f'AI 題目 {idx + 1}').strip(),
         'type': str(raw.get('type') or 'single').strip(),
         'options': normalized_options,
         'time': str(raw.get('time') or '20 秒'),
         'score': int(raw.get('score') or 1000),
-        'explanation': str(raw.get('explanation') or raw.get('閫??') or '此題未提供解析').strip(),
+        'explanation': str(raw.get('explanation') or raw.get('解析') or '請依照題目關鍵概念判斷。').strip(),
         'difficulty': raw.get('difficulty') or difficulty,
         'category': raw.get('category') or category,
     })
@@ -632,35 +630,35 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', 
     if not hf_api_key:
         if ALLOW_AI_FALLBACK:
             return build_local_fallback_quiz_bank(topic, category, difficulty, count)
-        raise RuntimeError('缺少 HF_API_KEY，請先在環境變數中設定 HuggingFace Token')
+        raise RuntimeError('尚未設定 HF_API_KEY，請先到 Render Environment 新增 HuggingFace Token。')
 
     if requests is None:
         if ALLOW_AI_FALLBACK:
             return build_local_fallback_quiz_bank(topic, category, difficulty, count)
-        raise RuntimeError('缺少 requests 套件，請先安裝 requirements.txt 內的依賴')
+        raise RuntimeError('尚未安裝 requests，請在 requirements.txt 加上 requests。')
 
     web_context = ''
     if source_mode == 'web_ai':
         web_context = fetch_wikipedia_summary(topic)
 
-    topic = str(topic or '綜合主題').strip() or '綜合主題'
+    topic = str(topic or '綜合學習').strip() or '綜合學習'
     category = normalize_category(category)
     difficulty = normalize_difficulty(difficulty)
     count = max(1, min(int(count or 5), 7))
 
     prompt = (
-        '你是 QuizArena 的出題助手。\n'
-        f'請產生 {count} 題選擇題。\n'
+        f'你是 QuizArena 的繁體中文出題助手。\n'
+        f'請產生 {count} 題測驗題。\n'
         f'主題：{topic}\n'
-        f'分類：{category}\n'
+        f'類別：{category}\n'
         f'難度：{difficulty}\n\n'
-        '請只輸出 JSON 陣列，不要加入 markdown 或額外說明。\n'
-        '每題格式如下：\n'
-        '[{"title":"題目標題","content":"題目內容","type":"single","difficulty":"medium","category":"綜合","time":"20 秒","score":1000,"explanation":"題目解析","options":[{"text":"選項A","correct":true},{"text":"選項B","correct":false},{"text":"選項C","correct":false},{"text":"選項D","correct":false}]}]\n'
-        '每題請提供 4 個選項，其中只有 1 個正確答案，並附上簡短解析。'
+        '請只回傳 JSON 陣列，不要加任何說明文字，不要 markdown。\n'
+        '每題格式必須如下：\n'
+        '[{"title":"題目標題","content":"完整題目內容","type":"single","difficulty":"medium","category":"綜合","time":"20 秒","score":1000,"explanation":"解析文字","options":[{"text":"選項A","correct":true},{"text":"選項B","correct":false},{"text":"選項C","correct":false},{"text":"選項D","correct":false}]}]\n'
+        '限制：使用繁體中文；每題至少 4 個選項；每題只能有一個正確答案；解析要簡潔但能教學。'
     )
     if web_context:
-        prompt += f'\n\n以下是可參考的背景資料：{web_context[:1200]}'
+        prompt += f'\n\n可參考資料摘要：{web_context[:1200]}'
 
     try:
         response = requests.post(
@@ -688,11 +686,11 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', 
             for idx, q in enumerate(generated_questions[:count])
         ]
         if not questions:
-            raise RuntimeError('AI 沒有成功產生題目')
+            raise RuntimeError('AI 沒有產生題目。')
 
         return normalize_bank({
             'id': uid('bank'),
-            'title': f'{topic} 憿澈',
+            'title': f'{topic} 題庫',
             'gameMode': 'individual',
             'questions': questions,
             'updatedAt': now_ts(),
@@ -774,217 +772,67 @@ def get_user_wins_map(usernames):
     return result
 
 
-TAIWAN_COUNTIES = [
-    '台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市',
-    '基隆市', '新竹市', '嘉義市', '新竹縣', '苗栗縣', '彰化縣',
-    '南投縣', '雲林縣', '嘉義縣', '屏東縣', '宜蘭縣', '花蓮縣',
-    '台東縣', '澎湖縣', '金門縣', '連江縣'
-]
-
-
-def sanitize_profile_avatar(value):
-    avatar = str(value or '').strip()
-    if not avatar:
-        return ''
-    if avatar.startswith('data:image/') and len(avatar) <= 1_500_000:
-        return avatar
-    if avatar.startswith('images/'):
-        return avatar
-    return ''
-
-
-def sanitize_profile_text(value, max_len=120):
-    return str(value or '').strip()[:max_len]
-
-
-def sanitize_avatar_asset(value, allowed_assets, default_value):
-    asset = str(value or '').strip()
-    return asset if asset in allowed_assets else default_value
-
-
-def sanitize_eyes_offset(value):
-    try:
-        offset = int(value or 0)
-    except Exception:
-        offset = 0
-    return max(-12, min(12, offset))
-
-
-def generate_default_avatar_profile(username):
-    seed = hash_text(str(username or '').strip().lower() or 'guest')
-    hair_index = int(seed[:8], 16) % len(HAIR_ASSETS)
-    eye_index = int(seed[8:16], 16) % len(EYE_ASSETS)
-    offset = (int(seed[16:24], 16) % 11) - 5
-    return {
-        'display_name': str(username or '').strip(),
-        'face': DEFAULT_FACE,
-        'hair': HAIR_ASSETS[hair_index],
-        'eyes': EYE_ASSETS[eye_index],
-        'eyes_offset_y': offset,
-    }
-
-
-def get_user_profile(username):
-    username = str(username or '').strip()
-    if not username:
-        return None
-    if use_postgres_user_store():
-        with closing(get_pg_conn()) as conn:
-            with conn.cursor() as cur:
-                cur.execute('''
-                    SELECT username, display_name, avatar_url, county, bio, favorite_category,
-                           face, hair, eyes, eyes_offset_y, updated_at
-                    FROM user_profiles
-                    WHERE username=%s
-                    LIMIT 1
-                ''', (username,))
-                return cur.fetchone()
-    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
-        conn.row_factory = dict_factory
-        return conn.execute('''
-            SELECT username, display_name, avatar_url, county, bio, favorite_category,
-                   face, hair, eyes, eyes_offset_y, updated_at
-            FROM user_profiles
-            WHERE username=?
-            LIMIT 1
-        ''', (username,)).fetchone()
-
-
-def build_player_title(username, wins=0, friend_count=0, unlocked_count=0):
-    if wins >= 25:
-        return '傳說冠軍'
-    if wins >= 10:
-        return '競技場之星'
-    if wins >= 5:
-        return '常勝旅人'
-    if wins >= 1:
-        return '首勝新秀'
-    if unlocked_count >= 6:
-        return '成就收藏家'
-    if friend_count >= 5:
-        return '派對召集人'
-    if friend_count >= 1:
-        return '好友同行'
-    return '冒險起步者'
-
-
-def build_profile_summary(username):
-    username = str(username or '').strip()
-    if not username:
-        return {
-            'username': '',
-            'displayName': '',
-            'avatarUrl': '',
-            'county': '',
-            'bio': '',
-            'favoriteCategory': '',
-            'face': DEFAULT_FACE,
-            'hair': DEFAULT_HAIR,
-            'eyes': DEFAULT_EYES,
-            'eyesOffsetY': 0,
-            'wins': 0,
-            'friendCount': 0,
-            'wrongBookCount': 0,
-            'title': '冒險起步者',
-            'achievements': [],
-            'unlockedAchievements': [],
-            'unlockedCount': 0,
-            'totalAchievementCount': len(ACHIEVEMENTS),
-            'counties': TAIWAN_COUNTIES,
-        }
-
-    profile = get_user_profile(username) or {}
-    appearance = generate_default_avatar_profile(username)
-    achievements = build_achievement_summary(username)
-    friends = get_friend_usernames(username)
-    wins = get_user_wins_map([username]).get(username, 0)
-    wrong_book = build_wrong_book_detail(username)
-    unlocked = [item for item in achievements.get('achievements', []) if item.get('unlocked')]
-
-    return {
-        'username': username,
-        'displayName': sanitize_profile_text(profile.get('display_name') or username, 20),
-        'avatarUrl': sanitize_profile_avatar(profile.get('avatar_url') or ''),
-        'county': sanitize_profile_text(profile.get('county') or '', 20),
-        'bio': sanitize_profile_text(profile.get('bio') or '', 180),
-        'favoriteCategory': sanitize_profile_text(profile.get('favorite_category') or '', 40),
-        'face': sanitize_avatar_asset(profile.get('face') or appearance['face'], [DEFAULT_FACE], DEFAULT_FACE),
-        'hair': sanitize_avatar_asset(profile.get('hair') or appearance['hair'], HAIR_ASSETS, appearance['hair']),
-        'eyes': sanitize_avatar_asset(profile.get('eyes') or appearance['eyes'], EYE_ASSETS, appearance['eyes']),
-        'eyesOffsetY': sanitize_eyes_offset(profile.get('eyes_offset_y', appearance['eyes_offset_y'])),
-        'wins': int(wins or 0),
-        'friendCount': len(friends),
-        'wrongBookCount': len((wrong_book or {}).get('items', [])),
-        'title': build_player_title(username, wins=wins, friend_count=len(friends), unlocked_count=len(unlocked)),
-        'achievements': achievements.get('achievements', []),
-        'unlockedAchievements': unlocked,
-        'unlockedCount': achievements.get('unlockedCount', 0),
-        'totalAchievementCount': achievements.get('totalCount', len(ACHIEVEMENTS)),
-        'counties': TAIWAN_COUNTIES,
-    }
-
-
 ACHIEVEMENTS = [
     {
         'id': 'welcome',
-        'title': '初來報到',
-        'description': '成功建立 QuizArena 帳號',
+        'title': '初次登場',
+        'description': '完成註冊並登入 QuizArena。',
         'icon': 'fa-id-badge',
         'metric': 'registered',
         'target': 1,
     },
     {
         'id': 'first_friend',
-        'title': '第一位好友',
-        'description': '新增 1 位好友',
+        'title': '找到夥伴',
+        'description': '成功加入 1 位好友。',
         'icon': 'fa-user-group',
         'metric': 'friends',
         'target': 1,
     },
     {
         'id': 'first_win',
-        'title': '開胡首勝',
-        'description': '累積 1 場勝利',
+        'title': '首勝到手',
+        'description': '拿下第 1 場勝利。',
         'icon': 'fa-trophy',
         'metric': 'wins',
         'target': 1,
     },
     {
         'id': 'triple_win',
-        'title': '三連佳績',
-        'description': '累積 3 場勝利',
+        'title': '連戰高手',
+        'description': '累積 3 場勝利。',
         'icon': 'fa-medal',
         'metric': 'wins',
         'target': 3,
     },
     {
         'id': 'arena_star',
-        'title': '競技場之星',
-        'description': '累積 10 場勝利',
+        'title': '競技場明星',
+        'description': '累積 10 場勝利。',
         'icon': 'fa-crown',
         'metric': 'wins',
         'target': 10,
     },
     {
         'id': 'social_circle',
-        'title': '鈭箸除?拙振',
-        'description': '新增 3 位好友',
+        'title': '人氣玩家',
+        'description': '成功加入 3 位好友。',
         'icon': 'fa-users',
         'metric': 'friends',
         'target': 3,
     },
     {
         'id': 'party_builder',
-        'title': '派對召集人',
-        'description': '新增 5 位好友',
+        'title': '派對核心',
+        'description': '成功加入 5 位好友。',
         'icon': 'fa-champagne-glasses',
         'metric': 'friends',
         'target': 5,
     },
     {
         'id': 'legend_winner',
-        'title': '傳說冠軍',
-        'description': '累積 25 場勝利',
+        'title': '傳說勝者',
+        'description': '累積 25 場勝利。',
         'icon': 'fa-gem',
         'metric': 'wins',
         'target': 25,
@@ -1032,21 +880,7 @@ def build_friends_overview(username):
     friend_names = get_friend_usernames(username)
     names = [username] + [name for name in friend_names if name != username]
     wins_map = get_user_wins_map(names)
-    records = []
-    for name in names:
-        summary = build_profile_summary(name)
-        records.append({
-            'username': name,
-            'displayName': summary.get('displayName') or name,
-            'wins': wins_map.get(name, 0),
-            'avatarUrl': summary.get('avatarUrl') or '',
-            'face': summary.get('face') or DEFAULT_FACE,
-            'hair': summary.get('hair') or DEFAULT_HAIR,
-            'eyes': summary.get('eyes') or DEFAULT_EYES,
-            'eyesOffsetY': sanitize_eyes_offset(summary.get('eyesOffsetY', 0)),
-            'title': summary.get('title') or '',
-            'county': summary.get('county') or '',
-        })
+    records = [{'username': name, 'wins': wins_map.get(name, 0)} for name in names]
     records.sort(key=lambda item: (-item['wins'], item['username'].lower()))
     return {
         'currentUser': username,
@@ -1063,16 +897,16 @@ def describe_client_device(user_agent):
     if 'ipad' in ua:
         return 'iPad'
     if 'android' in ua and 'mobile' in ua:
-        return 'Android ??'
+        return 'Android 手機'
     if 'android' in ua:
-        return 'Android 撟單'
+        return 'Android 平板'
     if 'windows' in ua:
-        return 'Windows ?餉'
+        return 'Windows 電腦'
     if 'macintosh' in ua or 'mac os' in ua:
-        return 'Mac ?餉'
+        return 'Mac 電腦'
     if 'linux' in ua:
-        return 'Linux 鋆蔭'
-    return '?芰鋆蔭'
+        return 'Linux 裝置'
+    return '未知裝置'
 
 
 def get_pending_friend_requests(username):
@@ -1141,7 +975,7 @@ def serialize_friend_requests(rows):
             'id': int(row.get('id') or 0),
             'requester': str(row.get('requester') or '').strip(),
             'addressee': str(row.get('addressee') or '').strip(),
-            'device': str(row.get('requester_device') or '?芰鋆蔭').strip() or '?芰鋆蔭',
+            'device': str(row.get('requester_device') or '未知裝置').strip() or '未知裝置',
             'createdAt': int(row.get('created_at') or 0),
             'createdAtText': time.strftime('%Y-%m-%d %H:%M', time.localtime(int(row.get('created_at') or now_ts()))),
             'status': str(row.get('status') or 'pending').strip() or 'pending',
@@ -1614,17 +1448,12 @@ def delete_room_fully(conn, pin):
 
 def get_player_payload(raw_player):
     p = raw_player or {}
-    username = str(p.get('username', '')).strip()
-    profile_summary = build_profile_summary(username) if username and get_user_exists(username) else {}
     return {
         'name': str(p.get('name', '')).strip(),
-        'face': sanitize_avatar_asset(p.get('face', profile_summary.get('face', DEFAULT_FACE)), [DEFAULT_FACE], DEFAULT_FACE),
-        'hair': sanitize_avatar_asset(p.get('hair', profile_summary.get('hair', DEFAULT_HAIR)), HAIR_ASSETS, DEFAULT_HAIR),
-        'eyes': sanitize_avatar_asset(p.get('eyes', profile_summary.get('eyes', DEFAULT_EYES)), EYE_ASSETS, DEFAULT_EYES),
-        'avatar_url': sanitize_profile_avatar(p.get('avatarUrl', '') or profile_summary.get('avatarUrl', '')),
-        'county': sanitize_profile_text(p.get('county', '') or profile_summary.get('county', ''), 20),
-        'user_title': sanitize_profile_text(p.get('title', '') or profile_summary.get('title', ''), 30),
-        'eyes_offset_y': sanitize_eyes_offset(p.get('eyesOffsetY', profile_summary.get('eyesOffsetY', 0))),
+        'face': str(p.get('face', DEFAULT_FACE)).strip() or DEFAULT_FACE,
+        'hair': str(p.get('hair', DEFAULT_HAIR)).strip() or DEFAULT_HAIR,
+        'eyes': str(p.get('eyes', DEFAULT_EYES)).strip() or DEFAULT_EYES,
+        'eyes_offset_y': int(p.get('eyesOffsetY', 0) or 0),
         'is_host': 1 if bool(p.get('isHost', False)) else 0,
     }
 
@@ -1675,7 +1504,7 @@ def init_postgres_users_db():
                     options_json TEXT,
                     explanation TEXT,
                     image TEXT,
-                    category TEXT DEFAULT '蝬?',
+                    category TEXT DEFAULT '綜合',
                     difficulty TEXT DEFAULT 'medium',
                     wrong_count INTEGER DEFAULT 1,
                     last_wrong_at BIGINT,
@@ -1701,34 +1530,6 @@ def init_postgres_users_db():
                     updated_at BIGINT
                 )
             ''')
-            c.execute('''
-                CREATE TABLE IF NOT EXISTS user_profiles (
-                    username TEXT PRIMARY KEY,
-                    display_name TEXT DEFAULT '',
-                    avatar_url TEXT,
-                    county TEXT DEFAULT '',
-                    bio TEXT DEFAULT '',
-                    favorite_category TEXT DEFAULT '',
-                    face TEXT DEFAULT 'images/face/face.png',
-                    hair TEXT DEFAULT 'images/hair/hair01.png',
-                    eyes TEXT DEFAULT 'images/face/eyes01.png',
-                    eyes_offset_y INTEGER DEFAULT 0,
-                    updated_at BIGINT
-                )
-            ''')
-            for col, typ in [
-                ('display_name', "TEXT DEFAULT ''"),
-                ('avatar_url', 'TEXT'),
-                ('county', "TEXT DEFAULT ''"),
-                ('bio', "TEXT DEFAULT ''"),
-                ('favorite_category', "TEXT DEFAULT ''"),
-                ('face', f"TEXT DEFAULT '{DEFAULT_FACE}'"),
-                ('hair', f"TEXT DEFAULT '{DEFAULT_HAIR}'"),
-                ('eyes', f"TEXT DEFAULT '{DEFAULT_EYES}'"),
-                ('eyes_offset_y', 'INTEGER DEFAULT 0'),
-                ('updated_at', 'BIGINT'),
-            ]:
-                c.execute(f'ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS {col} {typ}')
             c.execute('''
                 CREATE TABLE IF NOT EXISTS user_match_history (
                     id SERIAL PRIMARY KEY,
@@ -1789,7 +1590,7 @@ def init_users_db():
                 options_json TEXT,
                 explanation TEXT,
                 image TEXT,
-                category TEXT DEFAULT '蝬?',
+                category TEXT DEFAULT '綜合',
                 difficulty TEXT DEFAULT 'medium',
                 wrong_count INTEGER DEFAULT 1,
                 last_wrong_at INTEGER,
@@ -1802,7 +1603,7 @@ def init_users_db():
         for col, typ in [
             ('source_bank_title', 'TEXT'),
             ('image', 'TEXT'),
-            ('category', "TEXT DEFAULT '蝬?'"),
+            ('category', "TEXT DEFAULT '綜合'"),
             ('difficulty', "TEXT DEFAULT 'medium'"),
             ('wrong_count', 'INTEGER DEFAULT 1'),
             ('last_wrong_at', 'INTEGER'),
@@ -1848,37 +1649,6 @@ def init_users_db():
                 updated_at INTEGER
             )
         ''')
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS user_profiles (
-                username TEXT PRIMARY KEY,
-                display_name TEXT DEFAULT '',
-                avatar_url TEXT,
-                county TEXT DEFAULT '',
-                bio TEXT DEFAULT '',
-                favorite_category TEXT DEFAULT '',
-                face TEXT DEFAULT 'images/face/face.png',
-                hair TEXT DEFAULT 'images/hair/hair01.png',
-                eyes TEXT DEFAULT 'images/face/eyes01.png',
-                eyes_offset_y INTEGER DEFAULT 0,
-                updated_at INTEGER
-            )
-        ''')
-        c.execute('PRAGMA table_info(user_profiles)')
-        profile_cols = {row[1] for row in c.fetchall()}
-        for col, typ in [
-            ('display_name', "TEXT DEFAULT ''"),
-            ('avatar_url', 'TEXT'),
-            ('county', "TEXT DEFAULT ''"),
-            ('bio', "TEXT DEFAULT ''"),
-            ('favorite_category', "TEXT DEFAULT ''"),
-            ('face', f"TEXT DEFAULT '{DEFAULT_FACE}'"),
-            ('hair', f"TEXT DEFAULT '{DEFAULT_HAIR}'"),
-            ('eyes', f"TEXT DEFAULT '{DEFAULT_EYES}'"),
-            ('eyes_offset_y', 'INTEGER DEFAULT 0'),
-            ('updated_at', 'INTEGER'),
-        ]:
-            if col not in profile_cols:
-                c.execute(f'ALTER TABLE user_profiles ADD COLUMN {col} {typ}')
         c.execute('''
             CREATE TABLE IF NOT EXISTS user_match_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1957,7 +1727,6 @@ def init_rooms_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 room_pin TEXT NOT NULL, player_name TEXT NOT NULL,
                 face TEXT, hair TEXT, eyes TEXT, eyes_offset_y INTEGER DEFAULT 0,
-                avatar_url TEXT, county TEXT DEFAULT '', user_title TEXT DEFAULT '',
                 is_host INTEGER DEFAULT 0, team_id INTEGER DEFAULT 0,
                 joined_at INTEGER, last_seen INTEGER,
                 UNIQUE(room_pin, player_name)
@@ -1965,14 +1734,7 @@ def init_rooms_db():
         ''')
         c.execute('PRAGMA table_info(room_players)')
         pcols = {row[1] for row in c.fetchall()}
-        for col, typ in [
-            ('last_seen', 'INTEGER'),
-            ('team_id', 'INTEGER DEFAULT 0'),
-            ('is_eliminated', 'INTEGER DEFAULT 0'),
-            ('avatar_url', 'TEXT'),
-            ('county', "TEXT DEFAULT ''"),
-            ('user_title', "TEXT DEFAULT ''")
-        ]:
+        for col, typ in [('last_seen', 'INTEGER'), ('team_id', 'INTEGER DEFAULT 0'), ('is_eliminated', 'INTEGER DEFAULT 0')]:
             if col not in pcols:
                 c.execute(f'ALTER TABLE room_players ADD COLUMN {col} {typ}')
 
@@ -1981,15 +1743,13 @@ def init_rooms_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 room_pin TEXT NOT NULL, sender_name TEXT NOT NULL, message TEXT NOT NULL,
                 face TEXT, hair TEXT, eyes TEXT, eyes_offset_y INTEGER DEFAULT 0,
-                avatar_url TEXT, user_title TEXT DEFAULT '',
                 team_id INTEGER DEFAULT -1, created_at INTEGER
             )
         ''')
         c.execute('PRAGMA table_info(room_messages)')
         mcols = {row[1] for row in c.fetchall()}
-        for col, typ in [('team_id', 'INTEGER DEFAULT -1'), ('avatar_url', 'TEXT'), ('user_title', "TEXT DEFAULT ''")]:
-            if col not in mcols:
-                c.execute(f'ALTER TABLE room_messages ADD COLUMN {col} {typ}')
+        if 'team_id' not in mcols:
+            c.execute('ALTER TABLE room_messages ADD COLUMN team_id INTEGER DEFAULT -1')
 
         c.execute('''
             CREATE TABLE IF NOT EXISTS room_questions (
@@ -1998,7 +1758,7 @@ def init_rooms_db():
                 title TEXT, content TEXT, type TEXT, options_json TEXT, answer_json TEXT,
                 explanation TEXT, time_label TEXT, score INTEGER DEFAULT 1000,
                 fake_answer INTEGER DEFAULT 0, mode TEXT, image TEXT,
-                difficulty TEXT DEFAULT 'medium', category TEXT DEFAULT '蝬?',
+                difficulty TEXT DEFAULT 'medium', category TEXT DEFAULT '綜合',
                 origin_bank_id TEXT, origin_question_id TEXT,
                 UNIQUE(room_pin, question_id)
             )
@@ -2007,7 +1767,7 @@ def init_rooms_db():
         qcols = {row[1] for row in c.fetchall()}
         for col, typ in [
             ('difficulty', "TEXT DEFAULT 'medium'"),
-            ('category', "TEXT DEFAULT '蝬?'")
+            ('category', "TEXT DEFAULT '綜合'")
         ]:
             if col not in qcols:
                 c.execute(f'ALTER TABLE room_questions ADD COLUMN {col} {typ}')
@@ -2058,18 +1818,18 @@ def register():
         email = str(data.get('email', '')).strip()
         password = str(data.get('password', '')).strip()
         if len(username) < 3:
-            return jsonify(success=False, message='使用者名稱至少需要 3 個字'), 400
+            return jsonify(success=False, message='帳號至少需要 3 個字元'), 400
         if '@' not in email or '.' not in email.split('@')[-1]:
             return jsonify(success=False, message='Email 格式不正確'), 400
         if len(password) < 6:
-            return jsonify(success=False, message='密碼至少需要 6 個字'), 400
+            return jsonify(success=False, message='密碼至少需要 6 個字元'), 400
         if use_postgres_user_store():
             with closing(get_pg_conn()) as conn:
                 with conn.cursor() as cur:
                     cur.execute('SELECT username, email FROM users WHERE username=%s OR email=%s LIMIT 1', (username, email))
                     existing = cur.fetchone()
                     if existing:
-                        msg = '使用者名稱已存在' if existing.get('username') == username else 'Email 已被使用'
+                        msg = '帳號已存在' if existing.get('username') == username else 'Email 已存在'
                         return jsonify(success=False, message=msg), 400
                     cur.execute(
                         'INSERT INTO users (username, email, password) VALUES (%s, %s, %s)',
@@ -2084,7 +1844,7 @@ def register():
         return jsonify(success=True, message='註冊成功')
     except sqlite3.IntegrityError as e:
         text = str(e).lower()
-        msg = '使用者名稱已存在' if 'username' in text else ('Email 已被使用' if 'email' in text else '使用者名稱或 Email 已被使用')
+        msg = '帳號已存在' if 'username' in text else ('Email 已存在' if 'email' in text else '帳號或 Email 已存在')
         return jsonify(success=False, message=msg), 400
     except Exception as e:
         return jsonify(success=False, message=f'註冊失敗：{e}'), 500
@@ -2123,7 +1883,7 @@ def login():
 def load_quiz_banks_api():
     username = request.args.get('username', '').strip()
     if not username:
-        return jsonify(success=False, message='請提供使用者名稱'), 400
+        return jsonify(success=False, message='缺少使用者帳號'), 400
     return jsonify(
         success=True,
         quizBanks=load_quiz_banks_for_user(username),
@@ -2139,11 +1899,11 @@ def save_quiz_banks_api():
         username = str(data.get('username', '')).strip()
         banks = data.get('quizBanks', [])
         if not username or not isinstance(banks, list):
-            return jsonify(success=False, message='憿澈?澆??航炊'), 400
+            return jsonify(success=False, message='題庫格式錯誤'), 400
         save_quiz_banks_for_user(username, banks)
         return jsonify(success=True, message='題庫已儲存')
     except Exception as e:
-        return jsonify(success=False, message=f'儲存題庫失敗：{e}'), 500
+        return jsonify(success=False, message=f'儲存失敗：{e}'), 500
 
 
 @app.route('/generate_quiz_bank', methods=['POST'])
@@ -2160,14 +1920,14 @@ def generate_quiz_bank_api():
         bank = generate_ai_quiz_bank(topic, category, difficulty, count, source_mode=source_mode, api_key_override=api_key)
         return jsonify(success=True, quizBank=bank)
     except Exception as e:
-        return jsonify(success=False, message=f'AI 題庫產生失敗：{e}'), 500
+        return jsonify(success=False, message=f'AI 題庫生成失敗：{e}'), 500
 
 
 @app.route('/friends_overview')
 def friends_overview_api():
     username = str(request.args.get('username', '')).strip()
     if not username:
-        return jsonify(success=False, message='請提供使用者名稱'), 400
+        return jsonify(success=False, message='缺少使用者帳號'), 400
     overview = build_friends_overview(username)
     return jsonify(success=True, **overview)
 
@@ -2176,7 +1936,7 @@ def friends_overview_api():
 def friend_requests_summary_api():
     username = str(request.args.get('username', '')).strip()
     if not username:
-        return jsonify(success=False, message='請提供使用者名稱'), 400
+        return jsonify(success=False, message='缺少使用者帳號'), 400
     summary = build_friend_request_summary(username)
     return jsonify(success=True, **summary)
 
@@ -2185,101 +1945,15 @@ def friend_requests_summary_api():
 def achievements_summary_api():
     username = str(request.args.get('username', '')).strip()
     if not username:
-        return jsonify(success=False, message='請提供使用者名稱'), 400
+        return jsonify(success=False, message='缺少使用者帳號'), 400
     return jsonify(success=True, **build_achievement_summary(username))
-
-
-@app.route('/profile_summary')
-def profile_summary_api():
-    username = str(request.args.get('username', '')).strip()
-    if not username:
-        return jsonify(success=False, message='請提供使用者名稱'), 400
-    return jsonify(success=True, **build_profile_summary(username))
-
-
-@app.route('/save_profile', methods=['POST'])
-def save_profile_api():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        if not username:
-            return jsonify(success=False, message='請提供使用者名稱'), 400
-        if not get_user_exists(username):
-            return jsonify(success=False, message='找不到這個使用者'), 404
-
-        display_name = sanitize_profile_text(data.get('displayName', ''), 20) or username
-        avatar_url = sanitize_profile_avatar(data.get('avatarUrl', ''))
-        county = sanitize_profile_text(data.get('county', ''), 20)
-        bio = sanitize_profile_text(data.get('bio', ''), 180)
-        favorite_category = sanitize_profile_text(data.get('favoriteCategory', ''), 40)
-        face = sanitize_avatar_asset(data.get('face', DEFAULT_FACE), [DEFAULT_FACE], DEFAULT_FACE)
-        hair = sanitize_avatar_asset(data.get('hair', DEFAULT_HAIR), HAIR_ASSETS, DEFAULT_HAIR)
-        eyes = sanitize_avatar_asset(data.get('eyes', DEFAULT_EYES), EYE_ASSETS, DEFAULT_EYES)
-        eyes_offset_y = sanitize_eyes_offset(data.get('eyesOffsetY', 0))
-
-        if county and county not in TAIWAN_COUNTIES:
-            return jsonify(success=False, message='請選擇有效的縣市'), 400
-
-        if use_postgres_user_store():
-            with closing(get_pg_conn()) as conn:
-                with conn.cursor() as cur:
-                    cur.execute('''
-                        INSERT INTO user_profiles
-                        (username, display_name, avatar_url, county, bio, favorite_category,
-                         face, hair, eyes, eyes_offset_y, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT(username)
-                        DO UPDATE SET
-                            display_name=EXCLUDED.display_name,
-                            avatar_url=EXCLUDED.avatar_url,
-                            county=EXCLUDED.county,
-                            bio=EXCLUDED.bio,
-                            favorite_category=EXCLUDED.favorite_category,
-                            face=EXCLUDED.face,
-                            hair=EXCLUDED.hair,
-                            eyes=EXCLUDED.eyes,
-                            eyes_offset_y=EXCLUDED.eyes_offset_y,
-                            updated_at=EXCLUDED.updated_at
-                    ''', (username, display_name, avatar_url, county, bio, favorite_category,
-                          face, hair, eyes, eyes_offset_y, now_ts()))
-                conn.commit()
-        else:
-            with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
-                conn.execute('''
-                    INSERT INTO user_profiles
-                    (username, display_name, avatar_url, county, bio, favorite_category,
-                     face, hair, eyes, eyes_offset_y, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(username)
-                    DO UPDATE SET
-                        display_name=excluded.display_name,
-                        avatar_url=excluded.avatar_url,
-                        county=excluded.county,
-                        bio=excluded.bio,
-                        favorite_category=excluded.favorite_category,
-                        face=excluded.face,
-                        hair=excluded.hair,
-                        eyes=excluded.eyes,
-                        eyes_offset_y=excluded.eyes_offset_y,
-                        updated_at=excluded.updated_at
-                ''', (username, display_name, avatar_url, county, bio, favorite_category,
-                      face, hair, eyes, eyes_offset_y, now_ts()))
-                conn.commit()
-
-        return jsonify(
-            success=True,
-            message='個人資料已更新',
-            profile=build_profile_summary(username)
-        )
-    except Exception as e:
-        return jsonify(success=False, message=f'儲存個人資料失敗：{e}'), 500
 
 
 @app.route('/wrong_book_summary')
 def wrong_book_summary_api():
     username = str(request.args.get('username', '')).strip()
     if not username:
-        return jsonify(success=False, message='請提供使用者名稱'), 400
+        return jsonify(success=False, message='缺少使用者帳號'), 400
     return jsonify(success=True, **build_wrong_book_detail(username))
 
 
@@ -2290,11 +1964,11 @@ def send_friend_request_api():
         username = str(data.get('username', '')).strip()
         friend_name = str(data.get('friendName', '')).strip()
         if not username or not friend_name:
-            return jsonify(success=False, message='請提供雙方使用者名稱'), 400
+            return jsonify(success=False, message='請輸入好友帳號'), 400
         if username == friend_name:
-            return jsonify(success=False, message='不能將自己加為好友'), 400
+            return jsonify(success=False, message='自己已經在好友榜裡了'), 400
         if not get_user_exists(username) or not get_user_exists(friend_name):
-            return jsonify(success=False, message='找不到使用者'), 404
+            return jsonify(success=False, message='找不到這個帳號'), 404
 
         a, b = sorted([username, friend_name], key=lambda item: item.lower())
         if use_postgres_user_store():
@@ -2323,8 +1997,8 @@ def send_friend_request_api():
                     pending = cur.fetchone()
                     if pending:
                         if str(pending.get('requester') or '') == friend_name and str(pending.get('addressee') or '') == username:
-                            return jsonify(success=False, message='對方已先送出好友邀請，請直接接受'), 400
-                        return jsonify(success=False, message='好友邀請已送出，請等待對方回應'), 400
+                            return jsonify(success=False, message='對方已向你送出申請，請到好友申請接受'), 400
+                        return jsonify(success=False, message='好友申請已送出，請等待對方回應'), 400
 
                     cur.execute('''
                         INSERT INTO user_friend_requests
@@ -2333,7 +2007,7 @@ def send_friend_request_api():
                     ''', (username, friend_name, describe_client_device(request.user_agent.string), now_ts()))
                 conn.commit()
             summary = build_friend_request_summary(friend_name)
-            return jsonify(success=True, message='好友邀請已送出', **summary)
+            return jsonify(success=True, message='好友申請已送出', **summary)
 
         with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             existing_friend = conn.execute('''
@@ -2358,8 +2032,8 @@ def send_friend_request_api():
             ''', (username, friend_name, friend_name, username)).fetchone()
             if pending:
                 if str(pending[1]) == friend_name and str(pending[2]) == username:
-                    return jsonify(success=False, message='對方已先送出好友邀請，請直接接受'), 400
-                return jsonify(success=False, message='好友邀請已送出，請等待對方回應'), 400
+                    return jsonify(success=False, message='對方已向你送出申請，請到申請紀錄接受'), 400
+                return jsonify(success=False, message='好友申請已送出，請等待對方回應'), 400
 
             conn.execute('''
                 INSERT INTO user_friend_requests
@@ -2368,9 +2042,9 @@ def send_friend_request_api():
             ''', (username, friend_name, describe_client_device(request.user_agent.string), now_ts()))
             conn.commit()
         summary = build_friend_request_summary(friend_name)
-        return jsonify(success=True, message='好友邀請已送出', **summary)
+        return jsonify(success=True, message='好友申請已送出', **summary)
     except Exception as e:
-        return jsonify(success=False, message=f'送出好友邀請失敗：{e}'), 500
+        return jsonify(success=False, message=f'加入好友失敗：{e}'), 500
 
 
 @app.route('/respond_friend_request', methods=['POST'])
@@ -2381,9 +2055,9 @@ def respond_friend_request_api():
         request_id = int(data.get('requestId', 0) or 0)
         action = str(data.get('action', '')).strip().lower()
         if not username or request_id <= 0:
-            return jsonify(success=False, message='請提供有效的邀請資料'), 400
+            return jsonify(success=False, message='缺少申請資訊'), 400
         if action not in {'accept', 'reject'}:
-            return jsonify(success=False, message='無效的操作'), 400
+            return jsonify(success=False, message='不支援的操作'), 400
 
         if use_postgres_user_store():
             with closing(get_pg_conn()) as conn:
@@ -2396,9 +2070,9 @@ def respond_friend_request_api():
                     ''', (request_id, username))
                     row = cur.fetchone()
                     if not row:
-                        return jsonify(success=False, message='找不到好友邀請'), 404
+                        return jsonify(success=False, message='找不到這筆好友申請'), 404
                     if str(row.get('status') or '') != 'pending':
-                        return jsonify(success=False, message='這筆邀請已處理過'), 400
+                        return jsonify(success=False, message='這筆申請已處理過'), 400
 
                     cur.execute('''
                         UPDATE user_friend_requests
@@ -2417,7 +2091,7 @@ def respond_friend_request_api():
 
             return jsonify(
                 success=True,
-                message='已接受好友邀請' if action == 'accept' else '已拒絕好友邀請',
+                message='已接受好友申請' if action == 'accept' else '已忽略好友申請',
                 overview=build_friends_overview(username),
                 requestSummary=build_friend_request_summary(username)
             )
@@ -2431,9 +2105,9 @@ def respond_friend_request_api():
                 LIMIT 1
             ''', (request_id, username)).fetchone()
             if not row:
-                return jsonify(success=False, message='找不到好友邀請'), 404
+                return jsonify(success=False, message='找不到這筆好友申請'), 404
             if str(row.get('status') or '') != 'pending':
-                return jsonify(success=False, message='這筆邀請已處理過'), 400
+                return jsonify(success=False, message='這筆申請已處理過'), 400
 
             conn.execute('''
                 UPDATE user_friend_requests
@@ -2451,12 +2125,12 @@ def respond_friend_request_api():
 
         return jsonify(
             success=True,
-            message='已接受好友邀請' if action == 'accept' else '已拒絕好友邀請',
+            message='已接受好友申請' if action == 'accept' else '已忽略好友申請',
             overview=build_friends_overview(username),
             requestSummary=build_friend_request_summary(username)
         )
     except Exception as e:
-        return jsonify(success=False, message=f'處理好友邀請失敗：{e}'), 500
+        return jsonify(success=False, message=f'處理好友申請失敗：{e}'), 500
 
 
 @app.route('/copy_quiz_bank', methods=['POST'])
@@ -2472,13 +2146,13 @@ def copy_quiz_bank():
             return jsonify(success=False, message='找不到題庫'), 404
         copied = json.loads(json.dumps(target))
         copied['id'] = uid('bank')
-        copied['title'] = new_title or f"{target.get('title', '未命名題庫')} (副本)"
+        copied['title'] = new_title or f"{target.get('title', '未命名題庫')}（副本）"
         copied['updatedAt'] = now_ts()
         banks.insert(0, copied)
         save_quiz_banks_for_user(username, banks)
         return jsonify(success=True, quizBanks=banks, message='題庫已複製')
     except Exception as e:
-        return jsonify(success=False, message=f'複製題庫失敗：{e}'), 500
+        return jsonify(success=False, message=f'複製失敗：{e}'), 500
 
 
 @app.route('/rename_quiz_bank', methods=['POST'])
@@ -2494,10 +2168,10 @@ def rename_quiz_bank():
                 bank['title'] = new_title
                 bank['updatedAt'] = now_ts()
                 save_quiz_banks_for_user(username, banks)
-                return jsonify(success=True, quizBanks=banks, message='題庫名稱已更新')
+                return jsonify(success=True, quizBanks=banks, message='題庫已重新命名')
         return jsonify(success=False, message='找不到題庫'), 404
     except Exception as e:
-        return jsonify(success=False, message=f'重新命名題庫失敗：{e}'), 500
+        return jsonify(success=False, message=f'重新命名失敗：{e}'), 500
 
 
 @app.route('/delete_quiz_bank', methods=['POST'])
@@ -2513,7 +2187,7 @@ def delete_quiz_bank():
         save_quiz_banks_for_user(username, new_banks)
         return jsonify(success=True, quizBanks=new_banks, message='題庫已刪除')
     except Exception as e:
-        return jsonify(success=False, message=f'刪除題庫失敗：{e}'), 500
+        return jsonify(success=False, message=f'刪除失敗：{e}'), 500
 
 
 @app.route('/lobby_rooms')
@@ -2549,11 +2223,11 @@ def lobby_rooms():
                                      if n and not (n.startswith('__host_') and n.endswith('__'))]
             room['joinable'] = (room['status'] == 'waiting'
                                 and room['player_count'] < int(room.get('max_players', 8) or 8))
-            room['display_name'] = room.get('room_name') or room.get('bank_title') or f"?輸? {room['pin']}"
+            room['display_name'] = room.get('room_name') or room.get('bank_title') or f"房間 {room['pin']}"
             result.append(room)
         return jsonify(success=True, rooms=result)
     except Exception as e:
-        return jsonify(success=False, message=f'霈?之撱喳仃??{e}'), 500
+        return jsonify(success=False, message=f'讀取大廳失敗：{e}'), 500
 
 
 @app.route('/check_pin', methods=['POST'])
@@ -2561,10 +2235,10 @@ def check_pin():
     data = request.get_json() or {}
     pin = str(data.get('pin', '')).strip()
     if not validate_pin(pin):
-        return jsonify(success=False, message='PIN 必須是 6 位數'), 400
+        return jsonify(success=False, message='PIN 必須是 6 位數字'), 400
     room = fetch_room(pin)
     if not room:
-        return jsonify(success=False, message='找不到房間'), 404
+        return jsonify(success=False, message='房間不存在'), 404
     with closing(get_conn()) as conn:
         host_exists = conn.execute(
             'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
@@ -2573,7 +2247,7 @@ def check_pin():
         if not host_exists:
             delete_room_fully(conn, pin)
             conn.commit()
-            return jsonify(success=False, message='找不到房間'), 404
+            return jsonify(success=False, message='房間不存在'), 404
     room = serialize_room(room)
     return jsonify(success=True, room=room, requiresKey=room['is_private'])
 
@@ -2585,7 +2259,7 @@ def verify_room_key():
     room_key = str(data.get('roomKey', '')).strip()
     room = serialize_room(fetch_room(pin))
     if not room:
-        return jsonify(success=False, message='找不到房間'), 404
+        return jsonify(success=False, message='房間不存在'), 404
     with closing(get_conn()) as conn:
         host_exists = conn.execute(
             'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
@@ -2594,14 +2268,14 @@ def verify_room_key():
         if not host_exists:
             delete_room_fully(conn, pin)
             conn.commit()
-            return jsonify(success=False, message='找不到房間'), 404
+            return jsonify(success=False, message='房間不存在'), 404
     if not room['is_private']:
-        return jsonify(success=True, message='此房間不需要房間密碼')
+        return jsonify(success=True, message='公開房間')
     if not room_key:
-        return jsonify(success=False, message='請輸入房間密碼'), 400
+        return jsonify(success=False, message='請輸入房間密鑰'), 400
     if hash_text(room_key) != (room.get('room_key_hash') or ''):
-        return jsonify(success=False, message='撖?航炊'), 401
-    return jsonify(success=True, message='撖甇?Ⅱ')
+        return jsonify(success=False, message='密鑰錯誤'), 401
+    return jsonify(success=True, message='密鑰正確')
 
 
 @app.route('/create_room', methods=['POST'])
@@ -2627,11 +2301,11 @@ def create_room():
         if not created_by:
             return jsonify(success=False, message='請先登入再建立房間'), 400
         if not bank_id:
-            return jsonify(success=False, message='隢??豢?憿澈'), 400
+            return jsonify(success=False, message='請先選擇題庫'), 400
         if is_private and not room_key:
-            return jsonify(success=False, message='私人房間需要設定密碼'), 400
+            return jsonify(success=False, message='私人房必須設定密鑰'), 400
         if not isinstance(room_questions, list) or not room_questions:
-            return jsonify(success=False, message='建立房間前需要先準備題目'), 400
+            return jsonify(success=False, message='建立房間前請先選擇至少一題'), 400
 
         pin = generate_unique_pin()
 
@@ -2674,12 +2348,13 @@ def create_room():
                       json.dumps(answer_indexes, ensure_ascii=False),
                       q.get('explanation',''), q.get('time','20 秒'),
                       int(q.get('score',1000) or 1000), 1 if q.get('fakeAnswer') else 0,
-                      q.get('mode','normal'), q.get('image',''),
+                      q.get('mode','個人賽'), q.get('image',''),
                       normalize_difficulty(q.get('difficulty')),
                       normalize_category(q.get('category')),
                       bank_id, str(q.get('id',''))))
 
-            # Reserve a hidden host player row so the room stays associated with its creator.
+            # 建房時插入佔位房主（用 created_by 帳號名稱當 key）
+            # player_join 完成後 join_room ON CONFLICT DO UPDATE 會覆蓋成真正的玩家資料
             conn.execute('''
                 INSERT OR IGNORE INTO room_players
                 (room_pin, player_name, face, hair, eyes, eyes_offset_y, is_host, team_id, joined_at, last_seen)
@@ -2702,28 +2377,28 @@ def join_room():
         team_id = int(data.get('teamId', 0) or 0)
 
         if not validate_pin(pin):
-            return jsonify(success=False, message='PIN ?澆??航炊'), 400
+            return jsonify(success=False, message='PIN 格式錯誤'), 400
         if not player['name']:
             return jsonify(success=False, message='請輸入玩家名稱'), 400
 
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
             room = serialize_room(room)
 
             if room['status'] not in ['waiting', 'playing']:
-                return jsonify(success=False, message='?輸??桀?銝?'), 400
+                return jsonify(success=False, message='房間目前不可加入'), 400
 
             count = conn.execute(
                 "SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?"
                 " AND NOT (player_name LIKE '__host_%__' AND is_host=1)", (pin,)
             ).fetchone()['total']
             if count >= int(room.get('max_players', 8) or 8):
-                return jsonify(success=False, message='?輸?撌脫遛'), 400
+                return jsonify(success=False, message='房間已滿'), 400
 
             if room['is_private'] and hash_text(room_key) != (room.get('room_key_hash') or ''):
-                return jsonify(success=False, message='撖?航炊'), 401
+                return jsonify(success=False, message='密鑰錯誤'), 401
 
             host_exists = conn.execute(
                 'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
@@ -2732,20 +2407,18 @@ def join_room():
             if not host_exists and not player['is_host']:
                 delete_room_fully(conn, pin)
                 conn.commit()
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
 
             conn.execute('''
                 INSERT INTO room_players
-                (room_pin,player_name,face,hair,eyes,eyes_offset_y,avatar_url,county,user_title,is_host,team_id,joined_at,last_seen)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                (room_pin,player_name,face,hair,eyes,eyes_offset_y,is_host,team_id,joined_at,last_seen)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(room_pin,player_name) DO UPDATE SET
                     face=excluded.face,hair=excluded.hair,eyes=excluded.eyes,
-                    eyes_offset_y=excluded.eyes_offset_y,avatar_url=excluded.avatar_url,
-                    county=excluded.county,user_title=excluded.user_title,is_host=excluded.is_host,
+                    eyes_offset_y=excluded.eyes_offset_y,is_host=excluded.is_host,
                     team_id=excluded.team_id,joined_at=excluded.joined_at,last_seen=excluded.last_seen
             ''', (pin, player['name'], player['face'], player['hair'], player['eyes'],
-                  player['eyes_offset_y'], player['avatar_url'], player['county'], player['user_title'],
-                  player['is_host'], team_id, now_ts(), now_ts()))
+                  player['eyes_offset_y'], player['is_host'], team_id, now_ts(), now_ts()))
             conn.commit()
 
         return jsonify(success=True, message='加入房間成功', room=serialize_room(fetch_room(pin)))
@@ -2763,16 +2436,16 @@ def choose_team():
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
             if room.get('status') != 'waiting':
-                return jsonify(success=False, message='?撌脤?憪??⊥???'), 400
+                return jsonify(success=False, message='遊戲已開始，無法換隊'), 400
             team_size = int(room.get('team_size') or 4)
             cur_count = conn.execute(
                 'SELECT COUNT(*) AS c FROM room_players WHERE room_pin=? AND team_id=? AND player_name!=?',
                 (pin, team_id, player_name)
             ).fetchone()['c']
             if cur_count >= team_size:
-                return jsonify(success=False, message='該隊伍已滿員'), 400
+                return jsonify(success=False, message='這隊已滿，請選其他隊'), 400
             conn.execute('UPDATE room_players SET team_id=? WHERE room_pin=? AND player_name=?',
                          (team_id, pin, player_name))
             conn.commit()
@@ -2793,10 +2466,10 @@ def shuffle_teams():
                 (pin, player_name)
             ).fetchone()
             if not host:
-                return jsonify(success=False, message='只有房主可以隨機分隊'), 403
+                return jsonify(success=False, message='只有房主可以隨機分組'), 403
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
             team_count = int(room.get('team_count') or 2)
             players = conn.execute(
                 'SELECT player_name FROM room_players WHERE room_pin=? AND is_host=0', (pin,)
@@ -2807,9 +2480,9 @@ def shuffle_teams():
                 conn.execute('UPDATE room_players SET team_id=? WHERE room_pin=? AND player_name=?',
                              ((i % team_count) + 1, pin, name))
             conn.commit()
-        return jsonify(success=True, message='已完成隨機分隊')
+        return jsonify(success=True, message='隨機分組完成')
     except Exception as e:
-        return jsonify(success=False, message=f'隨機分隊失敗：{e}'), 500
+        return jsonify(success=False, message=f'隨機分組失敗：{e}'), 500
 
 
 @app.route('/leave_room', methods=['POST'])
@@ -2819,7 +2492,7 @@ def leave_room():
         pin = str(data.get('pin', '')).strip()
         player_name = str(data.get('playerName', '')).strip()
         if not pin or not player_name:
-            return jsonify(success=False, message='請提供房號與玩家名稱'), 400
+            return jsonify(success=False, message='缺少必要資料'), 400
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
@@ -2828,11 +2501,11 @@ def leave_room():
                 'SELECT * FROM room_players WHERE room_pin=? AND player_name=?', (pin, player_name)
             ).fetchone()
             if not leaving:
-                return jsonify(success=True, message='玩家已不在房間中')
+                return jsonify(success=True, message='玩家已不在房間內')
             if int(leaving.get('is_host', 0) or 0) == 1:
                 delete_room_fully(conn, pin)
                 conn.commit()
-                return jsonify(success=True, message='房主已離開，房間已關閉', roomDeleted=True)
+                return jsonify(success=True, message='房主已離開，房間已刪除', roomDeleted=True)
             conn.execute('DELETE FROM room_players WHERE room_pin=? AND player_name=?', (pin, player_name))
             host_exists = conn.execute(
                 'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
@@ -2841,7 +2514,7 @@ def leave_room():
             if not host_exists:
                 delete_room_fully(conn, pin)
                 conn.commit()
-                return jsonify(success=True, message='房主已離線，房間已關閉', roomDeleted=True)
+                return jsonify(success=True, message='房間已無房主，房間已刪除', roomDeleted=True)
             remaining = conn.execute(
                 "SELECT COUNT(*) AS total FROM room_players WHERE room_pin=?"
                 " AND NOT (player_name LIKE '__host_%__' AND is_host=1)", (pin,)
@@ -2849,7 +2522,7 @@ def leave_room():
             if remaining == 0:
                 delete_room_fully(conn, pin)
                 conn.commit()
-                return jsonify(success=True, message='房內無玩家，房間已關閉', roomDeleted=True)
+                return jsonify(success=True, message='房間已無玩家，房間已刪除', roomDeleted=True)
             conn.commit()
         return jsonify(success=True, message='已離開房間', roomDeleted=False)
     except Exception as e:
@@ -2864,7 +2537,7 @@ def kick_player():
         host_name = str(data.get('hostName', '')).strip()
         target_name = str(data.get('targetName', '')).strip()
         if not pin or not host_name or not target_name:
-            return jsonify(success=False, message='請提供完整的踢人資料'), 400
+            return jsonify(success=False, message='缺少必要資料'), 400
         with closing(get_conn()) as conn:
             host_row = conn.execute(
                 'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
@@ -2879,12 +2552,12 @@ def kick_player():
             if not target:
                 return jsonify(success=False, message='找不到該玩家'), 404
             if int(target.get('is_host') or 0) == 1:
-                return jsonify(success=False, message='不能踢出房主'), 400
+                return jsonify(success=False, message='不能踢掉房主'), 400
             conn.execute('DELETE FROM room_players WHERE room_pin=? AND player_name=?', (pin, target_name))
             conn.commit()
-        return jsonify(success=True, message='已將玩家移出房間')
+        return jsonify(success=True, message='玩家已被移出房間')
     except Exception as e:
-        return jsonify(success=False, message=f'踢出玩家失敗：{e}'), 500
+        return jsonify(success=False, message=f'踢人失敗：{e}'), 500
 
 
 @app.route('/room_state/<pin>')
@@ -2893,7 +2566,7 @@ def room_state(pin):
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
             host_exists = conn.execute(
                 'SELECT 1 FROM room_players WHERE room_pin=? AND is_host=1 AND COALESCE(last_seen,joined_at,0)>=? LIMIT 1',
                 (pin, host_alive_cutoff())
@@ -2901,13 +2574,13 @@ def room_state(pin):
             if not host_exists:
                 delete_room_fully(conn, pin)
                 conn.commit()
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
             conn.execute(
                 'UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
                 (now_ts(), pin, request.args.get('playerName', '').strip() or '__unknown__')
             )
             players = conn.execute('''
-                SELECT room_pin,player_name,face,hair,eyes,eyes_offset_y,avatar_url,county,user_title,is_host,team_id,joined_at
+                SELECT room_pin,player_name,face,hair,eyes,eyes_offset_y,is_host,team_id,joined_at
                 FROM room_players
                 WHERE room_pin=?
                   AND NOT (player_name LIKE '__host_%__' AND is_host=1)
@@ -2926,7 +2599,7 @@ def room_state(pin):
         return jsonify(success=True, room=serialize_room(room), players=players,
                        teams=teams, messages=messages, questionTotal=question_total)
     except Exception as e:
-        return jsonify(success=False, message=f'取得房間狀態失敗：{e}'), 500
+        return jsonify(success=False, message=f'讀取房間狀態失敗：{e}'), 500
 
 
 @app.route('/heartbeat', methods=['POST'])
@@ -2936,12 +2609,14 @@ def heartbeat():
         pin = str(data.get('pin', '')).strip()
         player_name = str(data.get('playerName', '')).strip()
         if not pin or not player_name:
-            return jsonify(success=False, message='請提供房號與玩家名稱'), 400
+            return jsonify(success=False, message='缺少必要資料'), 400
         with closing(get_conn()) as conn:
             if not conn.execute('SELECT 1 FROM rooms WHERE pin=?', (pin,)).fetchone():
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
+            # 一般玩家/房主的心跳
             conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
                          (now_ts(), pin, player_name))
+            # 若傳入的是佔位房主名稱，同時刷新所有 is_host=1 的 last_seen
             if player_name.startswith('__host_') and player_name.endswith('__'):
                 conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND is_host=1',
                              (now_ts(), pin))
@@ -2961,31 +2636,27 @@ def send_message():
         team_id = int(data.get('teamId', -1) or -1)
         avatar = get_player_payload({
             'name': sender_name,
-            'username': str(data.get('username', '')).strip(),
             'face': data.get('face', DEFAULT_FACE),
             'hair': data.get('hair', DEFAULT_HAIR),
             'eyes': data.get('eyes', DEFAULT_EYES),
-            'avatarUrl': data.get('avatarUrl', ''),
-            'county': data.get('county', ''),
-            'title': data.get('title', ''),
             'eyesOffsetY': data.get('eyesOffsetY', 0)
         })
         if not room_exists(pin):
-            return jsonify(success=False, message='找不到房間'), 404
+            return jsonify(success=False, message='房間不存在'), 404
         if not sender_name or not message:
-            return jsonify(success=False, message='閮銝蝛箇'), 400
+            return jsonify(success=False, message='訊息不可空白'), 400
         safe_message = html.escape(message)
         with closing(sqlite3.connect(ROOMS_DB_PATH)) as conn:
             conn.execute('''
                 INSERT INTO room_messages
-                (room_pin,sender_name,message,face,hair,eyes,eyes_offset_y,avatar_url,user_title,team_id,created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                (room_pin,sender_name,message,face,hair,eyes,eyes_offset_y,team_id,created_at)
+                VALUES (?,?,?,?,?,?,?,?,?)
             ''', (pin, sender_name, safe_message, avatar['face'], avatar['hair'],
-                  avatar['eyes'], avatar['eyes_offset_y'], avatar['avatar_url'], avatar['user_title'], team_id, now_ts()))
+                  avatar['eyes'], avatar['eyes_offset_y'], team_id, now_ts()))
             conn.commit()
-        return jsonify(success=True, message='閮撌脤')
+        return jsonify(success=True, message='訊息已送出')
     except Exception as e:
-        return jsonify(success=False, message=f'送出訊息失敗：{e}'), 500
+        return jsonify(success=False, message=f'發送訊息失敗：{e}'), 500
 
 
 @app.route('/team_messages')
@@ -3000,7 +2671,7 @@ def team_messages():
             ).fetchall()
         return jsonify(success=True, messages=msgs)
     except Exception as e:
-        return jsonify(success=False, message=f'取得隊伍訊息失敗：{e}'), 500
+        return jsonify(success=False, message=f'讀取訊息失敗：{e}'), 500
 
 
 @app.route('/start_game', methods=['POST'])
@@ -3020,13 +2691,13 @@ def start_game():
                 'SELECT COUNT(*) AS total FROM room_questions WHERE room_pin=?', (pin,)
             ).fetchone()['total']
             if total == 0:
-                return jsonify(success=False, message='房間內沒有題目可以開始'), 400
+                return jsonify(success=False, message='這個房間沒有題目'), 400
             conn.execute(
                 "UPDATE rooms SET status='playing',current_question_index=0,phase='question',game_start_ts=? WHERE pin=?",
                 (now_ts(), pin)
             )
             conn.commit()
-        return jsonify(success=True, message='遊戲開始')
+        return jsonify(success=True, message='遊戲已開始')
     except Exception as e:
         return jsonify(success=False, message=f'開始遊戲失敗：{e}'), 500
 
@@ -3037,13 +2708,15 @@ def player_game_state():
         pin = request.args.get('pin', '').strip()
         player_name = request.args.get('playerName', '').strip()
         if not pin or not player_name:
-            return jsonify(success=False, message='請提供房號與玩家名稱'), 400
+            return jsonify(success=False, message='缺少必要資料'), 400
 
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
 
+            # 遊戲進行中：只要房間 status=playing 且任何 is_host=1 存在就繼續
+            # 等待室：需要 last_seen 在存活範圍內
             room_status = (room.get('status') or 'waiting')
             if room_status == 'playing':
                 host_exists = conn.execute(
@@ -3059,7 +2732,7 @@ def player_game_state():
             if not host_exists:
                 delete_room_fully(conn, pin)
                 conn.commit()
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
 
             room = serialize_room(room)
             conn.execute('UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=?',
@@ -3076,7 +2749,7 @@ def player_game_state():
             my_team_id    = int((me or {}).get('team_id') or 0)
             is_eliminated = bool((me or {}).get('is_eliminated') or 0)
             players = conn.execute('''
-                SELECT player_name, face, hair, eyes, eyes_offset_y, avatar_url, county, user_title, is_host, is_eliminated, team_id
+                SELECT player_name, face, hair, eyes, eyes_offset_y, is_host, is_eliminated, team_id
                 FROM room_players
                 WHERE room_pin=?
                   AND NOT (player_name LIKE '__host_%__' AND is_host=1)
@@ -3139,9 +2812,10 @@ def player_game_state():
                 current_q = questions[current_index] if 0 <= current_index < total_questions else None
                 finished = current_q is None
 
-            # 鋡急?瘙啁摰園脣???唳芋撘?finished 閮?True嚗?蝡舐 isEliminated ???
+            # 被淘汰玩家進入「觀戰模式」（finished 設 True，前端用 isEliminated 區分）
             if is_eliminated and not finished:
-                finished = False  # 銝?????霈?蝡舐 isEliminated ?斗憿舐內閫?啁??
+                finished = False  # 不算真結束，讓前端用 isEliminated 判斷顯示觀戰畫面
+
             total_score = conn.execute(
                 'SELECT COALESCE(SUM(points_earned),0) AS total FROM room_results WHERE room_pin=? AND player_name=?',
                 (pin, player_name)
@@ -3150,12 +2824,12 @@ def player_game_state():
             all_rank = conn.execute('''
                 SELECT rr.player_name,
                        COALESCE(SUM(rr.points_earned),0) AS total_score,
-                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y, rp.avatar_url, rp.county, rp.user_title
+                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 FROM room_results rr
                 JOIN room_players rp
                   ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=?
-                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y, rp.avatar_url, rp.county, rp.user_title
+                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 ORDER BY total_score DESC, rr.player_name ASC
             ''', (pin,)).fetchall()
             my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
@@ -3191,7 +2865,6 @@ def player_game_state():
                 my_answered = my_result is not None
                 answer_status = conn.execute('''
                     SELECT rp.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y,
-                           rp.avatar_url, rp.county, rp.user_title,
                            rp.is_host, rp.is_eliminated,
                            CASE WHEN rr.id IS NULL THEN 0 ELSE 1 END AS answered,
                            rr.selected_json, rr.is_correct, rr.points_earned
@@ -3223,16 +2896,13 @@ def player_game_state():
                 correct_answer_text = '、'.join(chr(65+i) for i in ai) or '無'
                 explanation_text = current_q.get('explanation') or ''
             elif is_team_mode:
-                # ??璅∪?銋??喟摰嗅?銵函策?垢?喳?雿輻
+                # 團體模式也回傳玩家列表給前端右側名單使用
                 answer_status = [{
                     'player_name': p.get('player_name'),
                     'face': p.get('face'),
                     'hair': p.get('hair'),
                     'eyes': p.get('eyes'),
                     'eyes_offset_y': p.get('eyes_offset_y'),
-                    'avatar_url': p.get('avatar_url'),
-                    'county': p.get('county'),
-                    'user_title': p.get('user_title'),
                     'is_host': p.get('is_host'),
                     'is_eliminated': p.get('is_eliminated'),
                     'answered': 0
@@ -3256,7 +2926,7 @@ def player_game_state():
                         'points_earned': sub['points_earned'] if sub else 0
                     })
 
-            # Detect whether this viewer is the visible host player for projector mode.
+            # 判斷請求者是否為房主（用於決定是否帶正解）
             _host_row = conn.execute(
                 "SELECT player_name FROM room_players WHERE room_pin=? AND is_host=1"
                 " AND NOT (player_name LIKE '__host_%__') LIMIT 1", (pin,)
@@ -3281,7 +2951,7 @@ def player_game_state():
                 'category': normalize_category(q.get('category'))
             }
             if include_answers:
-                # ?蹂蜓?臭誑?甇?圾 index
+                # 房主可以看到正解 index
                 result['correct_indexes'] = ans
             return result
 
@@ -3290,7 +2960,7 @@ def player_game_state():
             totalQuestions=total_questions, answeredCount=current_index,
             totalScore=total_score,
             isEliminated=is_eliminated,
-            nextQuestion=pub_q(current_q, include_answers=False),
+            nextQuestion=pub_q(current_q, include_answers=is_host_player),
             allQuestions=[pub_q(q) for q in questions] if is_team_mode else [],
             finished=finished, leaderboard=leaderboard,
             teamScores=team_scores, teamQuestionStatus=team_question_status,
@@ -3299,13 +2969,13 @@ def player_game_state():
             answerStatus=answer_status, answerBreakdown=answer_breakdown,
             players=players,
             myRank=my_rank, showExactRank=bool(my_rank and my_rank <= 5),
-            correctAnswerText=('投影模式已隱藏答案' if is_host_player else correct_answer_text), explanation=explanation_text,
+            correctAnswerText=correct_answer_text, explanation=explanation_text,
             gameStartTs=int(room.get('game_start_ts') or 0),
             isTeamMode=is_team_mode,
             teamPlayMode=team_play_mode
         )
     except Exception as e:
-        return jsonify(success=False, message=f'取得遊戲狀態失敗：{e}'), 500
+        return jsonify(success=False, message=f'讀取遊戲狀態失敗：{e}'), 500
 
 
 @app.route('/submit_answer', methods=['POST'])
@@ -3326,13 +2996,13 @@ def submit_answer():
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
             is_team_mode = bool(room.get('team_mode'))
             team_play_mode = str(room.get('team_play_mode') or 'classic').strip().lower()
             if team_play_mode not in {'classic', 'free_assign'}:
                 team_play_mode = 'classic'
             if not is_team_mode and (room.get('phase') or 'question') != 'question':
-                return jsonify(success=False, message='目前不是作答階段'), 400
+                return jsonify(success=False, message='本題已結束作答'), 400
 
             q = conn.execute(
                 'SELECT * FROM room_questions WHERE room_pin=? AND question_id=?', (pin, question_id)
@@ -3353,7 +3023,7 @@ def submit_answer():
                 ''', (pin, question_id, my_team_id)).fetchone()
                 if already:
                     return jsonify(success=False,
-                                   message=f'{already["player_name"]} 已經替隊伍提交過這題答案'), 400
+                                   message=f'{already["player_name"]} 已代表本組作答此題'), 400
 
             existing = conn.execute(
                 'SELECT * FROM room_results WHERE room_pin=? AND player_name=? AND question_id=?',
@@ -3414,7 +3084,8 @@ def submit_answer():
                 owner = get_wrong_book_owner(username, player_name)
                 save_wrong_question(owner, room.get('bank_id'), room.get('bank_title'), q)
 
-            # Fake-answer mode eliminates players who answer incorrectly.
+            # ── 淘汰模式處理 ────────────────────────────
+            # fake_answer=1 且答錯 → 把玩家標記為淘汰，積分歸零
             is_fake_mode = bool(q.get('fake_answer') or 0)
             newly_eliminated = False
             if is_fake_mode and not is_correct:
@@ -3422,11 +3093,13 @@ def submit_answer():
                     'UPDATE room_players SET is_eliminated=1 WHERE room_pin=? AND player_name=?',
                     (pin, player_name)
                 )
+                # 所有舊的積分清零（INSERT OR REPLACE 把 points_earned 全設 0）
                 conn.execute(
                     'UPDATE room_results SET points_earned=0 WHERE room_pin=? AND player_name=?',
                     (pin, player_name)
                 )
                 newly_eliminated = True
+            # ────────────────────────────────────────────
 
             total_score = conn.execute(
                 'SELECT COALESCE(SUM(points_earned),0) AS total FROM room_results WHERE room_pin=? AND player_name=?',
@@ -3435,21 +3108,21 @@ def submit_answer():
             top5 = conn.execute('''
                 SELECT rr.player_name,
                        COALESCE(SUM(points_earned),0) AS total_score,
-                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y, rp.avatar_url, rp.county, rp.user_title
+                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 FROM room_results rr
                 JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=? AND rp.is_eliminated=0
-                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y, rp.avatar_url, rp.county, rp.user_title
+                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 ORDER BY total_score DESC,rr.player_name ASC LIMIT 5
             ''', (pin,)).fetchall()
             all_rank = conn.execute('''
                 SELECT rr.player_name,
                        COALESCE(SUM(rr.points_earned),0) AS total_score,
-                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y, rp.avatar_url, rp.county, rp.user_title
+                       rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 FROM room_results rr
                 JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=? AND rp.is_eliminated=0
-                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y, rp.avatar_url, rp.county, rp.user_title
+                GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 ORDER BY total_score DESC,rr.player_name ASC
             ''', (pin,)).fetchall()
             my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
@@ -3479,10 +3152,10 @@ def host_finish_question():
                 'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
                 (pin, player_name)
             ).fetchone():
-                return jsonify(success=False, message='只有房主可以結束作答階段'), 403
+                return jsonify(success=False, message='只有房主可以操作'), 403
             conn.execute("UPDATE rooms SET phase='explanation' WHERE pin=?", (pin,))
             conn.commit()
-        return jsonify(success=True, message='已切換到解析階段')
+        return jsonify(success=True, message='已進入解析階段')
     except Exception as e:
         return jsonify(success=False, message=f'切換解析階段失敗：{e}'), 500
 
@@ -3498,10 +3171,10 @@ def host_skip_explanation():
                 'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
                 (pin, player_name)
             ).fetchone():
-                return jsonify(success=False, message='只有房主可以跳過解析'), 403
+                return jsonify(success=False, message='只有房主可以操作'), 403
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                return jsonify(success=False, message='房間不存在'), 404
             total = conn.execute(
                 'SELECT COUNT(*) AS total FROM room_questions WHERE room_pin=?', (pin,)
             ).fetchone()['total']
@@ -3520,7 +3193,7 @@ def host_skip_explanation():
             conn.commit()
         return jsonify(success=True, message='已進入下一題', finished=next_index >= total)
     except Exception as e:
-        return jsonify(success=False, message=f'跳過解析失敗：{e}'), 500
+        return jsonify(success=False, message=f'切換下一題失敗：{e}'), 500
 
 
 @app.route('/host_end_team_game', methods=['POST'])
@@ -3534,7 +3207,7 @@ def host_end_team_game():
                 'SELECT 1 FROM room_players WHERE room_pin=? AND player_name=? AND is_host=1',
                 (pin, player_name)
             ).fetchone():
-                return jsonify(success=False, message='只有房主可以結束團隊遊戲'), 403
+                return jsonify(success=False, message='只有房主可以操作'), 403
             total = conn.execute(
                 'SELECT COUNT(*) AS t FROM room_questions WHERE room_pin=?', (pin,)
             ).fetchone()['t']
@@ -3544,9 +3217,9 @@ def host_end_team_game():
             )
             record_room_winner(conn, pin)
             conn.commit()
-        return jsonify(success=True, message='團隊遊戲已結束')
+        return jsonify(success=True, message='遊戲已結束')
     except Exception as e:
-        return jsonify(success=False, message=f'結束團隊遊戲失敗：{e}'), 500
+        return jsonify(success=False, message=f'結束遊戲失敗：{e}'), 500
 
 
 @app.route('/host_all_results')
@@ -3554,7 +3227,7 @@ def host_all_results():
     try:
         pin = request.args.get('pin', '').strip()
         if not pin:
-            return jsonify(success=False, message='請提供 PIN'), 400
+            return jsonify(success=False, message='缺少 PIN'), 400
         with closing(get_conn()) as conn:
             questions = conn.execute(
                 'SELECT question_id,seq,title FROM room_questions WHERE room_pin=? ORDER BY seq ASC', (pin,)
@@ -3577,7 +3250,7 @@ def host_all_results():
         } for r in results]
         return jsonify(success=True, results=enriched)
     except Exception as e:
-        return jsonify(success=False, message=f'取得完整結果失敗：{e}'), 500
+        return jsonify(success=False, message=f'讀取明細失敗：{e}'), 500
 
 
 @app.route('/teacher_report')
@@ -3585,7 +3258,7 @@ def teacher_report_api():
     try:
         pin = request.args.get('pin', '').strip()
         if not pin:
-            return jsonify(success=False, message='請提供 PIN'), 400
+            return jsonify(success=False, message='缺少 PIN'), 400
         with closing(get_conn()) as conn:
             live_report = build_teacher_report_from_conn(conn, pin)
         if live_report:
@@ -3595,11 +3268,11 @@ def teacher_report_api():
 
         saved_report = load_teacher_report_snapshot(pin)
         if not saved_report:
-            return jsonify(success=False, message='找不到教師報表'), 404
+            return jsonify(success=False, message='找不到這個房間或歷史報表'), 404
         saved_report['success'] = True
         return jsonify(saved_report)
     except Exception as e:
-        return jsonify(success=False, message=f'取得教師報表失敗：{e}'), 500
+        return jsonify(success=False, message=f'讀取老師報表失敗：{e}'), 500
 
 
 @app.route('/teacher_report_history')
@@ -3608,7 +3281,7 @@ def teacher_report_history_api():
         username = request.args.get('username', '').strip()
         return jsonify(success=True, reports=list_teacher_report_history(username))
     except Exception as e:
-        return jsonify(success=False, message=f'取得教師報表歷史失敗：{e}'), 500
+        return jsonify(success=False, message=f'讀取建房紀錄失敗：{e}'), 500
 
 
 @app.route('/<path:filename>')
@@ -3618,4 +3291,3 @@ def static_files(filename):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
-
