@@ -290,9 +290,9 @@ body.dark-mode .btn-close {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 16px 40px;
+  gap: 10px;
+  flex-wrap: nowrap;
+  padding: 12px 28px;
 }
 
 .logo-area {
@@ -309,8 +309,11 @@ body.dark-mode .btn-close {
 .top-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 /* ════════════════════════════════════════
@@ -1851,10 +1854,7 @@ body.dark-mode .lang-switcher:hover {
     padding-inline: 16px;
   }
 
-  .top-actions {
-    width: 100%;
-    justify-content: center;
-  }
+  /* top-actions handled by quizarena_fix.css (hides on mobile, shows drawer) */
 
   .friends-drawer {
     overflow-y: auto;
@@ -1867,33 +1867,14 @@ body.dark-mode .lang-switcher:hover {
 }
 
 @media (max-width: 768px) {
+  /* top-bar layout on mobile is handled by quizarena_fix.css (hamburger drawer) */
   .top-bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    padding: 14px 16px;
+    padding: 10px 16px;
   }
 
   .logo-img {
-    height: 90px;
+    height: 64px;
     display: block;
-    margin: 0 auto;
-  }
-
-  .top-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .login-status-card {
-    grid-column: 1 / -1;
-    justify-content: center;
-  }
-
-  .status-name {
-    max-width: none;
   }
 
   .custom-btn {
@@ -2057,4 +2038,20 @@ body:not(.dark-mode) .room-card {
 body:not(.dark-mode) .room-top h3,
 body:not(.dark-mode) .room-pin {
   color: #f0629a !important;
+}
+
+/* ================================================================
+   Dark mode additions for wrong_book + teacher_report pages
+   ================================================================ */
+body.dark-mode .wb-hero,
+body.dark-mode .tr-hero { filter: brightness(0.9); }
+
+body.dark-mode { background: linear-gradient(135deg, #1a0b2e, #2d1244 50%, #1e0e38); }
+body.dark-mode::before { opacity: 0.12; }
+
+/* Fix friends-fab-stack to be row on all screens */
+.friends-fab-stack {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
 }

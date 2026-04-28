@@ -1,57 +1,346 @@
-/* HOTFIX CSS */
-.top-bar{
-  width:min(1680px,96vw);
-  margin:0 auto;
-  display:grid!important;
-  grid-template-columns:minmax(180px,280px) 1fr;
-  align-items:center!important;
-  gap:18px!important;
+/* ================================================================
+   quizarena_fix.css  — 全面修正版
+   ================================================================ */
+
+/* ── Desktop nav: 單行不換行 ── */
+.top-bar {
+  width: min(1760px, 98vw);
+  margin: 0 auto;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px 28px !important;
 }
-.top-actions{
-  display:flex!important;
-  justify-content:flex-end!important;
-  align-items:center!important;
-  gap:12px!important;
-  flex-wrap:wrap!important;
+.logo-area { flex-shrink: 0; }
+.logo-img {
+  height: clamp(72px, 8vw, 130px) !important;
+  object-fit: contain;
 }
-.logo-img{
-  height:clamp(90px,9vw,145px)!important;
-  object-fit:contain;
+.top-actions {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 1;
+  justify-content: flex-end !important;
+  overflow: visible !important;
+  min-width: 0;
 }
-.profile-hero-copy h4{
-  max-width:420px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.top-actions .custom-btn {
+  white-space: nowrap;
+  padding: 10px 14px !important;
+  font-size: 0.88rem !important;
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  flex-shrink: 0;
 }
-.profile-stats-grid{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(120px,1fr));
-  gap:14px;
+/* login-status 只顯示帳號 一行 */
+.login-status-card {
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 200px;
+  padding: 8px 12px !important;
 }
+.status-name { font-size: 0.88rem !important; max-width: 120px !important; }
+.status-label { font-size: 0.68rem !important; }
+.status-subline { font-size: 0.68rem !important; }
+
+/* inline tools: lang + dark 並排 */
+.nav-inline-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.nav-inline-tools .lang-switcher {
+  height: 44px !important;
+  border-radius: 12px !important;
+  font-size: 0.88rem !important;
+  padding: 0 8px !important;
+}
+.dark-mode-btn {
+  min-width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #8e8ef8, #6b6be0) !important;
+}
+
+/* Hide hamburger on desktop */
+.hamburger-btn { display: none !important; }
+
+/* ── Mobile: hamburger 顯示 ── */
+@media (max-width: 820px) {
+  .top-bar {
+    padding: 10px 16px !important;
+    gap: 0 !important;
+  }
+  .top-actions { display: none !important; }
+  .hamburger-btn {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    background: rgba(255,255,255,0.8);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    margin-left: auto;
+    box-shadow: 0 4px 12px rgba(255,120,179,0.2);
+  }
+  .hamburger-btn span {
+    display: block;
+    width: 22px;
+    height: 2.5px;
+    background: #e075a6;
+    border-radius: 2px;
+    transition: 0.3s;
+  }
+  .logo-img { height: 64px !important; }
+}
+
+/* ── Mobile Drawer ── */
+.mobile-drawer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1050;
+  backdrop-filter: blur(2px);
+}
+.mobile-drawer-overlay.show { display: block; }
+
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 300px;
+  max-width: 88vw;
+  background: var(--bg-1, #fff7fc);
+  z-index: 1060;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 6px 0 30px rgba(255,120,179,0.18);
+  border-right: 1.5px solid rgba(255,133,193,0.2);
+}
+.mobile-drawer.open { transform: translateX(0); }
+
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1.5px solid rgba(255,133,193,0.18);
+  background: rgba(255,255,255,0.6);
+  backdrop-filter: blur(12px);
+}
+.mobile-drawer-logo { height: 52px; width: auto; }
+.mobile-drawer-close {
+  width: 36px; height: 36px;
+  background: rgba(255,120,179,0.12);
+  border: none;
+  border-radius: 10px;
+  color: #e075a6;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+
+.mobile-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-status-card {
+  max-width: 100% !important;
+  justify-content: flex-start;
+}
+
+/* mobile lang + dark 並排 同大小 */
+.mobile-drawer-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.mobile-drawer-tools .lang-switcher {
+  flex: 1;
+  height: 48px !important;
+  border-radius: 14px !important;
+  font-size: 0.95rem !important;
+}
+.mobile-drawer-tools .dark-mode-btn {
+  flex-shrink: 0;
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px !important;
+  border-radius: 14px !important;
+}
+
+/* ── 好友排行 + 加入好友 並排 FAB ── */
+.friends-fab-stack {
+  position: fixed;
+  bottom: 28px;
+  right: 20px;
+  z-index: 900;
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+}
+.friends-dock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #a875ff, #7c5ce0);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 8px 22px rgba(140,90,230,0.32);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.friends-dock-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(140,90,230,0.4); }
+.friends-fab-mini {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #ff8db8, #f25a9e);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  box-shadow: 0 8px 20px rgba(242,90,158,0.32);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.friends-fab-mini:hover { transform: scale(1.1); }
+
+/* ── Profile stats 對齊 ── */
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(100px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.profile-stat-card {
+  background: rgba(255,255,255,0.75);
+  border: 1.5px solid rgba(255,133,193,0.22);
+  border-radius: 18px;
+  padding: 18px 16px;
+  text-align: center;
+}
+.profile-stat-card span {
+  display: block;
+  font-size: 0.82rem;
+  color: #a56b87;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.profile-stat-card strong {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #8b425f;
+}
+
+/* ── Profile avatar layers ── */
 .profile-avatar,
 .profile-builder-preview,
-.friends-avatar-stack{
-  overflow:hidden;
-  position:relative;
+.friends-avatar-stack {
+  overflow: hidden;
+  position: relative;
 }
-.profile-photo-preview{
-  object-fit:cover!important;
+.profile-photo-preview { object-fit: cover !important; }
+
+/* ── btn colours ── */
+.btn-wrong-book {
+  background: linear-gradient(135deg, #ff9a6c, #ff6b6b);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(255,107,107,0.26);
 }
-.friends-record-card{
-  display:flex!important;
-  align-items:center!important;
-  gap:12px!important;
+.btn-teacher {
+  background: linear-gradient(135deg, #43c6ac, #1a9e89);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(67,198,172,0.26);
 }
-.lang-switcher{
-  height:52px!important;
-  border-radius:16px!important;
+
+/* ── Lang switcher base ── */
+.lang-switcher {
+  height: 44px !important;
+  border-radius: 12px !important;
+  border: 1.5px solid rgba(255,133,193,0.3) !important;
+  background: rgba(255,255,255,0.85) !important;
+  color: #8b425f;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 10px;
 }
-@media(max-width:992px){
-  .top-bar{grid-template-columns:1fr!important;justify-items:center;}
-  .top-actions{justify-content:center!important;}
-  .profile-stats-grid{grid-template-columns:repeat(2,1fr);}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 992px) {
+  .profile-stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
-@media(max-width:576px){
-  .profile-stats-grid{grid-template-columns:1fr;}
+@media (max-width: 576px) {
+  .profile-stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .profile-stat-card strong { font-size: 1.3rem; }
+}
+
+/* ── Dark mode overlay ── */
+body.dark-mode .mobile-drawer {
+  background: #1e1128;
+  border-right-color: rgba(255,133,193,0.15);
+}
+body.dark-mode .mobile-drawer-header {
+  background: rgba(30,10,42,0.7);
+  border-bottom-color: rgba(255,133,193,0.12);
+}
+body.dark-mode .hamburger-btn {
+  background: rgba(255,120,179,0.15);
+}
+body.dark-mode .lang-switcher {
+  background: rgba(40,20,60,0.9) !important;
+  color: #f0b8d8 !important;
+  border-color: rgba(255,133,193,0.2) !important;
+}
+body.dark-mode .profile-stat-card {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,133,193,0.15);
+}
+
+/* ── Friends record cards align fix ── */
+.friends-record-card {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+.friends-record-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.friends-record-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }

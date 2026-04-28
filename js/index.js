@@ -241,138 +241,12 @@
     }
     if (friendsDockBtn) friendsDockBtn.style.display = user ? "flex" : "none";
     if (openAddFriendBtn) openAddFriendBtn.style.display = user ? "inline-flex" : "none";
+    const friendsFabStack = $("friendsFabStack");
+    if (friendsFabStack) friendsFabStack.style.display = user ? "flex" : "none";
   }
 
-  function renderProfileSummary(data = {}) {
-    state.profileSummary = data;
-    const user = getCurrentUser();
-    const username = data.username || user || "玩家";
-    const title = data.title || "新手冒險家";
-    const county = data.county || "未設定縣市";
-    const favoriteCategory = data.favoriteCategory || "尚未設定擅長領域";
-    const avatarUrl = data.avatarUrl || "images/face/face.png";
-    const unlocked = Array.isArray(data.unlockedAchievements) ? data.unlockedAchievements : [];
 
-    const setText = (id, value) => {
-      const el = $(id);
-      if (el) el.textContent = value;
-    };
 
-    const avatarPreview = $("profileAvatarPreview");
-    if (avatarPreview) avatarPreview.src = state.profileAvatarDraft || avatarUrl;
-
-    setText("profileUsernameText", username);
-    setText("profileTitleText", title);
-    setText("profileWinsText", String(Number(data.wins || 0)));
-    setText("profileAchievementsText", `${Number(data.unlockedCount || 0)} / ${Number(data.totalAchievementCount || 0)}`);
-    setText("profileFriendsText", String(Number(data.friendCount || 0)));
-    setText("profileWrongBookText", String(Number(data.wrongBookCount || 0)));
-    setText("profileUnlockedBadge", `${unlocked.length} 個`);
-
-    const countyBadge = $("profileCountyBadge");
-    if (countyBadge) countyBadge.textContent = county;
-    const categoryBadge = $("profileFavCategoryBadge");
-    if (categoryBadge) categoryBadge.textContent = favoriteCategory;
-
-    const countySelect = $("profileCountySelect");
-    if (countySelect && Array.isArray(data.counties)) {
-      countySelect.innerHTML = ['<option value="">請選擇縣市</option>']
-        .concat(data.counties.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`))
-        .join("");
-      countySelect.value = data.county || "";
-    }
-
-    const bioInput = $("profileBioInput");
-    if (bioInput) bioInput.value = data.bio || "";
-    const favoriteInput = $("profileFavoriteCategoryInput");
-    if (favoriteInput) favoriteInput.value = data.favoriteCategory || "";
-
-    const unlockedWrap = $("profileUnlockedAchievements");
-    if (unlockedWrap) {
-      unlockedWrap.innerHTML = unlocked.length
-        ? unlocked.map((item) => `
-          <article class="profile-achievement-item">
-            <div class="profile-achievement-icon"><i class="fa-solid ${escapeHtml(item.icon || "fa-award")}"></i></div>
-            <div class="profile-achievement-copy">
-              <strong>${escapeHtml(item.title || "已解鎖成就")}</strong>
-              <p>${escapeHtml(item.description || "持續挑戰，收集更多成就。")}</p>
-            </div>
-          </article>
-        `).join("")
-        : `<div class="profile-empty-state">目前還沒有已解鎖成就，先去打一場吧。</div>`;
-    }
-
-    updateAuthUI();
-  }
-
-  async function loadProfileSummary() {
-    const user = getCurrentUser();
-    if (!user) {
-      state.profileSummary = null;
-      state.profileAvatarDraft = "";
-      updateAuthUI();
-      return null;
-    }
-    const data = await api(`/profile_summary?username=${encodeURIComponent(user)}`);
-    if (!state.profileAvatarDraft) {
-      renderProfileSummary(data);
-    } else {
-      const merged = { ...data, avatarUrl: state.profileAvatarDraft };
-      renderProfileSummary(merged);
-    }
-    return data;
-  }
-
-  function renderFriendsOverview(data = {}) {
-    const friendsRecords = $("friendsRecords");
-    const friendsList = $("friendsList");
-    if (!friendsRecords || !friendsList) return;
-
-    const records = Array.isArray(data.records) ? data.records : [];
-    const hasWins = records.some((item) => Number(item.wins || 0) > 0);
-
-    if (!records.length) {
-      friendsRecords.innerHTML = `
-        <article class="friends-empty-card">
-          <i class="fa-solid fa-user-group"></i>
-          <strong>還沒有好友資料</strong>
-          <span>登入後送出好友申請，就可以開始累積排行。</span>
-        </article>
-      `;
-    } else if (!hasWins) {
-      friendsRecords.innerHTML = records.map((item) => `
-        <article class="friends-record-card is-empty">
-          <div class="friends-empty-user">
-            <div class="friends-avatar-badge"><i class="fa-solid fa-circle-user"></i></div>
-            <div>
-              <div class="friends-record-name">${escapeHtml(item.username)}</div>
-              <div class="friends-record-rank">無勝場紀錄</div>
-            </div>
-          </div>
-        </article>
-      `).join("");
-    } else {
-      friendsRecords.innerHTML = records.map((item, index) => `
-        <article class="friends-record-card ${index === 0 ? "is-top" : ""}">
-          <div class="friends-record-top">
-            <div class="friends-record-left">
-              <div class="friends-rank-medal">${index + 1}</div>
-              <div>
-                <div class="friends-record-rank">${index === 0 ? "NO.1 WINNER" : `RANK ${index + 1}`}</div>
-                <div class="friends-record-name">${escapeHtml(item.username)}</div>
-              </div>
-            </div>
-            <div class="friends-record-wins">${Number(item.wins || 0)} 勝</div>
-          </div>
-        </article>
-      `).join("");
-    }
-
-    const friends = Array.isArray(data.friends) ? data.friends : [];
-    friendsList.textContent = friends.length
-      ? `好友列表：${friends.join("、")}`
-      : "好友列表：目前還沒有好友，先送出第一個好友申請吧。";
-  }
 
   function renderFriendRequestBadge(count) {
     state.pendingFriendCount = Number(count || 0);
@@ -514,66 +388,9 @@
     }
   }
 
-  function openProfileModal() {
-    if (!getCurrentUser()) {
-      showToast("請先登入");
-      openLoginModal();
-      return;
-    }
-    state.profileAvatarDraft = "";
-    loadProfileSummary().then(() => profileModal?.show()).catch((error) => {
-      showToast(error.message);
-    });
-  }
 
-  async function handleProfileAvatarInput(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 1024 * 1024) {
-      showToast("頭像請控制在 1MB 內");
-      event.target.value = "";
-      return;
-    }
-    state.profileAvatarDraft = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error("讀取頭像失敗"));
-      reader.readAsDataURL(file);
-    });
-    renderProfileSummary({ ...(state.profileSummary || {}), avatarUrl: state.profileAvatarDraft });
-  }
 
-  function clearProfileAvatar() {
-    state.profileAvatarDraft = "";
-    const avatarInput = $("profileAvatarInput");
-    if (avatarInput) avatarInput.value = "";
-    renderProfileSummary({ ...(state.profileSummary || {}), avatarUrl: "" });
-  }
 
-  async function saveProfile() {
-    const user = getCurrentUser();
-    if (!user) {
-      showToast("請先登入");
-      return;
-    }
-    const payload = {
-      username: user,
-      avatarUrl: state.profileAvatarDraft || state.profileSummary?.avatarUrl || "",
-      county: $("profileCountySelect")?.value || "",
-      favoriteCategory: $("profileFavoriteCategoryInput")?.value.trim() || "",
-      bio: $("profileBioInput")?.value.trim() || "",
-    };
-
-    const data = await api("/save_profile", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    state.profileAvatarDraft = "";
-    renderProfileSummary(data.profile || {});
-    showToast(data.message || "個人資料已更新");
-    await loadFriendsOverview();
-    await loadAchievementsSummary();
-  }
 
   function toggleFriendsDrawer(forceOpen = null) {
     const friendsShell = $("friendsShell");
@@ -1174,7 +991,7 @@
 
     $("loginBtn")?.addEventListener("click", openLoginModal);
     $("logoutBtn")?.addEventListener("click", handleLogout);
-    $("profileBtn")?.addEventListener("click", openProfileModal);
+    $("profileBtn")?.addEventListener("click", () => openProfileModal());
     $("loginStatusCard")?.addEventListener("click", () => {
       if (getCurrentUser()) openProfileModal();
     });
