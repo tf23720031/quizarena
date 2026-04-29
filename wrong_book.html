@@ -35,6 +35,27 @@
 
     <section class="tool-card">
       <div class="tool-card-head">
+        <h2>學習弱點雷達圖</h2>
+        <span class="tool-note">依類別、難度、題型統計錯題比例</span>
+      </div>
+      <div class="radar-layout">
+        <canvas id="weaknessRadar" width="420" height="420" aria-label="學習弱點雷達圖"></canvas>
+        <div id="weaknessRadarLegend" class="radar-legend"></div>
+      </div>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2>錯題練習</h2>
+        <button id="startPracticeBtn" class="tool-btn"><i class="fa-solid fa-play"></i> 開始練習</button>
+      </div>
+      <div id="wrongPracticeBox" class="practice-box">
+        <p>按下開始練習後，系統會從錯題本抽題，答完可以一直下一題反覆測試。</p>
+      </div>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head">
         <h2>複習清單</h2>
         <button id="refreshWrongBookBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> 重新整理</button>
       </div>

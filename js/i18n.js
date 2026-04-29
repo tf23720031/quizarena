@@ -27,6 +27,7 @@ const I18N = (() => {
     '個人資料':       { en:'Profile',             ja:'プロフィール',        ko:'프로필',             es:'Perfil' },
     '建立題庫':       { en:'Create Bank',         ja:'問題集を作成',        ko:'문제 은행 만들기',     es:'Crear banco' },
     '錯題本':         { en:'Wrong Book',          ja:'復習ノート',          ko:'오답 노트',           es:'Cuaderno de errores' },
+    '故事模式':       { en:'Story Mode',          ja:'ストーリーモード',    ko:'스토리 모드',         es:'Modo historia' },
     '老師模式':       { en:'Teacher Mode',        ja:'先生モード',          ko:'교사 모드',           es:'Modo profesor' },
     '重新整理大廳':   { en:'Refresh Lobby',       ja:'ロビー更新',          ko:'로비 새로고침',       es:'Actualizar sala' },
     '好友排行':       { en:'Friend Ranking',      ja:'友達ランキング',      ko:'친구 랭킹',           es:'Ranking amigos' },

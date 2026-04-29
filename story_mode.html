@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>故事模式 - QuizArena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/learning_tools.css">
+</head>
+<body>
+  <script>
+    document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');
+  </script>
+  <main class="tool-shell story-shell">
+    <header class="tool-topbar">
+      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <div>
+        <p class="tool-kicker">Story Mode</p>
+        <h1>故事模式</h1>
+      </div>
+      <span class="lang-switcher-slot"></span>
+    </header>
+
+    <section class="tool-card story-hero-card">
+      <div>
+        <span class="answer-pill">單人闖關</span>
+        <h2>選一條學習支線，完成越來越難的關卡。</h2>
+        <p>不用房主、不用 PIN，答題會保存進度，之後可以繼續挑戰。</p>
+      </div>
+      <div class="story-progress-card">
+        <span>目前玩家</span>
+        <strong id="storyUserName">-</strong>
+      </div>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2>選擇故事項目</h2>
+        <button id="resetStoryBtn" class="tool-btn secondary"><i class="fa-solid fa-rotate-left"></i> 重設本項進度</button>
+      </div>
+      <div id="storySubjectList" class="story-subject-grid"></div>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2 id="storyBranchTitle">故事支線</h2>
+        <span id="storyBranchMeta" class="tool-note"></span>
+      </div>
+      <div id="storyBranchList" class="story-branch-list"></div>
+    </section>
+
+    <section class="tool-card">
+      <div id="storyPlayArea" class="story-play-area">
+        <p>先選擇一個項目，再挑戰支線關卡。</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/story_mode.js"></script>
+</body>
+</html>

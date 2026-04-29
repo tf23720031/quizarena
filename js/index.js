@@ -144,6 +144,7 @@
     navMenuBtn?.classList.toggle("d-none", !user);
     $("createQuizBtn")?.classList.toggle("d-none", !user);
     $("wrongBookBtn")?.classList.toggle("d-none", !user);
+    $("storyModeBtn")?.classList.toggle("d-none", !user);
     $("teacherReportBtn")?.classList.toggle("d-none", !user);
     if (!user) document.body.classList.remove("nav-drawer-open");
 
@@ -786,6 +787,15 @@
     window.location.href = "wrong_book.html";
   }
 
+  function handleStoryModeClick() {
+    if (!getCurrentUser()) {
+      showToast("請先登入，才能保存故事模式進度");
+      openLoginModal();
+      return;
+    }
+    window.location.href = "story_mode.html";
+  }
+
   function handleProfileClick() {
     if (!getCurrentUser()) {
       showToast("請先登入");
@@ -844,6 +854,7 @@
     $("profileBtn")?.addEventListener("click", handleProfileClick);
     $("createQuizBtn")?.addEventListener("click", handleCreateQuizClick);
     $("wrongBookBtn")?.addEventListener("click", handleWrongBookClick);
+    $("storyModeBtn")?.addEventListener("click", handleStoryModeClick);
     $("teacherReportBtn")?.addEventListener("click", handleTeacherReportClick);
     $("businessDashboardBtn")?.addEventListener("click", handleBusinessDashboardClick);
 
