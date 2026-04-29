@@ -30,11 +30,38 @@ function optionText(option, index) {
   return option?.text || `選項 ${index + 1}`;
 }
 
+function topBy(items, key) {
+  const counts = new Map();
+  items.forEach((item) => {
+    const name = item[key] || "未分類";
+    counts.set(name, (counts.get(name) || 0) + Number(item.wrongCount || 1));
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || ["-", 0];
+}
+
+function renderInsight(items) {
+  const wrap = $("wrongBookInsight");
+  if (!wrap) return;
+  if (!items.length) {
+    wrap.innerHTML = `<article><strong>狀態很好</strong><span>目前沒有錯題，之後答錯會自動產生複習建議。</span></article>`;
+    return;
+  }
+  const [category, categoryCount] = topBy(items, "category");
+  const [difficulty, difficultyCount] = topBy(items, "difficulty");
+  const priority = [...items].sort((a, b) => Number(b.wrongCount || 0) - Number(a.wrongCount || 0))[0];
+  wrap.innerHTML = `
+    <article><strong>${escapeHtml(category)}</strong><span>最需要補強的類別，累積 ${categoryCount} 次錯誤。</span></article>
+    <article><strong>${escapeHtml(difficulty)}</strong><span>最常出錯的難度，累積 ${difficultyCount} 次錯誤。</span></article>
+    <article><strong>${escapeHtml(priority?.title || "-")}</strong><span>優先複習這題，已錯 ${Number(priority?.wrongCount || 0)} 次。</span></article>
+  `;
+}
+
 function renderWrongBook(data) {
   const items = Array.isArray(data.items) ? data.items : [];
   $("wrongItemCount").textContent = String(items.length);
   $("wrongTotalCount").textContent = String(Number(data.totalWrongCount || 0));
   $("wrongUserName").textContent = data.username || "-";
+  renderInsight(items);
 
   const list = $("wrongBookList");
   if (!items.length) {

@@ -34,14 +34,6 @@ function getLastPlayerName() {
   }
 }
 
-function getSavedUserProfile() {
-  try {
-    return JSON.parse(localStorage.getItem("quizUserProfile") || "null") || {};
-  } catch {
-    return {};
-  }
-}
-
 async function api(url, options = {}) {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -125,8 +117,7 @@ const state = {
   hairIndex: 0,
   eyeIndex: 0,
   eyesOffsetY: 0,
-  context: getJoinContext(),
-  savedProfile: getSavedUserProfile()
+  context: getJoinContext()
 };
 
 function populateRoomInfo() {
@@ -147,10 +138,9 @@ function populateRoomInfo() {
 
   const lastPlayerName = getLastPlayerName();
   playerNameInput.value =
-    lastPlayerName || state.savedProfile.username || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
+    lastPlayerName || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
 
   updateNamePreview();
-  hydrateSavedAvatar();
 }
 
 function updateNamePreview() {
@@ -174,17 +164,6 @@ function syncAvatarImages() {
   previewEye.src = eyes;
 
   applyEyesOffset();
-}
-
-function hydrateSavedAvatar() {
-  const profile = state.savedProfile || {};
-  const hairIdx = HAIRS.indexOf(profile.hair);
-  const eyeIdx = EYES.indexOf(profile.eyes);
-  if (hairIdx >= 0) state.hairIndex = hairIdx;
-  if (eyeIdx >= 0) state.eyeIndex = eyeIdx;
-  state.eyesOffsetY = Number(profile.eyesOffsetY || 0);
-  if (eyeSlider) eyeSlider.value = String(state.eyesOffsetY);
-  syncAvatarImages();
 }
 
 function updatePartTabs() {

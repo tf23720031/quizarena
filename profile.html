@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個人資料 - QuizArena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/learning_tools.css">
+</head>
+<body>
+  <script>
+    document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');
+  </script>
+  <main class="tool-shell">
+    <header class="tool-topbar">
+      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <div>
+        <p class="tool-kicker">Profile</p>
+        <h1>個人資料</h1>
+      </div>
+      <span class="lang-switcher-slot"></span>
+    </header>
+
+    <section class="tool-card profile-hero">
+      <div class="profile-hero-avatar" id="profileHeroAvatar"><i class="fa-solid fa-circle-user"></i></div>
+      <div class="profile-main">
+        <p class="profile-kicker">PLAYER PROFILE</p>
+        <span class="profile-title-pill" id="profileDisplayTitle">新手挑戰者</span>
+        <h2 id="profileUsername">-</h2>
+        <div class="profile-chip-row">
+          <span id="profileLocationChip">尚未設定所在地</span>
+          <span id="profileCategoryChip">尚未設定常玩分類</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article><span>總勝場</span><strong id="profileWins">0</strong></article>
+      <article><span>解鎖成就</span><strong id="profileAchievementCount">0/0</strong></article>
+      <article><span>目前語言</span><strong id="profileLanguageText">中文</strong></article>
+    </section>
+
+    <section class="tool-card profile-achievement-panel">
+      <div class="tool-card-head">
+        <h2>解鎖的成就</h2>
+        <strong id="profileAchievementBadge" class="profile-count-badge">0 項</strong>
+      </div>
+      <div id="profileAchievementsList" class="profile-achievements"></div>
+    </section>
+
+    <section class="profile-edit-grid">
+      <section class="tool-card profile-style-panel">
+        <div class="tool-card-head"><h2>更換造型</h2></div>
+        <label class="profile-upload-btn" for="profileAvatarInput">
+          <i class="fa-solid fa-upload"></i> 上傳頭像
+        </label>
+        <input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+
+        <div class="avatar-studio">
+          <button class="avatar-arrow" id="prevStyleBtn" type="button"><i class="fa-solid fa-chevron-left"></i></button>
+          <div class="avatar-stage" id="profileAvatarPreview"></div>
+          <button class="avatar-arrow" id="nextStyleBtn" type="button"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+
+        <div class="avatar-tabs">
+          <button id="hairModeBtn" class="active" type="button">髮型</button>
+          <button id="eyesModeBtn" type="button">眼睛</button>
+        </div>
+        <label class="eye-slider-label">
+          眼睛上下微調
+          <input id="eyeOffsetSlider" type="range" min="-18" max="18" value="0">
+        </label>
+        <div class="profile-action-row">
+          <button id="randomAvatarBtn" class="profile-soft-btn" type="button"><i class="fa-solid fa-dice"></i> 隨機</button>
+          <button id="resetAvatarBtn" class="profile-soft-btn" type="button"><i class="fa-solid fa-rotate-left"></i> 重設</button>
+          <button id="saveProfileBtn" class="profile-main-btn" type="button"><i class="fa-solid fa-check"></i> 確認更改</button>
+        </div>
+      </section>
+
+      <section class="tool-card profile-title-panel">
+        <div class="tool-card-head"><h2>我的稱號</h2></div>
+        <div id="profileTitleList" class="profile-title-list"></div>
+        <label class="profile-language-row">
+          偏好語言
+          <select id="profileLanguageSelect" class="profile-select">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+            <option value="es">Español</option>
+          </select>
+        </label>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>
