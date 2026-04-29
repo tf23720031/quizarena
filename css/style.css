@@ -489,6 +489,7 @@ body.dark-mode .nav-actions-drawer {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-align:start;
   padding: 12px 22px;
   color: #ffffff;
   font-size: 1.02rem;
