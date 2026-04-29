@@ -765,7 +765,7 @@ body.dark-mode .report-search-row input {
   flex: 1 1 220px !important;
 }
 body.dark-mode .achievements-list p{
-  color: rgba(246, 241, 255, .78) !important;
+  color: rgb(17, 17, 80) !important;
 }
 body.dark-mode .analysis-panel,
 body.dark-mode .story-subject-grid,
