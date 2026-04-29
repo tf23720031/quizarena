@@ -156,9 +156,16 @@
   }
 
   function initProfileAppearanceDraft(data = {}) {
+    const appearance = getAvatarAppearance(data);
+    // Prefer unsaved upload over server data
+    const unsavedAvatar = localStorage.getItem('qa_unsaved_avatar') || '';
+    if (unsavedAvatar) {
+      appearance.avatarUrl = unsavedAvatar;
+      state.profileAvatarDraft = unsavedAvatar;
+    }
     state.profileAppearanceDraft = {
       currentPart: "hair",
-      ...getAvatarAppearance(data),
+      ...appearance,
     };
     const slider = $("profileEyeSlider");
     if (slider) slider.value = String(state.profileAppearanceDraft.eyesOffsetY);
@@ -950,6 +957,8 @@
 
   function clearProfileAvatar() {
     state.profileAvatarDraft = "";
+    localStorage.removeItem('qa_unsaved_avatar');
+    localStorage.removeItem('qa_avatar_draft');
     const avatarInput = $("profileAvatarInput");
     if (avatarInput) avatarInput.value = "";
     if (state.profileAppearanceDraft) state.profileAppearanceDraft.avatarUrl = "";
@@ -1013,6 +1022,8 @@
     const avatarFilename = document.getElementById('profileAvatarFilename');
     if (avatarFilename && file.name) avatarFilename.textContent = file.name;
     if (window._qa_onAvatarLoaded) window._qa_onAvatarLoaded(compressedDataUrl);
+    // Persist draft to localStorage so it survives re-renders until saved
+    localStorage.setItem('qa_unsaved_avatar', compressedDataUrl);
     renderProfileAppearanceDraft();
   }
 
@@ -1041,14 +1052,17 @@
       body: JSON.stringify(payload),
     });
     state.profileViewer = user;
-    // Keep avatarUrl from saved profile so photo stays visible after save
-    if (data.profile && data.profile.avatarUrl) {
-      state.profileAvatarDraft = data.profile.avatarUrl;
+    const savedAvatarUrl = (data.profile && data.profile.avatarUrl) || '';
+    // After save: saved avatar is now in DB - clear unsaved draft, use saved URL
+    localStorage.removeItem('qa_unsaved_avatar');
+    if (savedAvatarUrl) {
+      state.profileAvatarDraft = savedAvatarUrl;
+      localStorage.setItem('qa_avatar_draft', savedAvatarUrl);
     } else {
-      state.profileAvatarDraft = "";
+      state.profileAvatarDraft = '';
+      localStorage.removeItem('qa_avatar_draft');
     }
-    renderProfileSummary(data.profile || {});
-    // Update nav avatar immediately
+    // Update nav avatar
     if (data.profile) {
       localStorage.setItem('qa_nav_appearance', JSON.stringify({
         face: data.profile.face || 'images/face/face.png',
@@ -1056,9 +1070,8 @@
         eyes: data.profile.eyes || 'images/face/eyes01.png',
         eyesOffsetY: data.profile.eyesOffsetY || 0,
       }));
-      if (data.profile.avatarUrl) localStorage.setItem('qa_avatar_draft', data.profile.avatarUrl);
-      else localStorage.removeItem('qa_avatar_draft');
     }
+    renderProfileSummary(data.profile || {});
     showToast(data.message || "個人資料已更新");
     await loadFriendsOverview();
     await loadAchievementsSummary();
@@ -1183,6 +1196,9 @@
   }
 
   function init() {
+    // Restore saved/unsaved avatar draft from localStorage
+    const _savedAvatar = localStorage.getItem('qa_avatar_draft') || localStorage.getItem('qa_unsaved_avatar') || '';
+    if (_savedAvatar) state.profileAvatarDraft = _savedAvatar;
     initModals();
     bindEvents();
     updateAuthUI();
