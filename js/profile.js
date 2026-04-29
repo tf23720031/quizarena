@@ -101,7 +101,6 @@ function renderProfile(profile) {
   }
 
   $("profileUsername").textContent = profile.username || "-";
-  $("profileDisplayTitle").textContent = profile.displayTitle || "新手挑戰者";
   $("profileWins").textContent = String(profile.wins || 0);
   const level = profile.level || {};
   let dailyReward = {};
@@ -154,7 +153,6 @@ function renderProfile(profile) {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".profile-title-option").forEach((item) => item.classList.remove("active"));
       btn.classList.add("active");
-      $("profileDisplayTitle").textContent = btn.dataset.title || "新手挑戰者";
       $("profileCategoryChip").textContent = btn.dataset.title || "尚未設定常玩分類";
     });
   });

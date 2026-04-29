@@ -1754,7 +1754,15 @@ body.dark-mode .achievement-card.is-empty span,
 body.dark-mode .achievement-card p,
 body.dark-mode .achievement-card span,
 body.dark-mode .achievement-card strong {
-  color: #243052;
+  color: #243052 !important;
+}
+
+body.dark-mode .achievements-panel *,
+body.dark-mode .achievement-card *,
+body.dark-mode .achievement-progress-count,
+body.dark-mode .achievement-body,
+body.dark-mode .achievement-title-row {
+  color: #243052 !important;
 }
 
 /* ════════════════════════════════════════

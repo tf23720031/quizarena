@@ -908,11 +908,17 @@ body.dark-mode .tool-btn.primary {
 .profile-main {
   min-width: 0;
   flex: 1;
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(260px, 1fr);
+  align-items: center;
+  column-gap: 28px;
 }
 
 .profile-hero-progress {
-  width: min(100%, 700px);
-  margin-top: 18px;
+  width: 100%;
+  margin-top: 0;
+  grid-column: 2;
+  grid-row: 1 / span 3;
 }
 
 .profile-hero-progress-head {
@@ -941,16 +947,6 @@ body.dark-mode .tool-btn.primary {
   font-size: 0.86rem;
   font-weight: 900;
   letter-spacing: 0.08em;
-}
-
-.profile-title-pill {
-  display: inline-flex;
-  margin-bottom: 8px;
-  padding: 6px 12px;
-  color: #d84c86;
-  font-weight: 900;
-  border-radius: 999px;
-  background: #fff0f7;
 }
 
 .profile-main h2 {
@@ -1318,6 +1314,16 @@ body.dark-mode .tool-btn.primary {
   .profile-hero {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .profile-main {
+    grid-template-columns: 1fr;
+    row-gap: 12px;
+  }
+
+  .profile-hero-progress {
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .profile-edit-grid,
