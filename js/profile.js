@@ -109,8 +109,8 @@ function renderProfile(profile) {
   $("profileCategoryChip").textContent = profile.displayTitle || "尚未設定常玩分類";
 
   const summary = profile.achievements || {};
-  $("profileAchievementCount").textContent = `${Number(summary.unlockedCount || 0)}/${Number(summary.totalCount || 0)}`;
-  $("profileAchievementBadge").textContent = `${Number(summary.unlockedCount || 0)} 項`;
+  $("profileAchievementCount").textContent = `已獲得:${Number(summary.unlockedCount || 0)}`;
+  $("profileAchievementBadge").textContent = `已獲得 ${Number(summary.unlockedCount || 0)} 項`;
   const unlocked = (summary.achievements || []).filter((item) => item.unlocked);
   $("profileAchievementsList").innerHTML = unlocked.length ? unlocked.map((item) => `
     <article class="profile-achievement-card">

@@ -22,7 +22,24 @@ const I18N = (() => {
     '確認':           { en:'Confirm',             ja:'確認',                ko:'확인',               es:'Confirmar' },
     // 首頁
     '目前帳號':       { en:'Account',             ja:'アカウント',          ko:'계정',               es:'Cuenta' },
+    '目前登入帳號':   { en:'Current account',     ja:'現在のアカウント',    ko:'현재 로그인 계정',     es:'Cuenta actual' },
     '尚未登入':       { en:'Not logged in',       ja:'未ログイン',          ko:'미로그인',           es:'Sin sesión' },
+    '個人資料':       { en:'Profile',             ja:'プロフィール',        ko:'프로필',             es:'Perfil' },
+    '建立題庫':       { en:'Create Bank',         ja:'問題集を作成',        ko:'문제 은행 만들기',     es:'Crear banco' },
+    '錯題本':         { en:'Wrong Book',          ja:'復習ノート',          ko:'오답 노트',           es:'Cuaderno de errores' },
+    '老師模式':       { en:'Teacher Mode',        ja:'先生モード',          ko:'교사 모드',           es:'Modo profesor' },
+    '重新整理大廳':   { en:'Refresh Lobby',       ja:'ロビー更新',          ko:'로비 새로고침',       es:'Actualizar sala' },
+    '好友排行':       { en:'Friend Ranking',      ja:'友達ランキング',      ko:'친구 랭킹',           es:'Ranking amigos' },
+    '好友戰績榜':     { en:'Friend Records',      ja:'友達成績表',          ko:'친구 전적',           es:'Historial amigos' },
+    '好友申請':       { en:'Friend Requests',     ja:'友達申請',            ko:'친구 요청',           es:'Solicitudes' },
+    '加入好友':       { en:'Add Friend',          ja:'友達を追加',          ko:'친구 추가',           es:'Agregar amigo' },
+    '好友申請紀錄':   { en:'Friend Requests',     ja:'友達申請履歴',        ko:'친구 요청 기록',      es:'Solicitudes' },
+    '好友個人資料':   { en:'Friend Profile',      ja:'友達プロフィール',    ko:'친구 프로필',         es:'Perfil amigo' },
+    '送出申請':       { en:'Send Request',        ja:'申請を送信',          ko:'요청 보내기',         es:'Enviar solicitud' },
+    '輸入玩家帳號':   { en:'Enter player account',ja:'プレイヤーIDを入力',  ko:'플레이어 계정 입력',   es:'Cuenta del jugador' },
+    '成就':           { en:'Achievements',        ja:'実績',                ko:'업적',               es:'Logros' },
+    '已解鎖':         { en:'Unlocked',            ja:'解除済み',            ko:'잠금 해제',           es:'Desbloqueado' },
+    '已獲得':         { en:'Unlocked',            ja:'獲得済み',            ko:'획득',               es:'Obtenidos' },
     '題庫中心':       { en:'Question Bank',       ja:'問題バンク',          ko:'문제 은행',           es:'Banco de preguntas' },
     '重新整理':       { en:'Refresh',             ja:'更新',                ko:'새로고침',           es:'Actualizar' },
     'Game Lobby':     { en:'Game Lobby',          ja:'ゲームロビー',        ko:'게임 로비',           es:'Sala de juegos' },
@@ -139,6 +156,23 @@ const I18N = (() => {
     '清空表單':       { en:'Clear form',          ja:'クリア',              ko:'초기화',             es:'Limpiar' },
     '刪除題目':       { en:'Delete',              ja:'削除',                ko:'삭제',               es:'Eliminar' },
     '目前題目清單':   { en:'Questions',           ja:'問題一覧',            ko:'문제 목록',           es:'Lista' },
+    // 個人資料 / 報表
+    '解鎖的成就':     { en:'Unlocked Achievements', ja:'獲得した実績',      ko:'획득한 업적',         es:'Logros obtenidos' },
+    '我的稱號':       { en:'My Titles',           ja:'称号',                ko:'내 칭호',             es:'Mis títulos' },
+    '更換造型':       { en:'Avatar Studio',       ja:'アバター編集',        ko:'아바타 꾸미기',       es:'Editar avatar' },
+    '上傳頭像':       { en:'Upload Avatar',       ja:'画像をアップロード',  ko:'아바타 업로드',       es:'Subir avatar' },
+    '眼睛上下微調':   { en:'Eye vertical adjust', ja:'目の上下調整',        ko:'눈 위치 조정',        es:'Ajustar ojos' },
+    '確認更改':       { en:'Save Changes',        ja:'変更を保存',          ko:'변경 저장',           es:'Guardar cambios' },
+    '偏好語言':       { en:'Preferred Language',  ja:'優先言語',            ko:'선호 언어',           es:'Idioma preferido' },
+    '總勝場':         { en:'Total wins',          ja:'合計勝利',            ko:'총 승리',             es:'Victorias totales' },
+    '學生表現':       { en:'Student Performance', ja:'学生の成績',          ko:'학생 성과',           es:'Rendimiento' },
+    '學生分數排行':   { en:'Student Ranking',     ja:'学生ランキング',      ko:'학생 점수 순위',      es:'Ranking' },
+    '最需要複習的題目': { en:'Review Priority',   ja:'復習優先問題',        ko:'복습 우선 문제',      es:'Prioridad de repaso' },
+    '隊伍表現':       { en:'Team Performance',    ja:'チーム成績',          ko:'팀 성과',             es:'Rendimiento equipo' },
+    '查看報表':       { en:'View Report',         ja:'レポートを見る',      ko:'보고서 보기',         es:'Ver reporte' },
+    '匯出 CSV':       { en:'Export CSV',          ja:'CSV出力',             ko:'CSV 내보내기',        es:'Exportar CSV' },
+    '匯出 Excel 報表': { en:'Export Excel Report', ja:'Excelレポート出力',  ko:'Excel 보고서 내보내기', es:'Exportar Excel' },
+    '匯出分析報告':   { en:'Export Analysis',     ja:'分析レポート出力',    ko:'분석 보고서 내보내기', es:'Exportar análisis' },
   };
 
   /* 動態內容區域（遊戲執行中不翻）*/
@@ -148,6 +182,9 @@ const I18N = (() => {
     'scoreboardWrap','podiumInner','hostDetailWrap','teamColumnsWrap','teamJoinButtons',
     'hostEliminatedNames','quizBankList','questionList','roomQuestionPicker',
     'lobbyGrid','memberMessage','toast','teamNamesWrap',
+    'friendsRecords','friendsList','friendRequestsContent','friendProfileContent',
+    'achievementsList','profileAchievementsList','profileTitleList','profileAvatarPreview',
+    'profileHeroAvatar','studentTableBody','scoreRankingList','questionReviewList','teamPerformanceList',
   ]);
 
   let lang = localStorage.getItem('quizLang') || 'zh';

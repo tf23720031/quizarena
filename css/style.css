@@ -313,6 +313,32 @@ body.dark-mode .btn-close {
   flex-wrap: wrap;
 }
 
+.nav-menu-btn {
+  display: none;
+  min-width: 52px !important;
+  width: 52px;
+  height: 52px;
+  padding: 0 !important;
+  border-radius: 18px !important;
+}
+
+.nav-actions-drawer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nav-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1030;
+  display: none;
+  background: rgba(22, 18, 48, 0.34);
+  backdrop-filter: blur(6px);
+}
+
 /* ════════════════════════════════════════
    登入狀態卡
    ════════════════════════════════════════ */
@@ -1037,6 +1063,16 @@ body.dark-mode #darkModeBtn {
   background: linear-gradient(135deg, rgba(255, 248, 221, 0.96), rgba(255, 255, 255, 0.84));
 }
 
+.friend-profile-trigger {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.friend-profile-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(45, 50, 115, 0.18);
+}
+
 .friends-record-top,
 .friends-empty-user,
 .friend-request-top {
@@ -1391,6 +1427,93 @@ body.dark-mode #darkModeBtn {
   color: rgba(66, 72, 102, 0.48) !important;
 }
 
+.friend-profile-content {
+  min-height: 160px;
+}
+
+.friend-profile-card {
+  display: grid;
+  gap: 16px;
+}
+
+.friend-profile-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.friend-profile-avatar {
+  width: 86px;
+  height: 86px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  background: #fff6fb;
+  box-shadow: 0 16px 34px rgba(74, 58, 126, 0.18);
+}
+
+.friend-profile-kicker {
+  color: #8d82e7;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.friend-profile-main h3 {
+  margin: 2px 0 4px;
+  color: #2f3554;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.friend-profile-main strong {
+  color: #ee6fa5;
+  font-size: 1rem;
+}
+
+.friend-profile-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.friend-profile-stats span,
+.friend-profile-titles span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 8px 12px;
+  color: #5c6080;
+  font-weight: 900;
+  border: 1px solid rgba(255, 143, 189, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 240, 248, 0.86);
+}
+
+.friend-profile-stats b {
+  margin-right: 4px;
+  color: #6d5be7;
+  font-size: 1.15rem;
+}
+
+.friend-profile-titles {
+  max-height: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.friend-profile-loading {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  color: #6754d8;
+  font-weight: 900;
+}
+
 body.dark-mode .friends-drawer {
   background:
     radial-gradient(circle at 75% 10%, rgba(78, 149, 255, 0.22) 0 11%, transparent 35%),
@@ -1411,6 +1534,17 @@ body.dark-mode .friends-record-name,
 body.dark-mode .friend-request-name,
 body.dark-mode .friends-record-wins {
   color: #ffffff;
+}
+
+body.dark-mode .friend-profile-main h3 {
+  color: #ffffff;
+}
+
+body.dark-mode .friend-profile-stats span,
+body.dark-mode .friend-profile-titles span {
+  color: #eaf2ff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 body.dark-mode .friends-record-rank,
@@ -1615,6 +1749,78 @@ body.dark-mode .lang-switcher:hover {
   }
 }
 
+@media (max-width: 1280px) {
+  .top-bar {
+    align-items: center;
+  }
+
+  .top-actions {
+    width: auto;
+    margin-left: auto;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .nav-menu-btn {
+    display: inline-flex;
+  }
+
+  .nav-actions-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 1040;
+    width: min(340px, calc(100vw - 38px));
+    height: 100dvh;
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 12px;
+    overflow-y: auto;
+    transform: translateX(112%);
+    transition: transform 0.24s ease;
+    border-left: 1px solid rgba(255, 255, 255, 0.72);
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 240, 248, 0.92)),
+      radial-gradient(circle at 90% 8%, rgba(255, 142, 189, 0.28), transparent 34%);
+    box-shadow: -18px 0 44px rgba(66, 52, 118, 0.26);
+  }
+
+  body.nav-drawer-open .nav-actions-drawer {
+    transform: translateX(0);
+  }
+
+  body.nav-drawer-open .nav-drawer-overlay {
+    display: block;
+  }
+
+  .nav-actions-drawer .custom-btn,
+  .nav-actions-drawer .lang-switcher,
+  .nav-actions-drawer .lang-switcher-slot {
+    width: 100%;
+  }
+
+  .nav-actions-drawer .custom-btn {
+    min-height: 50px;
+    padding-inline: 16px;
+    justify-content: flex-start;
+  }
+
+  .nav-actions-drawer #darkModeBtn {
+    width: 100% !important;
+    clip-path: none;
+  }
+
+  body.dark-mode .nav-actions-drawer {
+    background:
+      linear-gradient(135deg, rgba(13, 24, 56, 0.98), rgba(24, 34, 78, 0.96)),
+      radial-gradient(circle at 90% 8%, rgba(89, 140, 255, 0.24), transparent 34%);
+    border-left-color: rgba(255, 255, 255, 0.14);
+  }
+}
+
 @media (max-width: 768px) {
   .top-bar {
     flex-direction: column;
@@ -1631,8 +1837,8 @@ body.dark-mode .lang-switcher:hover {
 
   .top-actions {
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    justify-content: space-between;
     gap: 10px;
   }
 
@@ -1650,6 +1856,12 @@ body.dark-mode .lang-switcher:hover {
     min-height: 46px;
     padding: 10px 14px;
     font-size: 0.95rem;
+  }
+
+  .nav-menu-btn {
+    width: 52px;
+    min-width: 52px !important;
+    padding: 0 !important;
   }
 
   .page-wrap {
@@ -1757,7 +1969,7 @@ body.dark-mode .lang-switcher:hover {
 
 @media (max-width: 400px) {
   .top-actions {
-    grid-template-columns: 1fr;
+    display: flex;
   }
 }
 body:not(.dark-mode) .friends-dock-btn {

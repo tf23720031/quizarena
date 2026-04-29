@@ -27,45 +27,48 @@
           </div>
         </div>
 
-        <button class="custom-btn btn-auth" id="loginBtn">
-          <i class="fa fa-user"></i> 登入 / 註冊
+        <button class="custom-btn btn-auth nav-menu-btn" id="navMenuBtn" type="button" aria-label="開啟選單">
+          <i class="fa-solid fa-bars"></i>
         </button>
 
-        <button class="custom-btn btn-logout d-none" id="logoutBtn">
-          <i class="fa-solid fa-right-from-bracket"></i> 登出
-        </button>
+        <div class="nav-actions-drawer" id="navActionsDrawer">
+          <button class="custom-btn btn-auth" id="loginBtn">
+            <i class="fa fa-user"></i> 登入 / 註冊
+          </button>
 
-        <button class="custom-btn btn-auth d-none" id="profileBtn">
-          <i class="fa-solid fa-id-card"></i> 個人資料
-        </button>
+          <button class="custom-btn btn-logout d-none" id="logoutBtn">
+            <i class="fa-solid fa-right-from-bracket"></i> 登出
+          </button>
 
-        <button class="custom-btn btn-create" id="createQuizBtn">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫
-        </button>
+          <button class="custom-btn btn-auth d-none" id="profileBtn">
+            <i class="fa-solid fa-id-card"></i> 個人資料
+          </button>
 
-        <button class="custom-btn btn-join" id="wrongBookBtn">
-          <i class="fa-solid fa-book-open-reader"></i> 錯題本
-        </button>
+          <button class="custom-btn btn-create" id="createQuizBtn">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫
+          </button>
 
-        <button class="custom-btn btn-auth" id="teacherReportBtn">
-          <i class="fa-solid fa-chart-line"></i> 老師模式
-        </button>
+          <button class="custom-btn btn-join" id="wrongBookBtn">
+            <i class="fa-solid fa-book-open-reader"></i> 錯題本
+          </button>
 
-        <button class="custom-btn btn-create" id="businessDashboardBtn">
-          <i class="fa-solid fa-briefcase"></i> 營運後台
-        </button>
+          <button class="custom-btn btn-auth" id="teacherReportBtn">
+            <i class="fa-solid fa-chart-line"></i> 老師模式
+          </button>
 
-        <span class="lang-switcher-slot"></span>
+          <span class="lang-switcher-slot"></span>
 
-        <button class="custom-btn btn-join" id="refreshLobbyBtn">
-          <i class="fa-solid fa-rotate"></i> 重新整理大廳
-        </button>
+          <button class="custom-btn btn-join" id="refreshLobbyBtn">
+            <i class="fa-solid fa-rotate"></i> 重新整理大廳
+          </button>
 
-        <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
-          <i class="fa-solid fa-moon" id="darkModeIcon"></i>
-        </button>
+          <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
+            <i class="fa-solid fa-moon" id="darkModeIcon"></i>
+          </button>
+        </div>
       </div>
     </header>
+    <div class="nav-drawer-overlay" id="navDrawerOverlay"></div>
 
     <section class="main-section text-center container">
       <div class="decor decor-q1">?</div>
@@ -209,6 +212,20 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div id="friendRequestsContent" class="friend-requests-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="friendProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content cute-modal">
+        <div class="modal-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">好友個人資料</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div id="friendProfileContent" class="friend-profile-content" data-i18n-skip="true"></div>
         </div>
       </div>
     </div>

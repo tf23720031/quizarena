@@ -941,70 +941,21 @@ def update_user_profile(username, avatar=None, display_title=None, preferred_lan
 
 
 ACHIEVEMENTS = [
-    {
-        'id': 'welcome',
-        'title': '初次登場',
-        'description': '完成註冊並登入 QuizArena。',
-        'icon': 'fa-id-badge',
-        'metric': 'registered',
-        'target': 1,
-    },
-    {
-        'id': 'first_friend',
-        'title': '找到夥伴',
-        'description': '成功加入 1 位好友。',
-        'icon': 'fa-user-group',
-        'metric': 'friends',
-        'target': 1,
-    },
-    {
-        'id': 'first_win',
-        'title': '首勝到手',
-        'description': '拿下第 1 場勝利。',
-        'icon': 'fa-trophy',
-        'metric': 'wins',
-        'target': 1,
-    },
-    {
-        'id': 'triple_win',
-        'title': '連戰高手',
-        'description': '累積 3 場勝利。',
-        'icon': 'fa-medal',
-        'metric': 'wins',
-        'target': 3,
-    },
-    {
-        'id': 'arena_star',
-        'title': '競技場明星',
-        'description': '累積 10 場勝利。',
-        'icon': 'fa-crown',
-        'metric': 'wins',
-        'target': 10,
-    },
-    {
-        'id': 'social_circle',
-        'title': '人氣玩家',
-        'description': '成功加入 3 位好友。',
-        'icon': 'fa-users',
-        'metric': 'friends',
-        'target': 3,
-    },
-    {
-        'id': 'party_builder',
-        'title': '派對核心',
-        'description': '成功加入 5 位好友。',
-        'icon': 'fa-champagne-glasses',
-        'metric': 'friends',
-        'target': 5,
-    },
-    {
-        'id': 'legend_winner',
-        'title': '傳說勝者',
-        'description': '累積 25 場勝利。',
-        'icon': 'fa-gem',
-        'metric': 'wins',
-        'target': 25,
-    },
+    {'id': 'welcome', 'title': '冒險起步者', 'description': '完成註冊並登入 QuizArena。', 'icon': 'fa-seedling', 'metric': 'registered', 'target': 1},
+    {'id': 'first_friend', 'title': '好友同行', 'description': '成功加入 1 位好友。', 'icon': 'fa-user-group', 'metric': 'friends', 'target': 1},
+    {'id': 'three_friends', 'title': '三人同行', 'description': '成功加入 3 位好友。', 'icon': 'fa-users', 'metric': 'friends', 'target': 3},
+    {'id': 'party_builder', 'title': '派對召集人', 'description': '成功加入 5 位好友。', 'icon': 'fa-champagne-glasses', 'metric': 'friends', 'target': 5},
+    {'id': 'social_master', 'title': '社交達人', 'description': '成功加入 10 位好友。', 'icon': 'fa-people-arrows', 'metric': 'friends', 'target': 10},
+    {'id': 'wrong_collector', 'title': '錯題蒐集家', 'description': '累積 1 題錯題，開始複習弱點。', 'icon': 'fa-book-open-reader', 'metric': 'wrong_items', 'target': 1},
+    {'id': 'wrong_reviewer', 'title': '錯題獵手', 'description': '累積 5 題錯題，建立自己的複習清單。', 'icon': 'fa-magnifying-glass-chart', 'metric': 'wrong_items', 'target': 5},
+    {'id': 'bank_maker', 'title': '題庫大師', 'description': '建立 3 份自己的題庫。', 'icon': 'fa-file-pen', 'metric': 'quiz_banks', 'target': 3},
+    {'id': 'question_builder', 'title': '知識建築師', 'description': '累積建立 20 題題目。', 'icon': 'fa-layer-group', 'metric': 'questions', 'target': 20},
+    {'id': 'first_win', 'title': '首勝新秀', 'description': '拿下第 1 場勝利。', 'icon': 'fa-trophy', 'metric': 'wins', 'target': 1},
+    {'id': 'triple_win', 'title': '三連佳績', 'description': '累積 3 場勝利。', 'icon': 'fa-medal', 'metric': 'wins', 'target': 3},
+    {'id': 'steady_winner', 'title': '常勝旅人', 'description': '累積 10 場勝利。', 'icon': 'fa-route', 'metric': 'wins', 'target': 10},
+    {'id': 'arena_star', 'title': '競技場之星', 'description': '累積 25 場勝利。', 'icon': 'fa-crown', 'metric': 'wins', 'target': 25},
+    {'id': 'legend_winner', 'title': '傳說冠軍', 'description': '累積 50 場勝利。', 'icon': 'fa-gem', 'metric': 'wins', 'target': 50},
+    {'id': 'lightning_master', 'title': '閃電戰神', 'description': '累積 100 場勝利，成為競技場傳說。', 'icon': 'fa-bolt', 'metric': 'wins', 'target': 100},
 ]
 
 
@@ -1015,10 +966,23 @@ def build_achievement_summary(username):
 
     friends = get_friend_usernames(username)
     wins = get_user_wins_map([username]).get(username, 0)
+    try:
+        wrong_book = build_wrong_book_detail(username)
+    except Exception:
+        wrong_book = {'items': [], 'totalWrongCount': 0}
+    try:
+        banks = [bank for bank in load_quiz_banks_for_user(username) if not (bank.get('readonly') or bank.get('isSystem') or bank.get('isWrongBook'))]
+    except Exception:
+        banks = []
+    question_count = sum(len(bank.get('questions') or []) for bank in banks)
     metrics = {
         'registered': 1 if get_user_exists(username) else 0,
         'friends': len(friends),
         'wins': wins,
+        'wrong_items': len(wrong_book.get('items') or []),
+        'wrong_total': wrong_book.get('totalWrongCount') or 0,
+        'quiz_banks': len(banks),
+        'questions': question_count,
     }
 
     achievements = []
@@ -1375,6 +1339,7 @@ def build_teacher_report_from_conn(conn, pin):
     room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
     if not room:
         return None
+    teacher_name = str(room.get('created_by') or '').strip()
     questions = conn.execute(
         'SELECT question_id,seq,title,content,type,options_json,answer_json,explanation FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
         (pin,)
@@ -1383,16 +1348,18 @@ def build_teacher_report_from_conn(conn, pin):
         SELECT player_name, team_id, is_host
         FROM room_players
         WHERE room_pin=? AND COALESCE(is_host, 0) = 0
+          AND player_name != ?
         ORDER BY team_id ASC, player_name ASC
-    ''', (pin,)).fetchall()
+    ''', (pin, teacher_name)).fetchall()
     results = conn.execute('''
         SELECT rr.*, rp.team_id
         FROM room_results rr
         JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
         WHERE rr.room_pin=?
           AND COALESCE(rp.is_host, 0) = 0
+          AND rr.player_name != ?
         ORDER BY rp.team_id ASC, rr.player_name ASC, rr.question_id ASC
-    ''', (pin,)).fetchall()
+    ''', (pin, teacher_name)).fetchall()
 
     q_order = {q['question_id']: int(q['seq'] or 0) for q in questions}
     q_titles = {q['question_id']: q['title'] or '' for q in questions}

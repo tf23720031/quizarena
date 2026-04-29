@@ -4,6 +4,7 @@
   let memberModal;
   let addFriendModal;
   let friendRequestsModal;
+  let friendProfileModal;
 
   const state = {
     rooms: [],
@@ -166,7 +167,7 @@
       `;
     } else if (!hasWins) {
       friendsRecords.innerHTML = records.map((item) => `
-        <article class="friends-record-card is-empty">
+        <article class="friends-record-card is-empty friend-profile-trigger" data-friend-username="${escapeHtml(item.username)}">
           <div class="friends-empty-user">
             <div class="friends-avatar-badge">${avatarHtml(item, "qa-avatar-img")}</div>
             <div>
@@ -178,7 +179,7 @@
       `).join("");
     } else {
       friendsRecords.innerHTML = records.map((item, index) => `
-        <article class="friends-record-card ${index === 0 ? "is-top" : ""}">
+        <article class="friends-record-card ${index === 0 ? "is-top" : ""} friend-profile-trigger" data-friend-username="${escapeHtml(item.username)}">
           <div class="friends-record-top">
             <div class="friends-record-left">
               <div class="friends-avatar-badge">${avatarHtml(item, "qa-avatar-img")}</div>
@@ -194,10 +195,63 @@
       `).join("");
     }
 
+    friendsRecords.querySelectorAll("[data-friend-username]").forEach((card) => {
+      card.addEventListener("click", () => openFriendProfileModal(card.dataset.friendUsername || ""));
+    });
+
     const friends = Array.isArray(data.friends) ? data.friends : [];
     friendsList.textContent = friends.length
       ? `好友列表：${friends.join("、")}`
       : "好友列表：目前還沒有好友，先送出第一個好友申請吧。";
+  }
+
+  function renderFriendProfile(profile = {}) {
+    const content = $("friendProfileContent");
+    if (!content) return;
+    const summary = profile.achievements || {};
+    const unlocked = Number(summary.unlockedCount || 0);
+    const titles = Array.isArray(profile.titleOptions) ? profile.titleOptions : [];
+    const titleList = titles
+      .filter((item) => item && item.id !== "新手挑戰者")
+      .slice(0, 6)
+      .map((item) => `<span>${escapeHtml(item.label || item.id)}</span>`)
+      .join("");
+
+    content.innerHTML = `
+      <section class="friend-profile-card">
+        <div class="friend-profile-main">
+          <div class="friend-profile-avatar">${avatarHtml(profile, "qa-avatar-img")}</div>
+          <div>
+            <div class="friend-profile-kicker">PLAYER PROFILE</div>
+            <h3>${escapeHtml(profile.username || "玩家")}</h3>
+            <strong>${escapeHtml(profile.displayTitle || "新手挑戰者")}</strong>
+          </div>
+        </div>
+        <div class="friend-profile-stats">
+          <span><b>${Number(profile.wins || 0)}</b> 總勝場</span>
+          <span><b>${unlocked}</b> 已獲得成就</span>
+        </div>
+        <div class="friend-profile-titles">
+          ${titleList || "<span>尚未解鎖其他稱號</span>"}
+        </div>
+      </section>
+    `;
+  }
+
+  async function openFriendProfileModal(username) {
+    const target = String(username || "").trim();
+    if (!target) return;
+    const content = $("friendProfileContent");
+    if (content) {
+      content.innerHTML = `<div class="friend-profile-loading"><i class="fa-solid fa-spinner fa-spin"></i> 載入中...</div>`;
+    }
+    friendProfileModal?.show();
+    try {
+      const data = await api(`/user_profile?username=${encodeURIComponent(target)}`);
+      renderFriendProfile(data.profile || data);
+    } catch (error) {
+      if (content) content.innerHTML = `<div class="friend-profile-loading">${escapeHtml(error.message)}</div>`;
+    }
   }
 
   function renderFriendRequestBadge(count) {
@@ -783,6 +837,16 @@
 
     $("showLoginBtn")?.addEventListener("click", () => switchMemberTab("login"));
     $("showRegisterBtn")?.addEventListener("click", () => switchMemberTab("register"));
+
+    $("navMenuBtn")?.addEventListener("click", () => document.body.classList.add("nav-drawer-open"));
+    $("navDrawerOverlay")?.addEventListener("click", () => document.body.classList.remove("nav-drawer-open"));
+    $("navActionsDrawer")?.querySelectorAll("button, a, select").forEach((el) => {
+      el.addEventListener("click", () => {
+        if (window.matchMedia("(max-width: 1280px)").matches && el.tagName !== "SELECT") {
+          document.body.classList.remove("nav-drawer-open");
+        }
+      });
+    });
   }
 
   function initModals() {
@@ -791,6 +855,7 @@
     memberModal = getModal("memberModal");
     addFriendModal = getModal("addFriendModal");
     friendRequestsModal = getModal("friendRequestsModal");
+    friendProfileModal = getModal("friendProfileModal");
   }
 
   function init() {
