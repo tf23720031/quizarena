@@ -11,9 +11,9 @@ const SUBJECTS = [
         id: "library",
         title: "失落圖書館",
         stages: [
-          { level: 1, difficulty: "easy", scene: "你在圖書館入口找到第一張線索卡。", q: "「夜深忽夢少年事」主要描寫哪種情緒？", options: ["喜悅", "懷舊與感傷", "憤怒", "驚嚇"], answer: 1 },
-          { level: 2, difficulty: "medium", scene: "書架開始移動，需要判斷修辭才能通過。", q: "「時間像河流」使用哪一種修辭？", options: ["譬喻", "排比", "設問", "頂真"], answer: 0 },
-          { level: 3, difficulty: "hard", scene: "館長要求你分辨作者觀點。", q: "閱讀議論文時，最能判斷主旨的是哪一項？", options: ["標點符號", "作者反覆強調的核心立場", "字數最多的段落", "最短的句子"], answer: 1 },
+          { level: 1, difficulty: "easy", scene: "你推開失落圖書館的大門，會說話的書籤要求你用情緒理解喚醒第一盞燈。", q: "「夜深忽夢少年事」主要描寫哪種情緒？", options: ["喜悅", "懷舊與感傷", "憤怒", "驚嚇"], answer: 1 },
+          { level: 2, difficulty: "medium", scene: "書架像迷宮一樣旋轉，AI書靈投影出一句句文字，只有看懂修辭才能找到出口。", q: "「時間像河流」使用哪一種修辭？", options: ["譬喻", "排比", "設問", "頂真"], answer: 0 },
+          { level: 3, difficulty: "hard", scene: "圖書館核心出現一位虛擬館長，她要求你從混亂文本中抽出作者真正想守護的觀點。", q: "閱讀議論文時，最能判斷主旨的是哪一項？", options: ["標點符號", "作者反覆強調的核心立場", "字數最多的段落", "最短的句子"], answer: 1 },
         ],
       },
     ],
@@ -120,6 +120,13 @@ function showToast(message, delay = 1800) {
   showToast.timer = setTimeout(() => toast.classList.remove("show"), delay);
 }
 
+async function api(url, options = {}) {
+  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
+  const data = await res.json();
+  if (!res.ok || data.success === false) throw new Error(data.message || "生成失敗");
+  return data;
+}
+
 function userKey() {
   return localStorage.getItem("currentUser") || "guest";
 }
@@ -146,6 +153,61 @@ function activeSubject() {
 function activeBranch() {
   const subject = activeSubject();
   return subject.branches.find((item) => item.id === state.branchId) || subject.branches[0];
+}
+
+function makeStoryStageFromQuestion(question, index, subjectTitle) {
+  const options = Array.isArray(question.options) && question.options.length
+    ? question.options
+    : [
+      { text: "選項 A", correct: true },
+      { text: "選項 B", correct: false },
+      { text: "選項 C", correct: false },
+      { text: "選項 D", correct: false },
+    ];
+  const answer = Math.max(0, options.findIndex((option) => option.correct));
+  return {
+    level: index + 1,
+    difficulty: question.difficulty || (index < 2 ? "easy" : index < 4 ? "medium" : "hard"),
+    scene: `AI劇情引擎在「${subjectTitle}」支線生成了第 ${index + 1} 個事件：你必須解開這題，才能讓角色取得新的線索。`,
+    q: question.content || question.title || "AI生成題目",
+    options: options.map((option) => option.text || String(option)),
+    answer,
+  };
+}
+
+async function generateAiStoryQuestions() {
+  const subject = activeSubject();
+  const branch = activeBranch();
+  const button = $("generateStoryBtn");
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中';
+  }
+  try {
+    const data = await api("/generate_quiz_bank", {
+      method: "POST",
+      body: JSON.stringify({
+        topic: `${subject.title} ${branch.title} 故事闖關題`,
+        category: subject.title,
+        difficulty: "medium",
+        language: "zh",
+        count: 5,
+        sourceMode: "ai",
+      }),
+    });
+    const questions = data.quizBank?.questions || [];
+    if (!questions.length) throw new Error("AI沒有回傳題目");
+    branch.stages.push(...questions.map((question, index) => makeStoryStageFromQuestion(question, branch.stages.length + index, subject.title)));
+    showToast("已加入AI故事題目");
+    renderAll();
+  } catch (error) {
+    showToast(error.message || "AI生成失敗，請稍後再試", 2600);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> AI生成更多題目';
+    }
+  }
 }
 
 function renderSubjects() {
@@ -276,4 +338,5 @@ function renderAll() {
 }
 
 $("resetStoryBtn")?.addEventListener("click", resetCurrentProgress);
+$("generateStoryBtn")?.addEventListener("click", generateAiStoryQuestions);
 renderAll();

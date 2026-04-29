@@ -217,8 +217,7 @@ function renderPractice() {
       </div>
       ${practiceState.checked ? `
         <div class="explanation-box">
-          <strong>正解</strong><br>${escapeHtml(correctAnswerText(item))}
-          ${item.explanation ? `<hr><strong>解析</strong><br>${escapeHtml(item.explanation)}` : ""}
+          ${item.explanation ? `<strong>解析</strong><br>${escapeHtml(item.explanation)}` : "綠色選項就是正確答案。"}
         </div>
       ` : ""}
     </article>
@@ -324,7 +323,6 @@ function renderWrongBook(data) {
           return `<li class="${isCorrect ? "is-correct" : ""}">${escapeHtml(optionText(option, index))}${isCorrect ? " ✓" : ""}</li>`;
         }).join("")}
       </ul>
-      <div class="explanation-box"><strong>正解</strong><br>${escapeHtml(correctAnswerText(item))}</div>
       ${item.explanation ? `<div class="explanation-box"><strong>解析</strong><br>${escapeHtml(item.explanation)}</div>` : ""}
       <div class="question-tags">
         <span>${escapeHtml(item.sourceBankTitle)}</span>

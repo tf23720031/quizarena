@@ -20,6 +20,17 @@ function getStoredUser() {
     // Ignore broken local profile data and fall through to guest state.
   }
 
+  try {
+    const roomProfile = JSON.parse(localStorage.getItem('roomPlayerProfile') || 'null');
+    const name = String(roomProfile?.username || roomProfile?.account || roomProfile?.name || '').trim();
+    if (name) {
+      localStorage.setItem('currentUser', name);
+      return name;
+    }
+  } catch {
+    // Ignore temporary room profile data.
+  }
+
   return '';
 }
 
@@ -118,10 +129,27 @@ function loadLocalDraft() {
   try {
     const raw = JSON.parse(localStorage.getItem(getLocalDraftKey()) || 'null');
     const banks = Array.isArray(raw?.quizBanks) ? raw.quizBanks : [];
-    return banks;
+    if (banks.length) return banks;
   } catch {
-    return [];
+    // Try recovering from other local draft keys below.
   }
+
+  let bestDraft = null;
+  for (let idx = 0; idx < localStorage.length; idx += 1) {
+    const key = localStorage.key(idx) || '';
+    if (!key.startsWith('quizarena_draft_')) continue;
+    try {
+      const draft = JSON.parse(localStorage.getItem(key) || 'null');
+      const banks = Array.isArray(draft?.quizBanks) ? draft.quizBanks : [];
+      if (!banks.length) continue;
+      if (!bestDraft || Number(draft.savedAt || 0) > Number(bestDraft.savedAt || 0)) {
+        bestDraft = { savedAt: Number(draft.savedAt || 0), quizBanks: banks };
+      }
+    } catch {
+      // Skip broken draft records.
+    }
+  }
+  return bestDraft?.quizBanks || [];
 }
 function getCurrentBank() {
   return state.quizBanks[state.currentBankIndex] || null;
@@ -573,10 +601,15 @@ async function saveAllBanks() {
 }
 
 async function loadBanks() {
+  state.currentUser = getStoredUser();
+  $('currentUserText').textContent = state.currentUser || '未登入';
   const data = await api(`/load_quiz_banks?username=${encodeURIComponent(state.currentUser)}`);
   const localDraftBanks = loadLocalDraft();
   const serverBanks = data.quizBanks || [];
   const effectiveBanks = serverBanks.length ? serverBanks : localDraftBanks;
+  if (!serverBanks.length && localDraftBanks.length) {
+    showToast('已從瀏覽器草稿恢復你之前的題庫，記得按「儲存題庫」同步。', 3600);
+  }
 
   state.quizBanks = mergeLoadedBanks(
     effectiveBanks,

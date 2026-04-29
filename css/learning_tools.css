@@ -652,6 +652,14 @@ body.dark-mode .tool-btn.primary {
   gap: 12px;
 }
 
+.story-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .story-branch-card {
   min-height: 96px;
 }
@@ -1153,6 +1161,11 @@ body.dark-mode .tool-btn.primary {
 
   .tool-card-head,
   .report-search-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .story-head-actions {
     align-items: stretch;
     flex-direction: column;
   }
