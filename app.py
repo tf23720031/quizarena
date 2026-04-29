@@ -1046,6 +1046,99 @@ def build_friends_overview(username):
     }
 
 
+def get_co_played_usernames(username):
+    username = str(username or '').strip()
+    if not username:
+        return set()
+    username_key = username.lower()
+    played = set()
+    with closing(get_conn()) as conn:
+        pins = [row.get('room_pin') for row in conn.execute(
+            'SELECT DISTINCT room_pin FROM room_results WHERE LOWER(player_name)=LOWER(?)', (username,)
+        ).fetchall()]
+        if pins:
+            placeholders = ','.join(['?'] * len(pins))
+            played.update(str(row.get('player_name') or '').strip() for row in conn.execute(
+                f'SELECT DISTINCT player_name FROM room_results WHERE room_pin IN ({placeholders})', pins
+            ).fetchall())
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT report_json FROM teacher_report_history ORDER BY saved_at DESC LIMIT 120')
+                history_rows = cur.fetchall()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            history_rows = conn.execute('SELECT report_json FROM teacher_report_history ORDER BY saved_at DESC LIMIT 120').fetchall()
+
+    for row in history_rows:
+        try:
+            report = row.get('report_json')
+            if isinstance(report, str):
+                report = json.loads(report)
+            names = {str(item.get('playerName') or '').strip() for item in (report or {}).get('results', [])}
+        except Exception:
+            names = set()
+        if any(name.lower() == username_key for name in names):
+            played.update(names)
+    played = {name for name in played if name and name.lower() != username_key}
+    return played
+
+
+def build_friend_recommendations(username):
+    username = str(username or '').strip()
+    if not username or not get_user_exists(username):
+        return []
+    friends = {name.lower() for name in get_friend_usernames(username)}
+    co_played = get_co_played_usernames(username)
+    current_profile = get_user_profile_map([username]).get(username) or {}
+    my_county = current_profile.get('county') or ''
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT username, avatar, display_title, preferred_language, county
+                    FROM users
+                    WHERE LOWER(username) != LOWER(%s)
+                ''', (username,))
+                rows = cur.fetchall()
+    else:
+        with closing(get_conn(USERS_DB_PATH)) as conn:
+            rows = conn.execute('''
+                SELECT username, avatar, display_title, preferred_language, county
+                FROM users
+                WHERE LOWER(username) != LOWER(?)
+            ''', (username,)).fetchall()
+
+    recommendations = []
+    for row in rows:
+        candidate = str(row.get('username') or '').strip()
+        if not candidate or candidate.lower() in friends:
+            continue
+        if get_pending_friend_request_between(username, candidate):
+            continue
+        same_county = bool(my_county and normalize_profile_county(row.get('county')) == my_county)
+        played_together = any(candidate.lower() == name.lower() for name in co_played)
+        score = (60 if same_county else 0) + (45 if played_together else 0)
+        if score <= 0:
+            continue
+        reason_parts = []
+        if same_county:
+            reason_parts.append(f'同縣市：{my_county}')
+        if played_together:
+            reason_parts.append('曾一起玩過')
+        recommendations.append({
+            'username': candidate,
+            'avatar': row.get('avatar') or '',
+            'displayTitle': row.get('display_title') or '新手挑戰者',
+            'county': normalize_profile_county(row.get('county')),
+            'reason': '、'.join(reason_parts),
+            'score': score,
+        })
+    recommendations.sort(key=lambda item: (-item['score'], item['username'].lower()))
+    return recommendations[:8]
+
+
 def describe_client_device(user_agent):
     ua = str(user_agent or '').lower()
     if 'iphone' in ua:
@@ -1209,7 +1302,7 @@ def record_user_win(room, winner_name, winner_score):
 
 
 def record_room_winner(conn, pin):
-    room = conn.execute('SELECT pin, room_name, bank_id, bank_title FROM rooms WHERE pin=?', (pin,)).fetchone()
+    room = conn.execute('SELECT pin, room_name, bank_id, bank_title, created_by FROM rooms WHERE pin=?', (pin,)).fetchone()
     if not room:
         return
     rankings = conn.execute('''
@@ -1218,9 +1311,10 @@ def record_room_winner(conn, pin):
         JOIN room_players rp ON rp.room_pin = rr.room_pin AND rp.player_name = rr.player_name
         WHERE rr.room_pin = ?
           AND COALESCE(rp.is_host, 0) = 0
+          AND LOWER(rr.player_name) != LOWER(?)
         GROUP BY rr.player_name
         ORDER BY total_score DESC, rr.player_name ASC
-    ''', (pin,)).fetchall()
+    ''', (pin, str(room.get('created_by') or '').strip())).fetchall()
     if not rankings:
         return
     winner = rankings[0]
@@ -1358,6 +1452,7 @@ def build_teacher_report_from_conn(conn, pin):
     if not room:
         return None
     teacher_name = str(room.get('created_by') or '').strip()
+    teacher_key = teacher_name.lower()
     questions = conn.execute(
         'SELECT question_id,seq,title,content,type,options_json,answer_json,explanation FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
         (pin,)
@@ -1366,7 +1461,7 @@ def build_teacher_report_from_conn(conn, pin):
         SELECT player_name, team_id, is_host
         FROM room_players
         WHERE room_pin=? AND COALESCE(is_host, 0) = 0
-          AND player_name != ?
+          AND LOWER(player_name) != LOWER(?)
         ORDER BY team_id ASC, player_name ASC
     ''', (pin, teacher_name)).fetchall()
     results = conn.execute('''
@@ -1375,12 +1470,20 @@ def build_teacher_report_from_conn(conn, pin):
         JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
         WHERE rr.room_pin=?
           AND COALESCE(rp.is_host, 0) = 0
-          AND rr.player_name != ?
+          AND LOWER(rr.player_name) != LOWER(?)
         ORDER BY rp.team_id ASC, rr.player_name ASC, rr.question_id ASC
     ''', (pin, teacher_name)).fetchall()
 
     q_order = {q['question_id']: int(q['seq'] or 0) for q in questions}
     q_titles = {q['question_id']: q['title'] or '' for q in questions}
+    q_options = {}
+    q_types = {}
+    for q in questions:
+        try:
+            q_options[q['question_id']] = json.loads(q.get('options_json') or '[]')
+        except Exception:
+            q_options[q['question_id']] = []
+        q_types[q['question_id']] = str(q.get('type') or 'single')
     per_player = {
         player['player_name']: {
             'playerName': player['player_name'],
@@ -1422,6 +1525,8 @@ def build_teacher_report_from_conn(conn, pin):
     enriched = []
     for row in results:
         player_name = row['player_name']
+        if str(player_name or '').strip().lower() == teacher_key:
+            continue
         if player_name not in per_player:
             per_player[player_name] = {
                 'playerName': player_name,
@@ -1438,12 +1543,33 @@ def build_teacher_report_from_conn(conn, pin):
         if row['question_id'] in per_question:
             per_question[row['question_id']]['answered'] += 1
             per_question[row['question_id']]['correct'] += 1 if is_correct else 0
+        try:
+            selected_indexes = json.loads(row.get('selected_json') or '[]')
+        except Exception:
+            selected_indexes = []
+        if not isinstance(selected_indexes, list):
+            selected_indexes = []
+        selected_parts = []
+        options = q_options.get(row['question_id']) or []
+        for idx in selected_indexes:
+            try:
+                idx = int(idx)
+            except Exception:
+                continue
+            label = chr(65 + idx) if idx >= 0 else str(idx)
+            text = ''
+            if 0 <= idx < len(options):
+                text = str((options[idx] or {}).get('text') or '').strip()
+            selected_parts.append(f'{label}. {text}' if text else label)
+        selected_text = '、'.join(selected_parts) if selected_parts else ('未選擇' if q_types.get(row['question_id']) != 'fill' else '填答內容未保存')
         enriched.append({
             'playerName': player_name,
             'teamId': int(row.get('team_id') or 0),
             'questionId': row['question_id'],
             'seq': q_order.get(row['question_id'], 0),
             'title': q_titles.get(row['question_id'], ''),
+            'selectedIndexes': selected_indexes,
+            'selectedAnswerText': selected_text,
             'isCorrect': is_correct,
             'pointsEarned': points,
             'answerOrder': int(row.get('answer_order') or 0),
@@ -2234,6 +2360,14 @@ def friend_requests_summary_api():
         return jsonify(success=False, message='缺少使用者帳號'), 400
     summary = build_friend_request_summary(username)
     return jsonify(success=True, **summary)
+
+
+@app.route('/friend_recommendations')
+def friend_recommendations_api():
+    username = str(request.args.get('username', '')).strip()
+    if not username:
+        return jsonify(success=False, message='缺少使用者帳號'), 400
+    return jsonify(success=True, recommendations=build_friend_recommendations(username))
 
 
 @app.route('/achievements_summary')
@@ -3414,9 +3548,10 @@ def submit_answer():
                 FROM room_results rr
                 JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=? AND rp.is_eliminated=0 AND COALESCE(rp.is_host, 0) = 0
+                  AND LOWER(rr.player_name) != LOWER(?)
                 GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 ORDER BY total_score DESC,rr.player_name ASC LIMIT 5
-            ''', (pin,)).fetchall()
+            ''', (pin, str(room.get('created_by') or '').strip())).fetchall()
             all_rank = conn.execute('''
                 SELECT rr.player_name,
                        COALESCE(SUM(rr.points_earned),0) AS total_score,
@@ -3424,9 +3559,10 @@ def submit_answer():
                 FROM room_results rr
                 JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name
                 WHERE rr.room_pin=? AND rp.is_eliminated=0 AND COALESCE(rp.is_host, 0) = 0
+                  AND LOWER(rr.player_name) != LOWER(?)
                 GROUP BY rr.player_name, rp.face, rp.hair, rp.eyes, rp.eyes_offset_y
                 ORDER BY total_score DESC,rr.player_name ASC
-            ''', (pin,)).fetchall()
+            ''', (pin, str(room.get('created_by') or '').strip())).fetchall()
             my_rank = next((i+1 for i,r in enumerate(all_rank) if r['player_name']==player_name), None)
             conn.commit()
 
@@ -3531,12 +3667,14 @@ def host_all_results():
         if not pin:
             return jsonify(success=False, message='缺少 PIN'), 400
         with closing(get_conn()) as conn:
+            room = conn.execute('SELECT created_by FROM rooms WHERE pin=?', (pin,)).fetchone() or {}
+            teacher_name = str(room.get('created_by') or '').strip()
             questions = conn.execute(
                 'SELECT question_id,seq,title FROM room_questions WHERE room_pin=? ORDER BY seq ASC', (pin,)
             ).fetchall()
             results = conn.execute(
-                'SELECT rr.*,rp.team_id FROM room_results rr JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name WHERE rr.room_pin=? AND COALESCE(rp.is_host, 0) = 0 ORDER BY rp.team_id ASC,rr.player_name ASC',
-                (pin,)
+                'SELECT rr.*,rp.team_id FROM room_results rr JOIN room_players rp ON rp.room_pin=rr.room_pin AND rp.player_name=rr.player_name WHERE rr.room_pin=? AND COALESCE(rp.is_host, 0) = 0 AND LOWER(rr.player_name) != LOWER(?) ORDER BY rp.team_id ASC,rr.player_name ASC',
+                (pin, teacher_name)
             ).fetchall()
         q_order = {q['question_id']: q['seq'] for q in questions}
         q_titles = {q['question_id']: q['title'] for q in questions}

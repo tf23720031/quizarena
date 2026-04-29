@@ -463,10 +463,47 @@
     }
   }
 
-  async function handleAddFriend() {
+  function renderFriendRecommendations(items = []) {
+    const list = $("friendRecommendationList");
+    if (!list) return;
+    if (!items.length) {
+      list.innerHTML = `<div class="friend-recommend-empty">目前沒有推薦名單，先設定縣市或多玩幾場會更準。</div>`;
+      return;
+    }
+    list.innerHTML = items.map((item) => `
+      <article class="friend-recommend-card">
+        <div class="friend-recommend-user">
+          <div class="friend-recommend-avatar">${avatarHtml(item, "qa-avatar-img")}</div>
+          <div>
+            <strong>${escapeHtml(item.username)}</strong>
+            <span>${escapeHtml(item.reason || item.displayTitle || "推薦好友")}</span>
+          </div>
+        </div>
+        <button class="friend-request-btn accept" type="button" data-recommend-username="${escapeHtml(item.username)}">加好友</button>
+      </article>
+    `).join("");
+    list.querySelectorAll("[data-recommend-username]").forEach((btn) => {
+      btn.addEventListener("click", () => sendFriendRequest(btn.dataset.recommendUsername || ""));
+    });
+  }
+
+  async function loadFriendRecommendations() {
+    const user = getCurrentUser();
+    const list = $("friendRecommendationList");
+    if (!user || !list) return;
+    list.innerHTML = `<div class="friend-recommend-empty">載入推薦中...</div>`;
+    try {
+      const data = await api(`/friend_recommendations?username=${encodeURIComponent(user)}`);
+      renderFriendRecommendations(data.recommendations || []);
+    } catch (error) {
+      list.innerHTML = `<div class="friend-recommend-empty">${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function sendFriendRequest(friendName) {
     const user = getCurrentUser();
     const friendUsernameInput = $("friendUsernameInput");
-    const friendName = friendUsernameInput?.value.trim() || "";
+    friendName = String(friendName || friendUsernameInput?.value.trim() || "").trim();
 
     if (!user) {
       showToast("請先登入再送出好友申請");
@@ -487,9 +524,14 @@
       addFriendModal?.hide();
       showToast(data.message || "好友申請已送出");
       await loadFriendRequestSummary();
+      await loadFriendRecommendations();
     } catch (error) {
       showToast(error.message);
     }
+  }
+
+  async function handleAddFriend() {
+    await sendFriendRequest();
   }
 
   async function respondFriendRequest(requestId, action) {
@@ -825,6 +867,7 @@
         return;
       }
       addFriendModal?.show();
+      loadFriendRecommendations();
     });
 
     $("openFriendRequestsBtn")?.addEventListener("click", async () => {

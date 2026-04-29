@@ -48,9 +48,63 @@ function fileSafeName(value) {
   return String(value || "room").replace(/[\\/:*?"<>|]+/g, "-").trim() || "room";
 }
 
+function sanitizeReport(report = {}) {
+  const teacher = String(report.room?.createdBy || "").trim().toLowerCase();
+  const isTeacher = (name) => teacher && String(name || "").trim().toLowerCase() === teacher;
+  const basePlayers = (report.players || []).filter((player) => !isTeacher(player.playerName));
+  const results = (report.results || []).filter((row) => !isTeacher(row.playerName));
+  const playerMap = new Map(basePlayers.map((player) => [
+    player.playerName,
+    { ...player, answered: 0, correct: 0, totalScore: 0 },
+  ]));
+
+  results.forEach((row) => {
+    if (!playerMap.has(row.playerName)) {
+      playerMap.set(row.playerName, {
+        playerName: row.playerName,
+        teamId: toNumber(row.teamId),
+        answered: 0,
+        correct: 0,
+        totalScore: 0,
+      });
+    }
+    const player = playerMap.get(row.playerName);
+    player.answered += 1;
+    player.correct += row.isCorrect ? 1 : 0;
+    player.totalScore += toNumber(row.pointsEarned);
+  });
+
+  const players = [...playerMap.values()]
+    .map((player) => ({
+      ...player,
+      accuracy: player.answered ? round1((player.correct / player.answered) * 100) : 0,
+    }))
+    .sort((a, b) => toNumber(b.totalScore) - toNumber(a.totalScore) || String(a.playerName).localeCompare(String(b.playerName)));
+
+  const questionMap = new Map((report.questions || []).map((question) => [
+    question.questionId,
+    { ...question, answered: 0, correct: 0 },
+  ]));
+  results.forEach((row) => {
+    const question = questionMap.get(row.questionId);
+    if (!question) return;
+    question.answered += 1;
+    question.correct += row.isCorrect ? 1 : 0;
+  });
+  const questions = [...questionMap.values()]
+    .map((question) => ({
+      ...question,
+      accuracy: question.answered ? round1((question.correct / question.answered) * 100) : 0,
+    }))
+    .sort((a, b) => toNumber(a.seq) - toNumber(b.seq));
+
+  return { ...report, players, questions, results };
+}
+
 function getReportAnalysis(report) {
-  const players = [...(report.players || [])];
-  const questions = [...(report.questions || [])].sort((a, b) => toNumber(a.seq) - toNumber(b.seq));
+  const cleanReport = sanitizeReport(report);
+  const players = [...(cleanReport.players || [])];
+  const questions = [...(cleanReport.questions || [])].sort((a, b) => toNumber(a.seq) - toNumber(b.seq));
   const totalQuestions = questions.length;
   const avgAccuracy = average(players, (player) => player.accuracy);
   const avgScore = average(players, (player) => player.totalScore);
@@ -237,20 +291,21 @@ function renderAnalysis(data) {
 }
 
 function renderReport(data) {
-  const analysis = getReportAnalysis(data);
-  latestReport = data;
+  const cleanData = sanitizeReport(data);
+  const analysis = getReportAnalysis(cleanData);
+  latestReport = cleanData;
   $("downloadCsvBtn").disabled = false;
   $("downloadExcelReportBtn").disabled = false;
   $("downloadHtmlReportBtn").disabled = false;
-  $("reportRoomName").textContent = data.room?.roomName || data.room?.pin || "-";
-  $("reportPlayerCount").textContent = String((data.players || []).length);
-  $("reportQuestionCount").textContent = String((data.questions || []).length);
+  $("reportRoomName").textContent = cleanData.room?.roomName || cleanData.room?.pin || "-";
+  $("reportPlayerCount").textContent = String((cleanData.players || []).length);
+  $("reportQuestionCount").textContent = String((cleanData.questions || []).length);
   $("reportAverageAccuracy").textContent = `${analysis.avgAccuracy}%`;
   $("reportAverageScore").textContent = String(analysis.avgScore);
   $("reportNeedsHelp").textContent = String(analysis.needsHelp);
-  if (data.fromHistory) showToast("已載入歷史報表");
+  if (cleanData.fromHistory) showToast("已載入歷史報表");
 
-  renderAnalysis(data);
+  renderAnalysis(cleanData);
 
   $("studentReportList").innerHTML = `
     <table class="report-table">
@@ -267,7 +322,7 @@ function renderReport(data) {
         </tr>
       </thead>
       <tbody>
-        ${(data.players || []).map((player, index) => {
+        ${(cleanData.players || []).map((player, index) => {
           const needsHelp = toNumber(player.accuracy) < 60 || toNumber(player.answered) < analysis.totalQuestions;
           return `
             <tr>
@@ -286,7 +341,7 @@ function renderReport(data) {
     </table>
   `;
 
-  $("questionReportList").innerHTML = (data.questions || []).map((question) => {
+  $("questionReportList").innerHTML = (cleanData.questions || []).map((question) => {
     const accuracy = Number(question.accuracy || 0);
     const status = toNumber(question.answered) === 0 ? "未作答" : accuracy < 60 ? "建議複習" : "掌握良好";
     return `
@@ -398,12 +453,13 @@ function downloadCsv() {
     ]),
     [],
     ["作答明細"],
-    ["學生", "隊伍", "題號", "題目", "是否答對", "得分", "作答順序"],
+    ["學生", "隊伍", "題號", "題目", "學生選擇", "是否答對", "得分", "作答順序"],
     ...(latestReport.results || []).map((row) => [
       row.playerName,
       row.teamId || "",
       row.seq,
       row.title,
+      row.selectedAnswerText || "未選擇",
       row.isCorrect ? "是" : "否",
       row.pointsEarned,
       row.answerOrder || "",
@@ -552,12 +608,13 @@ function buildExcelReport(report) {
 
   <h2>作答明細</h2>
   <table>
-    <tr><th>學生</th><th>隊伍</th><th>題號</th><th>題目</th><th>是否答對</th><th>得分</th><th>作答順序</th></tr>
+    <tr><th>學生</th><th>隊伍</th><th>題號</th><th>題目</th><th>學生選擇</th><th>是否答對</th><th>得分</th><th>作答順序</th></tr>
     ${excelTableRows(report.results || [], [
       (row) => row.playerName,
       (row) => row.teamId || "",
       (row) => row.seq,
       (row) => row.title,
+      (row) => row.selectedAnswerText || "未選擇",
       (row) => row.isCorrect ? "是" : "否",
       (row) => row.pointsEarned,
       (row) => row.answerOrder || "",
@@ -601,7 +658,7 @@ function buildHtmlReport(report) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuizArena 分析報告 - ${escapeHtml(room.pin || "")}</title>
   <style>
-    *{box-sizing:border-box}body{margin:0;color:#293150;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;background:#f5f7ff}.page{width:min(1040px,calc(100% - 32px));margin:0 auto;padding:32px 0 48px}header{padding:26px;border-radius:24px;color:#fff;background:linear-gradient(135deg,#5d63d8,#48c0d8);box-shadow:0 20px 42px rgba(83,92,143,.18)}h1,h2,h3,p{margin:0}header p{margin-top:8px;opacity:.9}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.card{padding:18px;border-radius:18px;background:#fff;box-shadow:0 12px 30px rgba(83,92,143,.1)}.metric span{display:block;color:#7880a5;font-weight:800;font-size:.82rem}.metric strong{display:block;margin-top:4px;color:#5d63d8;font-size:1.8rem}.section{margin-top:18px}.bar-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(160px,2fr) 70px;gap:12px;align-items:center;margin-top:10px;font-weight:800}.bar-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar-row b{height:13px;overflow:hidden;border-radius:999px;background:#edf0fb}.bar-row i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#7c7bff,#48c0d8)}.bar-row i.warn{background:linear-gradient(90deg,#ff9a8b,#ff6cae)}.bar-row em{color:#66709b;font-style:normal;text-align:right}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:10px;border-bottom:1px solid #e8ebf8;text-align:left}th{color:#66709b;font-size:.8rem}.tag{display:inline-block;padding:5px 9px;border-radius:999px;background:#f0f2ff;color:#66709b;font-weight:900;font-size:.78rem}.empty{padding:12px;border-radius:12px;background:#f7f8ff;color:#66709b;font-weight:800}@media(max-width:760px){.grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.bar-row em{text-align:left}}
+    *{box-sizing:border-box}body{margin:0;color:#293150;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;background:#f5f7ff}.page{width:min(1040px,calc(100% - 32px));margin:0 auto;padding:32px 0 48px}header{padding:26px;border-radius:24px;color:#fff;background:linear-gradient(135deg,#5d63d8,#48c0d8);box-shadow:0 20px 42px rgba(83,92,143,.18)}h1,h2,h3,p{margin:0}header p{margin-top:8px;opacity:.9}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{min-width:0;padding:18px;border-radius:18px;background:#fff;box-shadow:0 12px 30px rgba(83,92,143,.1)}.metric span{display:block;color:#7880a5;font-weight:800;font-size:.82rem}.metric strong{display:block;margin-top:4px;color:#5d63d8;font-size:1.8rem}.section{margin-top:18px}.bar-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(160px,2fr) 82px;gap:12px;align-items:center;margin-top:10px;font-weight:800}.bar-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar-row b{height:13px;overflow:hidden;border-radius:999px;background:#edf0fb}.bar-row i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#7c7bff,#48c0d8)}.bar-row i.warn{background:linear-gradient(90deg,#ff9a8b,#ff6cae)}.bar-row em{color:#66709b;font-style:normal;text-align:right}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:10px;border-bottom:1px solid #e8ebf8;text-align:left;vertical-align:top}th{color:#66709b;font-size:.8rem}.tag{display:inline-block;padding:5px 9px;border-radius:999px;background:#f0f2ff;color:#66709b;font-weight:900;font-size:.78rem}.empty{padding:12px;border-radius:12px;background:#f7f8ff;color:#66709b;font-weight:800}@media(max-width:760px){.grid,.split{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.bar-row em{text-align:left}}
   </style>
 </head>
 <body>
@@ -628,7 +685,7 @@ function buildHtmlReport(report) {
       })}
     </section>
 
-    <section class="grid section">
+    <section class="split section">
       <article class="card">
         <h2>最需要複習的題目</h2>
         ${htmlBars(analysis.hardestQuestions, {
@@ -674,6 +731,16 @@ function buildHtmlReport(report) {
             const status = toNumber(question.answered) === 0 ? "未作答" : accuracy < 60 ? "建議複習" : "掌握良好";
             return `<tr><td>Q${toNumber(question.seq)}</td><td>${escapeHtml(question.title || question.content || "未命名題目")}</td><td>${escapeHtml(question.correctAnswerText || "-")}</td><td>${toNumber(question.answered)}</td><td>${toNumber(question.correct)}</td><td>${accuracy}%</td><td><span class="tag">${status}</span></td></tr>`;
           }).join("")}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card section">
+      <h2>作答明細</h2>
+      <table>
+        <thead><tr><th>學生</th><th>題號</th><th>題目</th><th>學生選擇</th><th>結果</th><th>得分</th></tr></thead>
+        <tbody>
+          ${(report.results || []).map((row) => `<tr><td>${escapeHtml(row.playerName)}</td><td>Q${toNumber(row.seq)}</td><td>${escapeHtml(row.title || "")}</td><td>${escapeHtml(row.selectedAnswerText || "未選擇")}</td><td><span class="tag">${row.isCorrect ? "答對" : "答錯"}</span></td><td>${toNumber(row.pointsEarned)}</td></tr>`).join("")}
         </tbody>
       </table>
     </section>
