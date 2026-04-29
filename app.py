@@ -254,10 +254,12 @@ def normalize_bank(raw_bank):
 
 def load_default_quiz_banks():
     if not os.path.exists(DEFAULT_BANKS_PATH):
-        return []
-    with open(DEFAULT_BANKS_PATH, 'r', encoding='utf-8') as f:
-        raw = json.load(f)
-    banks = raw.get('banks', []) if isinstance(raw, dict) else []
+        banks = []
+    else:
+        with open(DEFAULT_BANKS_PATH, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        banks = raw.get('banks', []) if isinstance(raw, dict) else []
+    banks = banks + build_extra_system_banks()
     normalized = []
     for bank in banks:
         item = normalize_bank(bank)
@@ -265,6 +267,56 @@ def load_default_quiz_banks():
         item['readonly'] = True
         normalized.append(item)
     return normalized
+
+
+def build_extra_system_banks():
+    templates = [
+        ('system_story_ai_data', '系統題庫：AI巨量資料任務', 'AI與巨量資料', [
+            ('資料欄位判斷', '資料表中的一欄通常代表什麼？', ['同一種屬性的資料', '整個網站', '一張圖片的背景', '不能分析的文字'], 0),
+            ('缺失值處理', '分析前發現資料缺很多欄位，最合理的第一步是什麼？', ['檢查缺失原因與比例', '直接刪掉全部資料', '把答案都填 100', '停止記錄'], 0),
+            ('模型偏誤', '若訓練資料只來自單一族群，AI最可能出現什麼問題？', ['判斷偏誤', '速度變慢但更公平', '自動產生硬體', '永遠不會錯'], 0),
+            ('視覺化目的', '資料視覺化最主要幫助使用者做到什麼？', ['快速看出趨勢與異常', '讓資料無法閱讀', '增加檔案大小', '取代所有分析'], 0),
+            ('測試資料', '測試資料的主要用途是什麼？', ['檢查模型在新資料上的表現', '只拿來裝飾', '刪除訓練資料', '讓題目變短'], 0),
+        ]),
+        ('system_story_design_game', '系統題庫：設計與遊戲支線', '設計概論', [
+            ('視覺層級', '在介面中讓重要按鈕更容易被看到，最相關的是哪個概念？', ['視覺層級', '檔案壓縮', '隨機排列', '取消留白'], 0),
+            ('即時回饋', '玩家按下按鈕後立刻看到反應，主要改善什麼？', ['操作理解與手感', '題目數量', '網路費用', '背景音量'], 0),
+            ('難度曲線', '好的關卡通常如何安排難度？', ['逐步提升挑戰', '第一關直接最難', '永遠沒有回饋', '完全不給目標'], 0),
+            ('色彩對比', '文字與背景對比不足時，最直接影響什麼？', ['可讀性', '資料庫容量', '登入速度', '題目分類'], 0),
+            ('成就設計', '成就系統最適合鼓勵玩家做什麼？', ['持續挑戰與探索', '跳過所有題目', '刪除帳號', '停止互動'], 0),
+        ]),
+        ('system_kahoot_share_template', 'Kahoot分享題庫：課堂快問快答', '課堂互動', [
+            ('快問快答', 'Kahoot 類型題目最常見的特色是什麼？', ['短題幹與快速作答', '只能寫長篇作文', '不能計分', '沒有選項'], 0),
+            ('暖身題', '課堂開始時用一題簡單題，主要目的通常是什麼？', ['讓學生快速進入狀態', '立刻淘汰所有人', '關閉互動', '取代教學'], 0),
+            ('迷思診斷', '老師用即時答題看到很多人選錯，可以立刻做什麼？', ['補充講解迷思概念', '忽略結果', '刪除題庫', '停止課程'], 0),
+            ('選項設計', '好的選項設計應該避免什麼？', ['每個選項都一模一樣', '有明確正解', '干擾選項合理', '文字簡潔'], 0),
+            ('賽後複習', '遊戲後最能提升學習效果的是什麼？', ['回看錯題與解析', '只看名次', '不看答案', '刪掉紀錄'], 0),
+        ]),
+    ]
+    banks = []
+    for bank_id, title, category, rows in templates:
+        banks.append({
+            'id': bank_id,
+            'title': title,
+            'gameMode': 'individual',
+            'language': 'zh',
+            'questions': [
+                {
+                    'id': f'{bank_id}_{idx + 1}',
+                    'title': q_title,
+                    'content': content,
+                    'type': 'single',
+                    'category': category,
+                    'difficulty': 'easy' if idx < 2 else 'medium',
+                    'time': '20 秒',
+                    'score': 1000,
+                    'explanation': f'這題重點是「{options[answer]}」，適合用來做課堂快速複習。',
+                    'options': [{'text': opt, 'correct': i == answer} for i, opt in enumerate(options)],
+                }
+                for idx, (q_title, content, options, answer) in enumerate(rows)
+            ],
+        })
+    return banks
 
 
 def get_wrong_book_owner(username, fallback_player_name=''):

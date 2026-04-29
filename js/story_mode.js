@@ -152,6 +152,64 @@ const STORY_ARCS = {
   },
 };
 
+SUBJECTS.push(
+  {
+    id: "science",
+    title: "自然科學",
+    icon: "fa-atom",
+    summary: "從生物、物理到地球科學，完成實驗室探索。",
+    branches: [{ id: "lab", title: "星塵實驗室", stages: [] }],
+  },
+  {
+    id: "history",
+    title: "世界歷史",
+    icon: "fa-landmark",
+    summary: "穿越文明、革命與大航海，拼回時間線。",
+    branches: [{ id: "archive", title: "時光檔案館", stages: [] }],
+  },
+  {
+    id: "geography",
+    title: "地理環境",
+    icon: "fa-earth-asia",
+    summary: "判讀地圖、氣候與區域特色，完成探險委託。",
+    branches: [{ id: "atlas", title: "雲端地圖局", stages: [] }],
+  },
+  {
+    id: "ai_data",
+    title: "AI與巨量資料",
+    icon: "fa-database",
+    summary: "理解資料、模型與判讀倫理，修復智慧城市。",
+    branches: [{ id: "data-city", title: "資料星城", stages: [] }],
+  }
+);
+
+Object.assign(STORY_ARCS, {
+  science: {
+    place: "星塵實驗室",
+    goal: "完成跨領域實驗報告",
+    clues: ["光合作用葉片", "電路火花", "星圖碎片", "岩層樣本", "顯微鏡片", "酸鹼試紙", "力學彈簧", "氣候雲圖", "細胞徽章", "能量晶核"],
+    concepts: ["光合作用", "食物鏈", "細胞構造", "酸鹼判斷", "電路通路", "力與運動", "能量轉換", "聲音傳播", "光的反射", "水循環", "天氣判讀", "地震成因", "岩石分類", "星球運行", "人體循環", "消化系統", "生態平衡", "實驗變因", "資料紀錄", "科學推論"],
+  },
+  history: {
+    place: "時光檔案館",
+    goal: "把散落的世界時間線重新排序",
+    clues: ["文明陶片", "航海羅盤", "革命傳單", "古城印章", "王朝年表", "工廠齒輪", "思想手稿", "貿易銀幣", "條約副本", "博物館鑰匙"],
+    concepts: ["古埃及文明", "古希臘城邦", "羅馬共和", "絲路交流", "中古莊園", "文藝復興", "宗教改革", "大航海時代", "科學革命", "啟蒙運動", "工業革命", "法國大革命", "民族主義", "帝國主義", "世界大戰", "冷戰格局", "全球化", "文化交流", "史料判讀", "因果分析"],
+  },
+  geography: {
+    place: "雲端地圖局",
+    goal: "完成一張會自己更新的世界地圖",
+    clues: ["等高線羽筆", "季風指針", "河流藍圖", "都市座標", "人口晶片", "板塊碎片", "雨林種子", "沙漠沙漏", "港口徽章", "能源礦石"],
+    concepts: ["經緯度", "比例尺", "等高線", "氣候類型", "季風", "洋流", "河川地形", "板塊運動", "火山地震", "人口分布", "都市化", "農業區位", "工業區位", "交通節點", "能源資源", "環境保育", "災害防治", "區域特色", "地圖判讀", "空間分析"],
+  },
+  ai_data: {
+    place: "資料星城",
+    goal: "讓失控的推薦系統重新學會判斷",
+    clues: ["資料表碎片", "特徵徽章", "模型羅盤", "偏誤警示燈", "雲端鑰匙", "視覺化面板", "清理腳本", "隱私封條", "API票券", "決策紀錄"],
+    concepts: ["資料欄位", "資料清理", "缺失值", "資料視覺化", "平均數", "中位數", "離群值", "分類任務", "回歸任務", "訓練資料", "測試資料", "模型準確率", "過度擬合", "推薦系統", "資料偏誤", "隱私保護", "API資料", "儀表板", "決策解釋", "AI倫理"],
+  },
+});
+
 function buildUniqueStages(subject) {
   const arc = STORY_ARCS[subject.id];
   if (!arc) return subject.branches[0].stages;
@@ -185,7 +243,7 @@ function expandStorySubjects() {
 
 expandStorySubjects();
 
-const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false };
+const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false, lastCorrect: false, lives: 3 };
 
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -215,6 +273,10 @@ function progressKey() {
   return `quizarena_story_progress_${userKey()}`;
 }
 
+function livesKey(subjectId = state.subjectId, branchId = state.branchId) {
+  return `quizarena_story_lives_${userKey()}_${subjectId}_${branchId}`;
+}
+
 function storyAchievementKey() {
   return `quizarena_story_achievements_${userKey()}`;
 }
@@ -228,6 +290,27 @@ function saveProgress(subjectId, branchId, clearedLevel) {
   const key = `${subjectId}:${branchId}`;
   progress[key] = Math.max(Number(progress[key] || 0), clearedLevel);
   localStorage.setItem(progressKey(), JSON.stringify(progress));
+}
+
+function loadLives() {
+  state.lives = Math.max(0, Math.min(3, Number(localStorage.getItem(livesKey()) || 3)));
+}
+
+function saveLives() {
+  localStorage.setItem(livesKey(), String(Math.max(0, Math.min(3, state.lives))));
+}
+
+function resetRun(message = "生命歸零，故事已重新開始") {
+  const progress = loadProgress();
+  delete progress[`${state.subjectId}:${state.branchId}`];
+  localStorage.setItem(progressKey(), JSON.stringify(progress));
+  state.stageIndex = 0;
+  state.selected = null;
+  state.checked = false;
+  state.lastCorrect = false;
+  state.lives = 3;
+  saveLives();
+  showStoryModal("重新開始故事", message, "挑戰重置");
 }
 
 function storyClearedTotal() {
@@ -343,6 +426,8 @@ function renderSubjects() {
       state.stageIndex = 0;
       state.selected = null;
       state.checked = false;
+      state.lastCorrect = false;
+      loadLives();
       renderAll();
     });
   });
@@ -366,6 +451,8 @@ function renderBranches() {
       state.stageIndex = 0;
       state.selected = null;
       state.checked = false;
+      state.lastCorrect = false;
+      loadLives();
       renderAll();
     });
   });
@@ -374,14 +461,25 @@ function renderBranches() {
 function renderPlayArea() {
   const subject = activeSubject();
   const branch = activeBranch();
-  const stage = branch.stages[state.stageIndex] || branch.stages[0];
   const progress = loadProgress();
   const cleared = Number(progress[`${subject.id}:${branch.id}`] || 0);
+  const isLocked = state.stageIndex > cleared;
+  if (isLocked) {
+    state.stageIndex = Math.min(cleared, branch.stages.length - 1);
+    state.selected = null;
+    state.checked = false;
+    state.lastCorrect = false;
+  }
+  const stage = branch.stages[state.stageIndex] || branch.stages[0];
+  const canGoNext = state.checked && state.lastCorrect && state.stageIndex < branch.stages.length - 1;
   $("storyPlayArea").innerHTML = `
     <article class="story-stage-card">
       <div class="question-meta-row">
         <h3>${escapeHtml(branch.title)}：第 ${stage.level} 關</h3>
-        <span class="answer-pill">${escapeHtml(stage.difficulty)}</span>
+        <div class="story-status-row">
+          <span class="story-lives">${"♥".repeat(state.lives)}${"♡".repeat(3 - state.lives)}</span>
+          <span class="answer-pill">${escapeHtml(stage.difficulty)}</span>
+        </div>
       </div>
       <p class="story-scene">${escapeHtml(stage.scene)}</p>
       <h4>${escapeHtml(stage.q)}</h4>
@@ -395,8 +493,8 @@ function renderPlayArea() {
         }).join("")}
       </div>
       <div class="practice-actions">
-        <button id="checkStoryBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 確認答案</button>
-        <button id="nextStoryBtn" class="tool-btn secondary"><i class="fa-solid fa-forward"></i> 下一關</button>
+        <button id="checkStoryBtn" class="tool-btn" ${state.checked ? "disabled" : ""}><i class="fa-solid fa-check"></i> 確認答案</button>
+        <button id="nextStoryBtn" class="tool-btn secondary" ${canGoNext ? "" : "disabled"}><i class="fa-solid fa-forward"></i> 下一關</button>
       </div>
       <div class="story-clear-state">本支線已通關 ${cleared} / ${branch.stages.length} 關</div>
     </article>
@@ -420,7 +518,10 @@ function checkStoryAnswer() {
   }
   state.checked = true;
   if (state.selected === stage.answer) {
+    state.lastCorrect = true;
     saveProgress(state.subjectId, state.branchId, stage.level);
+    state.lives = 3;
+    saveLives();
     if (!checkStoryAchievements()) {
       showStoryModal(
         "新的支線片段",
@@ -428,16 +529,32 @@ function checkStoryAnswer() {
       );
     }
   } else {
-    showToast("答錯了，可以再看一次正解");
+    state.lastCorrect = false;
+    state.lives -= 1;
+    saveLives();
+    if (state.lives <= 0) {
+      resetRun("三顆愛心都扣完了，這條故事線需要從第一關重新開始。");
+      return;
+    }
+    state.checked = false;
+    state.selected = null;
+    showToast(`答錯了，扣 1 顆愛心，剩下 ${state.lives} 顆`);
   }
   renderAll();
 }
 
 function nextStoryStage() {
   const branch = activeBranch();
-  state.stageIndex = (state.stageIndex + 1) % branch.stages.length;
+  const progress = loadProgress();
+  const cleared = Number(progress[`${state.subjectId}:${state.branchId}`] || 0);
+  if (!(state.checked && state.lastCorrect) && state.stageIndex >= cleared) {
+    showToast("答對這題後才能前往下一關");
+    return;
+  }
+  state.stageIndex = Math.min(state.stageIndex + 1, branch.stages.length - 1);
   state.selected = null;
   state.checked = false;
+  state.lastCorrect = false;
   renderPlayArea();
 }
 
@@ -445,11 +562,18 @@ function resetCurrentProgress() {
   const progress = loadProgress();
   delete progress[`${state.subjectId}:${state.branchId}`];
   localStorage.setItem(progressKey(), JSON.stringify(progress));
+  state.stageIndex = 0;
+  state.selected = null;
+  state.checked = false;
+  state.lastCorrect = false;
+  state.lives = 3;
+  saveLives();
   showToast("已重設本支線進度");
   renderAll();
 }
 
 function renderAll() {
+  loadLives();
   $("storyUserName").textContent = userKey() === "guest" ? "訪客" : userKey();
   renderSubjects();
   renderBranches();

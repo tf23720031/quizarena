@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/player_join.css">
-  <link rel="stylesheet" href="css/dark_mode.css">
-  <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.toggle('dark-mode',localStorage.getItem('quizDarkMode')==='1');});</script>
 </head>
 <body>
   <div class="join-bg"></div>
@@ -78,6 +76,15 @@
           <div class="field-block">
             <label for="playerNameInput">玩家名稱</label>
             <input type="text" id="playerNameInput" placeholder="請輸入玩家名稱" maxlength="20">
+          </div>
+
+          <div class="field-block">
+            <label for="avatarUploadInput">使用自己的頭像</label>
+            <label class="upload-avatar-btn" for="avatarUploadInput">
+              <i class="fa-solid fa-image"></i> 上傳頭像
+            </label>
+            <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg" hidden>
+            <div class="upload-hint">上傳後會直接用圖片進房；也可以改用下方髮型與眼睛自訂。</div>
           </div>
 
           <div class="tab-switch">

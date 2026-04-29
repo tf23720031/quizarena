@@ -39,6 +39,7 @@ body{margin:0;font-family:"Comic Sans MS","Arial","GenSenRounded",sans-serif;bac
 .face-layer{width:150px;bottom:2px;z-index:1}
 .eye-layer{width:150px;bottom:2px;z-index:2}
 .hair-layer{width:150px;bottom:2px;z-index:3}
+.uploaded-face{width:150px;height:150px;bottom:10px;border-radius:28px;object-fit:cover}
 
 .player-preview-card h3{margin:12px 0 18px;font-size:1.9rem;color:var(--text-main);font-weight:900}
 
@@ -60,6 +61,29 @@ body{margin:0;font-family:"Comic Sans MS","Arial","GenSenRounded",sans-serif;bac
 .field-block label{display:block;font-size:1rem;font-weight:900;color:var(--text-main);margin-bottom:10px}
 .field-block input{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.75);border-radius:18px;height:54px;padding:0 18px;font-size:1rem;color:var(--text-main);outline:none}
 .field-block input:focus{border-color:#f39bbd;box-shadow:0 0 0 4px rgba(243,155,189,.12)}
+
+.upload-avatar-btn{
+  min-height:52px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  width:100%;
+  padding:12px 18px;
+  color:#fff;
+  font-weight:900;
+  border-radius:18px;
+  background:linear-gradient(135deg,#8d6cff,#5bb8ff);
+  box-shadow:0 12px 24px rgba(110,92,220,.18);
+  cursor:pointer;
+}
+
+.upload-hint{
+  margin-top:8px;
+  color:var(--text-soft);
+  font-size:.86rem;
+  font-weight:800;
+}
 
 .tab-switch{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
 

@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/style_create.css">
-  <link rel="stylesheet" href="css/dark_mode.css">
-  <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.toggle('dark-mode',localStorage.getItem('quizDarkMode')==='1');});</script>
 </head>
 <body>
   <div class="page-wrap">
@@ -248,12 +246,16 @@
                           <option value="3">3 題</option>
                           <option value="5" selected>5 題</option>
                           <option value="7">7 題</option>
+                          <option value="10">10 題</option>
+                          <option value="20">20 題</option>
                         </select>
                       </div>
                       <div class="col-md-3">
                         <select id="aiSourceModeInput" class="form-select cute-select">
                           <option value="ai">AI 生成</option>
                           <option value="web_ai">網路參考</option>
+                          <option value="story">故事模式題庫</option>
+                          <option value="kahoot_share">Kahoot 分享題庫</option>
                         </select>
                       </div>
                     </div>

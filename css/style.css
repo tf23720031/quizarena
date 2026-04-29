@@ -378,7 +378,6 @@ body.nav-drawer-open .nav-drawer-overlay {
   width: 100%;
   min-height: 52px;
   justify-content: flex-start;
-  color: #1e2a5e !important;
 }
 
 .nav-drawer-overlay {
@@ -395,6 +394,18 @@ body.dark-mode .nav-actions-drawer {
     linear-gradient(135deg, rgba(13, 24, 56, 0.98), rgba(24, 34, 78, 0.96)),
     radial-gradient(circle at 90% 8%, rgba(89, 140, 255, 0.24), transparent 34%);
   border-left-color: rgba(255, 255, 255, 0.14);
+}
+
+body.dark-mode .nav-actions-drawer .custom-btn {
+  justify-content: flex-start;
+  color: #243052 !important;
+  background: linear-gradient(135deg, #f8fbff, #dce8ff) !important;
+  border-color: rgba(255, 255, 255, 0.56) !important;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.dark-mode .nav-actions-drawer .custom-btn i {
+  color: #243052 !important;
 }
 
 /* ════════════════════════════════════════
@@ -489,7 +500,6 @@ body.dark-mode .nav-actions-drawer {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  text-align:start;
   padding: 12px 22px;
   color: #ffffff;
   font-size: 1.02rem;
@@ -1252,6 +1262,16 @@ body.dark-mode #darkModeBtn {
   transition: opacity 0.24s ease, transform 0.24s ease, max-height 0.42s ease, margin 0.42s ease, padding 0.42s ease;
 }
 
+.achievement-card,
+.achievement-title-row,
+.achievement-body {
+  text-align: left;
+}
+
+.achievement-card > * {
+  min-width: 0;
+}
+
 .achievement-card.is-unlocked {
   color: #313857;
   background: linear-gradient(135deg, rgba(255, 247, 205, 0.96), rgba(255, 255, 255, 0.9));
@@ -1667,15 +1687,15 @@ body.dark-mode .friends-empty-card,
 body.dark-mode .friends-record-card,
 body.dark-mode .friend-request-card,
 body.dark-mode .friends-request-trigger {
-  color: #eaf2ff;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
-  border-color: rgba(255, 255, 255, 0.14);
+  color: #243052;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(247, 249, 255, 0.88));
+  border-color: rgba(255, 255, 255, 0.54);
 }
 
 body.dark-mode .friends-record-name,
 body.dark-mode .friend-request-name,
 body.dark-mode .friends-record-wins {
-  color: #ffffff;
+  color: #243052;
 }
 
 body.dark-mode .friend-profile-main h3 {
@@ -1691,13 +1711,37 @@ body.dark-mode .friend-profile-titles span {
 
 body.dark-mode .friends-record-rank,
 body.dark-mode .friend-request-meta {
-  color: rgba(234, 242, 255, 0.68);
+  color: #5f698d;
 }
 
 body.dark-mode .friends-dock-btn,
 body.dark-mode .friends-fab-mini {
   background: linear-gradient(135deg, #2542b8 0%, #1685c7 100%) !important;
   box-shadow: 0 16px 36px rgba(19, 81, 172, 0.36) !important;
+}
+
+body.dark-mode .achievements-panel {
+  color: #243052;
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.54);
+}
+
+body.dark-mode .achievements-head {
+  color: #243052;
+}
+
+body.dark-mode .achievement-card,
+body.dark-mode .achievement-card.is-unlocked {
+  color: #243052;
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(255, 255, 255, 0.78);
+}
+
+body.dark-mode .achievement-title-row strong,
+body.dark-mode .achievement-body p,
+body.dark-mode .achievement-title-row span,
+body.dark-mode .achievement-card.is-empty span {
+  color: #243052;
 }
 
 /* ════════════════════════════════════════
@@ -1948,7 +1992,6 @@ body.dark-mode .lang-switcher:hover {
     min-height: 50px;
     padding-inline: 16px;
     justify-content: flex-start;
-    color: #1e2a5e !important;
   }
 
   .nav-actions-drawer #darkModeBtn {
@@ -2161,97 +2204,4 @@ body:not(.dark-mode) .room-card {
 body:not(.dark-mode) .room-top h3,
 body:not(.dark-mode) .room-pin {
   color: #f0629a !important;
-}
-
-/* =========================================================
-   FRIEND LEADERBOARD - LIGHT STYLE ONLY
-   只影響 style.css 的好友戰績榜淺色粉紫漸層；dark_mode.css 不改這區。
-========================================================= */
-body:not(.dark-mode) .friends-drawer {
-  width: min(382px, calc(100vw - 24px)) !important;
-  padding: 30px 20px 28px !important;
-  color: #4f5483 !important;
-  background:
-    radial-gradient(circle at 84% 8%, rgba(255, 123, 205, .22), transparent 30%),
-    radial-gradient(circle at 18% 94%, rgba(123, 170, 255, .18), transparent 34%),
-    linear-gradient(145deg, #fff7ff 0%, #ffe8f8 38%, #f1eaff 70%, #edf5ff 100%) !important;
-  border-right: 1px solid rgba(255, 255, 255, .82) !important;
-  box-shadow: 24px 0 60px rgba(114, 94, 178, .24) !important;
-}
-body:not(.dark-mode) .friends-drawer::after {
-  opacity: .28 !important;
-  background:
-    radial-gradient(circle at 16% 18%, rgba(255,255,255,.68), transparent 18%),
-    linear-gradient(rgba(154, 129, 255, .08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(154, 129, 255, .08) 1px, transparent 1px) !important;
-  background-size: auto, 42px 42px, 42px 42px !important;
-}
-body:not(.dark-mode) .friends-drawer-glow {
-  right: -62px !important;
-  top: 30px !important;
-  opacity: .55 !important;
-  background: linear-gradient(135deg, rgba(255, 126, 203, .32), rgba(169, 143, 255, .16)) !important;
-}
-body:not(.dark-mode) .friends-drawer-head h2 {
-  color: #d85bc6 !important;
-  text-shadow: 0 8px 22px rgba(255, 139, 218, .28) !important;
-}
-body:not(.dark-mode) .friends-drawer-head p {
-  color: #68709a !important;
-  font-weight: 800 !important;
-}
-body:not(.dark-mode) .friends-close-btn {
-  background: linear-gradient(135deg, #ff8ecb, #b68cff) !important;
-  color: #fff !important;
-}
-body:not(.dark-mode) .friends-rank-caption {
-  color: #e453a9 !important;
-  background: rgba(255, 255, 255, .66) !important;
-  border: 1px solid rgba(255, 176, 226, .58) !important;
-  box-shadow: 0 12px 26px rgba(255, 164, 221, .18), inset 0 1px 0 rgba(255,255,255,.9) !important;
-}
-body:not(.dark-mode) .friends-empty-card,
-body:not(.dark-mode) .friends-record-card,
-body:not(.dark-mode) .friend-request-card,
-body:not(.dark-mode) .friends-list-text,
-body:not(.dark-mode) .achievements-panel,
-body:not(.dark-mode) .friends-request-trigger {
-  color: #3f4874 !important;
-  background: rgba(255, 255, 255, .72) !important;
-  border: 1px solid rgba(255, 255, 255, .82) !important;
-  box-shadow: 0 16px 34px rgba(135, 112, 205, .13), inset 0 1px 0 rgba(255,255,255,.88) !important;
-  backdrop-filter: blur(18px) saturate(135%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
-}
-body:not(.dark-mode) .friends-record-card.is-top {
-  background: linear-gradient(135deg, rgba(255, 255, 255, .84), rgba(255, 245, 232, .76), rgba(255, 235, 251, .72)) !important;
-  border-color: rgba(255, 224, 167, .75) !important;
-}
-body:not(.dark-mode) .friends-record-rank,
-body:not(.dark-mode) .friend-request-meta,
-body:not(.dark-mode) .achievement-card span {
-  color: #7a82ab !important;
-}
-body:not(.dark-mode) .friends-record-name,
-body:not(.dark-mode) .friend-request-name,
-body:not(.dark-mode) .achievement-card strong {
-  color: #303a67 !important;
-}
-body:not(.dark-mode) .friends-record-title { color: #9b67c8 !important; }
-body:not(.dark-mode) .friends-record-wins,
-body:not(.dark-mode) .achievements-head strong {
-  color: #5b60d9 !important;
-  background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(239, 230, 255, .82)) !important;
-}
-body:not(.dark-mode) .achievement-card {
-  background: rgba(255, 255, 255, .78) !important;
-  border-color: rgba(255,255,255,.86) !important;
-  color: #4a537c !important;
-}
-body:not(.dark-mode) .friends-request-trigger {
-  color: #4a4f80 !important;
-  font-weight: 900 !important;
-}
-body:not(.dark-mode) .friends-request-icon-wrap {
-  background: linear-gradient(135deg, #ff8cc8, #a78cff) !important;
 }

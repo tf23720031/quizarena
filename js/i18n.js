@@ -180,6 +180,18 @@ const I18N = (() => {
     '匯出分析報告':   { en:'Export Analysis',     ja:'分析レポート出力',    ko:'분석 보고서 내보내기', es:'Exportar análisis' },
   };
 
+  const ZH_BY_TRANSLATION = {};
+  Object.entries(D).forEach(([zh, translations]) => {
+    Object.values(translations || {}).forEach((value) => {
+      if (value) ZH_BY_TRANSLATION[String(value).trim()] = zh;
+    });
+  });
+
+  function normalizeKey(text) {
+    const key = String(text || '').trim();
+    return ZH_BY_TRANSLATION[key] || key;
+  }
+
   /* 動態內容區域（遊戲執行中不翻）*/
   const SKIP_IDS = new Set([
     'chatList','playerList','leaderboardList','hostAnswerStatus','hostAnswerBreakdown',
@@ -198,6 +210,7 @@ const I18N = (() => {
   let aiTimer = null;
 
   function tr(key) {
+    key = normalizeKey(key);
     if (!key || lang === 'zh') return key;
     return (D[key] && D[key][lang]) || key;
   }
@@ -225,9 +238,11 @@ const I18N = (() => {
   function translateEl(el, targetLang) {
     const key = el.dataset.i18n;
     if (!key) return;
-    const translated = targetLang === 'zh' ? key : (tr(key) || key);
-    const aiKey = `${targetLang}:${key}`;
-    const finalText = targetLang === 'zh' ? key : (D[key]?.[targetLang] || aiCache.get(aiKey) || translated);
+    const sourceKey = normalizeKey(key);
+    if (sourceKey !== key) el.dataset.i18n = sourceKey;
+    const translated = targetLang === 'zh' ? sourceKey : (tr(sourceKey) || sourceKey);
+    const aiKey = `${targetLang}:${sourceKey}`;
+    const finalText = targetLang === 'zh' ? sourceKey : (D[sourceKey]?.[targetLang] || aiCache.get(aiKey) || translated);
     // 找並替換直接子 TextNode
     let found = false;
     for (const node of el.childNodes) {
@@ -251,8 +266,10 @@ const I18N = (() => {
   function translatePh(el, targetLang) {
     const key = el.dataset.i18nPh;
     if (!key) return;
-    const aiKey = `${targetLang}:${key}`;
-    el.placeholder = targetLang === 'zh' ? key : (D[key]?.[targetLang] || aiCache.get(aiKey) || tr(key) || key);
+    const sourceKey = normalizeKey(key);
+    if (sourceKey !== key) el.dataset.i18nPh = sourceKey;
+    const aiKey = `${targetLang}:${sourceKey}`;
+    el.placeholder = targetLang === 'zh' ? sourceKey : (D[sourceKey]?.[targetLang] || aiCache.get(aiKey) || tr(sourceKey) || sourceKey);
   }
 
   async function translateMissing(targetLang) {
@@ -299,9 +316,10 @@ const I18N = (() => {
     // placeholder
     if ((tag === 'INPUT' || tag === 'TEXTAREA') && root.placeholder && !root.dataset.i18nPh) {
       const ph = root.placeholder.trim();
-      if (D[ph] || shouldAiTranslate(ph)) {
-        root.dataset.i18nPh = ph;
-        if (lang !== 'zh') root.placeholder = tr(ph) || ph;
+      const key = normalizeKey(ph);
+      if (D[key] || shouldAiTranslate(key)) {
+        root.dataset.i18nPh = key;
+        if (lang !== 'zh') root.placeholder = tr(key) || key;
       }
     }
 
@@ -309,12 +327,13 @@ const I18N = (() => {
     for (const node of root.childNodes) {
       if (node.nodeType === 3) {
         const txt = node.textContent.trim();
-        if (txt && (D[txt] || shouldAiTranslate(txt)) && !root.dataset.i18n) {
-          root.dataset.i18n = txt;
+        const key = normalizeKey(txt);
+        if (key && (D[key] || shouldAiTranslate(key)) && !root.dataset.i18n) {
+          root.dataset.i18n = key;
           if (lang !== 'zh') {
             const leading  = node.textContent.match(/^\s*/)[0];
             const trailing = node.textContent.match(/\s*$/)[0];
-            node.textContent = leading + (tr(txt) || txt) + trailing;
+            node.textContent = leading + (tr(key) || key) + trailing;
           }
         }
       } else if (node.nodeType === 1) {

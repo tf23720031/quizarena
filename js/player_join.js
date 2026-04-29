@@ -34,6 +34,10 @@ function getLastPlayerName() {
   }
 }
 
+function getAccountName() {
+  return String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+}
+
 async function api(url, options = {}) {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -77,6 +81,7 @@ const eyeSliderBox = document.getElementById("eyeSliderBox");
 const randomBtn = document.getElementById("randomBtn");
 const resetBtn = document.getElementById("resetBtn");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
+const avatarUploadInput = document.getElementById("avatarUploadInput");
 
 /* ========= 資料 ========= */
 const HAIRS = [
@@ -112,11 +117,14 @@ const EYES = [
   "images/face/eyes12.png"
 ];
 
+const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+
 const state = {
   currentPart: "hair",
   hairIndex: 0,
   eyeIndex: 0,
   eyesOffsetY: 0,
+  uploadedAvatar: "",
   context: getJoinContext()
 };
 
@@ -138,7 +146,7 @@ function populateRoomInfo() {
 
   const lastPlayerName = getLastPlayerName();
   playerNameInput.value =
-    lastPlayerName || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
+    lastPlayerName || getAccountName() || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
 
   updateNamePreview();
 }
@@ -154,9 +162,16 @@ function applyEyesOffset() {
 }
 
 function syncAvatarImages() {
+  if (state.uploadedAvatar) {
+    [mainFace, previewFace].forEach((img) => { img.src = state.uploadedAvatar; img.classList.add("uploaded-face"); });
+    [mainHair, previewHair, mainEye, previewEye].forEach((img) => { img.src = TRANSPARENT_PIXEL; });
+    applyEyesOffset();
+    return;
+  }
   const hair = HAIRS[state.hairIndex];
   const eyes = EYES[state.eyeIndex];
 
+  [mainFace, previewFace].forEach((img) => { img.src = "images/face/face.png"; img.classList.remove("uploaded-face"); });
   mainHair.src = hair;
   previewHair.src = hair;
 
@@ -183,6 +198,7 @@ function updatePartTabs() {
 }
 
 function movePart(direction) {
+  state.uploadedAvatar = "";
   if (state.currentPart === "hair") {
     state.hairIndex =
       (state.hairIndex + direction + HAIRS.length) % HAIRS.length;
@@ -195,6 +211,7 @@ function movePart(direction) {
 }
 
 function randomizeAvatar() {
+  state.uploadedAvatar = "";
   state.hairIndex = Math.floor(Math.random() * HAIRS.length);
   state.eyeIndex = Math.floor(Math.random() * EYES.length);
   state.eyesOffsetY = Math.floor(Math.random() * 11) - 5;
@@ -205,6 +222,7 @@ function randomizeAvatar() {
 }
 
 function resetAvatar() {
+  state.uploadedAvatar = "";
   state.hairIndex = 0;
   state.eyeIndex = 0;
   state.eyesOffsetY = 0;
@@ -235,10 +253,10 @@ async function joinRoom() {
     roomKey: context.roomKey || "",
     player: {
       name: playerName,
-      face: "images/face/face.png",
-      hair: HAIRS[state.hairIndex],
-      eyes: EYES[state.eyeIndex],
-      eyesOffsetY: state.eyesOffsetY,
+      face: state.uploadedAvatar || "images/face/face.png",
+      hair: state.uploadedAvatar ? TRANSPARENT_PIXEL : HAIRS[state.hairIndex],
+      eyes: state.uploadedAvatar ? TRANSPARENT_PIXEL : EYES[state.eyeIndex],
+      eyesOffsetY: state.uploadedAvatar ? 0 : state.eyesOffsetY,
       isHost: isHost
     }
   };
@@ -285,6 +303,22 @@ resetBtn?.addEventListener("click", resetAvatar);
 eyeSlider?.addEventListener("input", () => {
   state.eyesOffsetY = Number(eyeSlider.value || 0);
   applyEyesOffset();
+});
+
+avatarUploadInput?.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpeg)$/.test(file.type)) {
+    showToast("只支援 JPG / PNG 頭像");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.uploadedAvatar = String(reader.result || "");
+    syncAvatarImages();
+    showToast("已套用上傳頭像");
+  };
+  reader.readAsDataURL(file);
 });
 
 joinRoomBtn?.addEventListener("click", joinRoom);

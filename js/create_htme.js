@@ -1003,14 +1003,18 @@ async function generateAiBank() {
   generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中...';
 
   try {
+    const sourceMode = $('aiSourceModeInput')?.value || 'ai';
     const data = await api('/generate_quiz_bank', {
       method: 'POST',
       body: JSON.stringify({
-        topic,
+        topic: sourceMode === 'kahoot_share'
+          ? `${topic}，請模擬 Kahoot 分享題庫常見的短題幹、快節奏選項與課堂互動題型`
+          : topic,
         category: $('aiCategoryInput').value.trim(),
         difficulty: $('aiDifficultyInput').value,
         language: $('bankLanguage')?.value || localStorage.getItem('quizLang') || 'zh',
-        sourceMode: $('aiSourceModeInput')?.value || 'ai',
+        sourceMode,
+        storyMode: sourceMode === 'story',
         count: Number($('aiCountInput')?.value || 5)
       })
     });
