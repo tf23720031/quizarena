@@ -1687,15 +1687,15 @@ body.dark-mode .friends-empty-card,
 body.dark-mode .friends-record-card,
 body.dark-mode .friend-request-card,
 body.dark-mode .friends-request-trigger {
-  color: #243052;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(247, 249, 255, 0.88));
-  border-color: rgba(255, 255, 255, 0.54);
+  color: #f7fbff;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 body.dark-mode .friends-record-name,
 body.dark-mode .friend-request-name,
 body.dark-mode .friends-record-wins {
-  color: #243052;
+  color: #f7fbff;
 }
 
 body.dark-mode .friend-profile-main h3 {
@@ -1711,7 +1711,17 @@ body.dark-mode .friend-profile-titles span {
 
 body.dark-mode .friends-record-rank,
 body.dark-mode .friend-request-meta {
-  color: #5f698d;
+  color: rgba(247, 251, 255, 0.78);
+}
+
+body.dark-mode .friends-record-title,
+body.dark-mode .friends-empty-card span,
+body.dark-mode .friends-empty-card strong {
+  color: #f7fbff;
+}
+
+body.dark-mode .friends-record-wins {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 body.dark-mode .friends-dock-btn,
@@ -1740,7 +1750,10 @@ body.dark-mode .achievement-card.is-unlocked {
 body.dark-mode .achievement-title-row strong,
 body.dark-mode .achievement-body p,
 body.dark-mode .achievement-title-row span,
-body.dark-mode .achievement-card.is-empty span {
+body.dark-mode .achievement-card.is-empty span,
+body.dark-mode .achievement-card p,
+body.dark-mode .achievement-card span,
+body.dark-mode .achievement-card strong {
   color: #243052;
 }
 

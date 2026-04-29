@@ -910,6 +910,31 @@ body.dark-mode .tool-btn.primary {
   flex: 1;
 }
 
+.profile-hero-progress {
+  width: min(100%, 700px);
+  margin-top: 18px;
+}
+
+.profile-hero-progress-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.profile-hero-progress-head strong {
+  color: #5d63d8;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.profile-hero-progress-head span {
+  color: #c8518a;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
 .profile-kicker {
   margin: 0;
   color: #8b82df;

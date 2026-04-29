@@ -116,7 +116,6 @@ function renderProfile(profile) {
   $("profileLevelBar").style.width = `${Math.min(100, Math.round((currentLevelXp / 180) * 100))}%`;
   $("profileLanguageSelect").value = profile.language || "zh";
   $("profileCountySelect").value = profile.county || "";
-  $("profileLanguageText").textContent = languageText(profile.language || "zh");
   $("profileLocationChip").textContent = profile.county || "尚未設定所在地";
   $("profileCategoryChip").textContent = profile.displayTitle || "尚未設定常玩分類";
 
@@ -258,7 +257,6 @@ $("resetAvatarBtn")?.addEventListener("click", () => {
 });
 $("profileLanguageSelect")?.addEventListener("change", () => {
   const lang = $("profileLanguageSelect").value;
-  $("profileLanguageText").textContent = languageText(lang);
   if (window.I18N?.applyLang) window.I18N.applyLang(lang);
 });
 $("profileCountySelect")?.addEventListener("change", () => {
