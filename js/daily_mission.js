@@ -2,6 +2,9 @@ const $ = (id) => document.getElementById(id);
 const user = localStorage.getItem("currentUser") || "guest";
 const today = new Date().toISOString().slice(0, 10);
 const key = `quizarena_daily_${user}`;
+const rewardKey = `quizarena_daily_reward_${user}`;
+const titleKey = `quizarena_daily_title_${user}`;
+const EXP_PER_DAY = 60;
 
 const POOL = [
   { q: "哪一種學習方式最適合複習錯題？", options: ["直接背答案", "先看錯因再重做", "跳過不看", "只看分數"], answer: 1 },
@@ -29,7 +32,8 @@ function loadState(reset = false) {
   try { state = JSON.parse(localStorage.getItem(key) || "{}"); } catch {}
   if (reset || state.date !== today) {
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const streak = state.date === yesterday ? Number(state.streak || 0) + 1 : 1;
+    const keptYesterday = state.date === yesterday && Array.isArray(state.done) && state.done.length >= 3;
+    const streak = keptYesterday ? Number(state.streak || 0) + 1 : 1;
     const start = Math.abs([...today].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)) % POOL.length;
     state = { date: today, streak, done: [], questions: [0, 1, 2].map((n) => (start + n) % POOL.length) };
     localStorage.setItem(key, JSON.stringify(state));
@@ -41,11 +45,39 @@ function saveState(state) {
   localStorage.setItem(key, JSON.stringify(state));
 }
 
+function loadReward() {
+  try {
+    return JSON.parse(localStorage.getItem(rewardKey) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveReward(reward) {
+  localStorage.setItem(rewardKey, JSON.stringify(reward));
+}
+
+function grantDailyReward(state) {
+  const reward = loadReward();
+  if (reward.lastRewardDate === today) return false;
+  reward.exp = Number(reward.exp || 0) + EXP_PER_DAY;
+  reward.completedDays = Number(reward.completedDays || 0) + 1;
+  reward.lastRewardDate = today;
+  reward.streak = Number(state.streak || 1);
+  if (Number(state.streak || 0) >= 7) {
+    reward.title = "連勤學者";
+    localStorage.setItem(titleKey, "連勤學者");
+  }
+  saveReward(reward);
+  return true;
+}
+
 function render() {
   const state = loadState();
+  const reward = loadReward();
   $("dailyProgress").textContent = `${state.done.length}/3`;
   $("dailyStreak").textContent = `${Number(state.streak || 0)} 天`;
-  $("dailyReward").textContent = Number(state.streak || 0) >= 7 ? "連勤學者" : "連續 7 天給稱號";
+  $("dailyReward").textContent = Number(state.streak || 0) >= 7 ? `連勤學者 +${EXP_PER_DAY} EXP` : `+${EXP_PER_DAY} EXP｜第 ${Number(reward.completedDays || 0)} 天`;
   $("dailyMissionList").innerHTML = state.questions.map((poolIndex, index) => {
     const item = POOL[poolIndex];
     const done = state.done.includes(index);
@@ -68,8 +100,10 @@ function render() {
         return;
       }
       latest.done = [...new Set([...latest.done, qIndex])];
+      const completedNow = latest.done.length >= 3;
+      const rewarded = completedNow ? grantDailyReward(latest) : false;
       saveState(latest);
-      showToast(latest.done.length >= 3 ? "今日任務完成" : "答對了");
+      showToast(completedNow ? (rewarded ? `今日任務完成，獲得 ${EXP_PER_DAY} EXP` : "今日任務已完成") : "答對了");
       render();
     });
   });

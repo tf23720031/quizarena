@@ -995,6 +995,8 @@ def build_title_options(achievement_summary):
         wins = get_user_wins_map([achievement_summary.get('username')]).get(achievement_summary.get('username'), 0)
         if wins >= 3:
             options.append({'id': '常勝玩家', 'label': '常勝玩家'})
+    if not any(opt['id'] == '連勤學者' for opt in options):
+        options.append({'id': '連勤學者', 'label': '連勤學者'})
     return options
 
 

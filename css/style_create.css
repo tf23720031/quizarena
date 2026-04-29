@@ -130,6 +130,24 @@ body::before {
   filter: brightness(1.02);
 }
 
+.lang-switcher {
+  min-height: 48px;
+  padding: 9px 16px;
+  color: #8b5c7e;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.62);
+  border-radius: 999px;
+  outline: none;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 10px 20px rgba(77, 59, 68, 0.12);
+}
+
+body.dark-mode .lang-switcher {
+  color: #f7fbff;
+  border-color: rgba(255,255,255,.16);
+  background: linear-gradient(135deg, rgba(32, 46, 94, .94), rgba(24, 37, 78, .9));
+}
+
 .btn-join {
   background: linear-gradient(180deg, #63b5ff 0%, #448df1 100%);
 }

@@ -288,6 +288,7 @@ const I18N = (() => {
         body: JSON.stringify({ targetLang, texts: keys })
       });
       const data = await res.json();
+      if (targetLang !== lang) return;
       const translations = data.translations || {};
       Object.entries(translations).forEach(([key, value]) => {
         if (value) aiCache.set(`${targetLang}:${key}`, String(value));
@@ -328,6 +329,7 @@ const I18N = (() => {
       if (node.nodeType === 3) {
         const txt = node.textContent.trim();
         const key = normalizeKey(txt);
+        if (lang !== 'zh' && key === txt && !/[\u4e00-\u9fff]/.test(key)) continue;
         if (key && (D[key] || shouldAiTranslate(key)) && !root.dataset.i18n) {
           root.dataset.i18n = key;
           if (lang !== 'zh') {
@@ -346,6 +348,7 @@ const I18N = (() => {
   function applyLang(newLang) {
     lang = newLang;
     localStorage.setItem('quizLang', newLang);
+    clearTimeout(aiTimer);
 
     // 重翻所有標記過的元素
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -357,7 +360,7 @@ const I18N = (() => {
 
     // 同步所有選單
     document.querySelectorAll('.lang-switcher').forEach(s => { s.value = newLang; });
-    scheduleAiTranslate(newLang);
+    if (newLang !== 'zh') scheduleAiTranslate(newLang);
   }
 
   /* 建立選單 */

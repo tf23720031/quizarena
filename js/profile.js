@@ -104,9 +104,16 @@ function renderProfile(profile) {
   $("profileDisplayTitle").textContent = profile.displayTitle || "新手挑戰者";
   $("profileWins").textContent = String(profile.wins || 0);
   const level = profile.level || {};
-  $("profileLevel").textContent = `Lv.${Number(level.level || 1)}`;
-  $("profileXpText").textContent = `${Number(level.currentLevelXp || 0)} / ${Number(level.nextLevelXp || 180)} XP`;
-  $("profileLevelBar").style.width = `${Number(level.progress || 0)}%`;
+  let dailyReward = {};
+  try { dailyReward = JSON.parse(localStorage.getItem(`quizarena_daily_reward_${profile.username}`) || "{}"); } catch {}
+  const dailyExp = Number(dailyReward.exp || 0);
+  const totalXp = Number(level.xp || 0) + dailyExp;
+  const computedLevel = Math.max(Number(level.level || 1), Math.floor(totalXp / 180) + 1);
+  const currentLevelXp = totalXp % 180;
+  $("profileLevel").textContent = `Lv.${computedLevel}`;
+  $("profileDailyExp").textContent = `${dailyExp} EXP`;
+  $("profileXpText").textContent = `${currentLevelXp} / 180 XP`;
+  $("profileLevelBar").style.width = `${Math.min(100, Math.round((currentLevelXp / 180) * 100))}%`;
   $("profileLanguageSelect").value = profile.language || "zh";
   $("profileCountySelect").value = profile.county || "";
   $("profileLanguageText").textContent = languageText(profile.language || "zh");
@@ -133,7 +140,12 @@ function renderProfile(profile) {
   `;
 
   const currentTitle = profile.displayTitle || "新手挑戰者";
-  $("profileTitleList").innerHTML = (profile.titleOptions || []).map((title) => `
+  const dailyTitle = localStorage.getItem(`quizarena_daily_title_${profile.username || ""}`) || "";
+  const titleOptions = [...(profile.titleOptions || [])];
+  if (dailyTitle && !titleOptions.some((item) => item.id === dailyTitle)) {
+    titleOptions.push({ id: dailyTitle, label: dailyTitle });
+  }
+  $("profileTitleList").innerHTML = titleOptions.map((title) => `
     <button type="button" class="profile-title-option ${title.id === currentTitle ? "active" : ""}" data-title="${escapeHtml(title.id)}">
       <strong>${escapeHtml(title.label)}</strong>
       <span>${title.id === currentTitle ? "使用中" : "點擊套用"}</span>

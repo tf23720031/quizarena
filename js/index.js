@@ -54,14 +54,6 @@
         return username;
       }
     } catch {}
-    try {
-      const roomProfile = JSON.parse(localStorage.getItem("roomPlayerProfile") || "null");
-      const username = String(roomProfile?.username || roomProfile?.account || roomProfile?.name || "").trim();
-      if (username) {
-        localStorage.setItem("currentUser", username);
-        return username;
-      }
-    } catch {}
     return "";
   }
 
@@ -72,6 +64,11 @@
   function clearCurrentUser() {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("currentUserProfile");
+    sessionStorage.removeItem("currentUser");
+    localStorage.removeItem("roomPlayerProfile");
+    localStorage.removeItem("pendingJoinContext");
+    localStorage.removeItem("currentRoomPin");
+    localStorage.removeItem("currentRoomKey");
   }
 
   function setCachedProfile(profile) {
@@ -434,10 +431,6 @@
     try {
       const data = await api(`/user_profile?username=${encodeURIComponent(user)}`);
       setCachedProfile(data.profile);
-      if (data.profile?.language && window.I18N?.applyLang) {
-        localStorage.setItem("quizLang", data.profile.language);
-        window.I18N.applyLang(data.profile.language);
-      }
       updateAuthUI();
       return data.profile;
     } catch (error) {

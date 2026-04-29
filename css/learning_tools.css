@@ -140,6 +140,31 @@ h2 {
   opacity: 0.48;
 }
 
+.lang-switcher {
+  min-height: 46px;
+  padding: 8px 16px;
+  color: #8b5c7e;
+  font-weight: 900;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 24px rgba(83, 92, 143, 0.14);
+}
+
+.lang-switcher-slot {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+body.dark-mode .lang-switcher {
+  color: #f7fbff;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, rgba(32, 46, 94, 0.94), rgba(24, 37, 78, 0.9));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+}
+
 .question-list {
   display: grid;
   gap: 12px;
@@ -206,7 +231,7 @@ body.dark-mode .profile-title-option {
 
 body.dark-mode .tool-topbar h1,
 body.dark-mode .tool-kicker {
-  color: #dbe8ff;
+  color: #f7fbff;
 }
 
 body.dark-mode .question-card p,
@@ -216,10 +241,6 @@ body.dark-mode .wrong-insight-grid span {
   color: #34405f;
 }
 
-body.dark-mode h1,
-body.dark-mode h2,
-body.dark-mode h3,
-body.dark-mode h4,
 body.dark-mode .tool-card-head,
 body.dark-mode .analysis-card h3,
 body.dark-mode .story-subject-card strong,
@@ -236,6 +257,19 @@ body.dark-mode .tool-note,
 body.dark-mode .story-clear-state,
 body.dark-mode .story-scene,
 body.dark-mode .report-empty {
+  color: #243052;
+}
+
+body.dark-mode .tool-card-head h2,
+body.dark-mode .analysis-card > h3 {
+  color: #f7fbff;
+}
+
+body.dark-mode .tool-card .question-card h3,
+body.dark-mode .tool-card .story-stage-card h3,
+body.dark-mode .tool-card .story-stage-card h4,
+body.dark-mode .tool-card .profile-main h2,
+body.dark-mode .tool-card .profile-achievement-card strong {
   color: #243052;
 }
 

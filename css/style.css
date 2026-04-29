@@ -398,14 +398,14 @@ body.dark-mode .nav-actions-drawer {
 
 body.dark-mode .nav-actions-drawer .custom-btn {
   justify-content: flex-start;
-  color: #243052 !important;
-  background: linear-gradient(135deg, #f8fbff, #dce8ff) !important;
+  color: #f7fbff !important;
+  background: linear-gradient(135deg, rgba(255, 117, 173, 0.96), rgba(103, 139, 255, 0.94)) !important;
   border-color: rgba(255, 255, 255, 0.56) !important;
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22) !important;
 }
 
 body.dark-mode .nav-actions-drawer .custom-btn i {
-  color: #243052 !important;
+  color: #f7fbff !important;
 }
 
 /* ════════════════════════════════════════

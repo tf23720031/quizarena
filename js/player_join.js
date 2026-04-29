@@ -81,7 +81,7 @@ const eyeSliderBox = document.getElementById("eyeSliderBox");
 const randomBtn = document.getElementById("randomBtn");
 const resetBtn = document.getElementById("resetBtn");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
-const avatarUploadInput = document.getElementById("avatarUploadInput");
+const profileAvatarToggleBtn = document.getElementById("profileAvatarToggleBtn");
 
 /* ========= 資料 ========= */
 const HAIRS = [
@@ -125,8 +125,30 @@ const state = {
   eyeIndex: 0,
   eyesOffsetY: 0,
   uploadedAvatar: "",
+  profileAvatar: "",
+  useProfileAvatar: false,
   context: getJoinContext()
 };
+
+function parseProfileImageAvatar(value) {
+  const avatar = String(value || "");
+  return avatar && !avatar.startsWith("style:") ? avatar : "";
+}
+
+async function loadProfileAvatar() {
+  const cached = (() => {
+    try { return JSON.parse(localStorage.getItem("currentUserProfile") || "null"); } catch { return null; }
+  })();
+  state.profileAvatar = parseProfileImageAvatar(cached?.avatar);
+  const account = getAccountName();
+  if (!state.profileAvatar && account) {
+    try {
+      const data = await api(`/user_profile?username=${encodeURIComponent(account)}`);
+      state.profileAvatar = parseProfileImageAvatar(data.profile?.avatar);
+      if (data.profile) localStorage.setItem("currentUserProfile", JSON.stringify(data.profile));
+    } catch (_) {}
+  }
+}
 
 function populateRoomInfo() {
   const room = state.context?.room;
@@ -162,8 +184,9 @@ function applyEyesOffset() {
 }
 
 function syncAvatarImages() {
-  if (state.uploadedAvatar) {
-    [mainFace, previewFace].forEach((img) => { img.src = state.uploadedAvatar; img.classList.add("uploaded-face"); });
+  const imageAvatar = state.useProfileAvatar ? state.profileAvatar : "";
+  if (imageAvatar) {
+    [mainFace, previewFace].forEach((img) => { img.src = imageAvatar; img.classList.add("uploaded-face"); });
     [mainHair, previewHair, mainEye, previewEye].forEach((img) => { img.src = TRANSPARENT_PIXEL; });
     applyEyesOffset();
     return;
@@ -195,10 +218,18 @@ function updatePartTabs() {
   previewEye.classList.remove("hidden-layer");
 
   eyeSliderBox.classList.toggle("hidden-layer", !isEye);
+  document.querySelector(".custom-box")?.classList.toggle("is-profile-avatar", state.useProfileAvatar);
+  if (profileAvatarToggleBtn) {
+    profileAvatarToggleBtn.classList.toggle("active", state.useProfileAvatar);
+    profileAvatarToggleBtn.setAttribute("aria-pressed", state.useProfileAvatar ? "true" : "false");
+    profileAvatarToggleBtn.innerHTML = state.useProfileAvatar
+      ? '<i class="fa-solid fa-toggle-on"></i> 開啟，使用個人頭像'
+      : '<i class="fa-solid fa-toggle-off"></i> 關閉，使用捏人';
+  }
 }
 
 function movePart(direction) {
-  state.uploadedAvatar = "";
+  state.useProfileAvatar = false;
   if (state.currentPart === "hair") {
     state.hairIndex =
       (state.hairIndex + direction + HAIRS.length) % HAIRS.length;
@@ -208,10 +239,11 @@ function movePart(direction) {
   }
 
   syncAvatarImages();
+  updatePartTabs();
 }
 
 function randomizeAvatar() {
-  state.uploadedAvatar = "";
+  state.useProfileAvatar = false;
   state.hairIndex = Math.floor(Math.random() * HAIRS.length);
   state.eyeIndex = Math.floor(Math.random() * EYES.length);
   state.eyesOffsetY = Math.floor(Math.random() * 11) - 5;
@@ -222,7 +254,7 @@ function randomizeAvatar() {
 }
 
 function resetAvatar() {
-  state.uploadedAvatar = "";
+  state.useProfileAvatar = false;
   state.hairIndex = 0;
   state.eyeIndex = 0;
   state.eyesOffsetY = 0;
@@ -253,10 +285,10 @@ async function joinRoom() {
     roomKey: context.roomKey || "",
     player: {
       name: playerName,
-      face: state.uploadedAvatar || "images/face/face.png",
-      hair: state.uploadedAvatar ? TRANSPARENT_PIXEL : HAIRS[state.hairIndex],
-      eyes: state.uploadedAvatar ? TRANSPARENT_PIXEL : EYES[state.eyeIndex],
-      eyesOffsetY: state.uploadedAvatar ? 0 : state.eyesOffsetY,
+      face: state.useProfileAvatar && state.profileAvatar ? state.profileAvatar : "images/face/face.png",
+      hair: state.useProfileAvatar && state.profileAvatar ? TRANSPARENT_PIXEL : HAIRS[state.hairIndex],
+      eyes: state.useProfileAvatar && state.profileAvatar ? TRANSPARENT_PIXEL : EYES[state.eyeIndex],
+      eyesOffsetY: state.useProfileAvatar && state.profileAvatar ? 0 : state.eyesOffsetY,
       isHost: isHost
     }
   };
@@ -305,26 +337,24 @@ eyeSlider?.addEventListener("input", () => {
   applyEyesOffset();
 });
 
-avatarUploadInput?.addEventListener("change", (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  if (!/^image\/(png|jpeg)$/.test(file.type)) {
-    showToast("只支援 JPG / PNG 頭像");
+profileAvatarToggleBtn?.addEventListener("click", async () => {
+  if (!state.profileAvatar) await loadProfileAvatar();
+  if (!state.useProfileAvatar && !state.profileAvatar) {
+    showToast("個人資料目前沒有上傳頭像，請先到個人資料上傳照片");
     return;
   }
-  const reader = new FileReader();
-  reader.onload = () => {
-    state.uploadedAvatar = String(reader.result || "");
-    syncAvatarImages();
-    showToast("已套用上傳頭像");
-  };
-  reader.readAsDataURL(file);
+  state.useProfileAvatar = !state.useProfileAvatar;
+  syncAvatarImages();
+  updatePartTabs();
 });
 
 joinRoomBtn?.addEventListener("click", joinRoom);
 
 populateRoomInfo();
-syncAvatarImages();
+loadProfileAvatar().finally(() => {
+  syncAvatarImages();
+  updatePartTabs();
+});
 
 // ── 房主在選頭像期間發 heartbeat，防止房間被系統刪除 ──────
 (function startHostHeartbeat() {
@@ -351,4 +381,3 @@ syncAvatarImages();
   beat();
   setInterval(beat, 20000);
 })();
-updatePartTabs();

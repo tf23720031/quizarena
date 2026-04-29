@@ -79,12 +79,11 @@
           </div>
 
           <div class="field-block">
-            <label for="avatarUploadInput">使用自己的頭像</label>
-            <label class="upload-avatar-btn" for="avatarUploadInput">
-              <i class="fa-solid fa-image"></i> 上傳頭像
-            </label>
-            <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg" hidden>
-            <div class="upload-hint">上傳後會直接用圖片進房；也可以改用下方髮型與眼睛自訂。</div>
+            <label>使用自己的頭像</label>
+            <button type="button" class="upload-avatar-btn" id="profileAvatarToggleBtn" aria-pressed="false">
+              <i class="fa-solid fa-toggle-off"></i> 關閉，使用捏人
+            </button>
+            <div class="upload-hint">開啟後會套用個人資料中上傳的頭像；關閉後可自由調整髮型與眼睛。</div>
           </div>
 
           <div class="tab-switch">
