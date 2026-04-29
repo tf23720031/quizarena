@@ -48,6 +48,8 @@ const optionsList     = document.getElementById('optionsList');
 const fillAnswerWrap  = document.getElementById('fillAnswerWrap');
 const fillAnswerInput = document.getElementById('fillAnswerInput');
 const submitAnswerBtn = document.getElementById('submitAnswerBtn');
+const teamQuestionSelectWrap = document.getElementById('teamQuestionSelectWrap');
+const teamQuestionSelect = document.getElementById('teamQuestionSelect');
 
 /* spectator */
 const spectatorView        = document.getElementById('spectatorView');
@@ -103,6 +105,7 @@ let hostFinishedQuestion = false;
 let isTeamMode           = false;
 let myTeamId             = 0;
 let latestTeamMsgCount   = 0;
+let teamPlayMode         = 'classic';
 
 const getPlayerName = () => (playerProfile?.name || '').trim();
 
@@ -122,6 +125,12 @@ async function api(url, opts = {}) {
 }
 
 function avatarHtml(p, size = 48) {
+  const avatarUrl = p.avatar_url || p.avatarUrl || '';
+  if (avatarUrl) {
+    return `<div class="mini-avatar photo-avatar" style="width:${size}px;height:${size}px;">
+      <img src="${avatarUrl}" class="ma-photo">
+    </div>`;
+  }
   const face = p.face || 'images/face/face.png';
   const hair = p.hair || 'images/hair/hair01.png';
   const eyes = p.eyes || 'images/face/eyes01.png';
@@ -131,6 +140,11 @@ function avatarHtml(p, size = 48) {
     <img src="${eyes}" class="ma-layer ma-eyes" style="transform:translateX(-50%) translateY(${oy}px)">
     <img src="${hair}" class="ma-layer ma-hair">
   </div>`;
+}
+
+function displayPlayerName(p) {
+  const title = p.user_title || p.userTitle || '';
+  return title ? `${p.player_name}・${title}` : p.player_name;
 }
 
 /* ══════════════════════════════════════
@@ -371,7 +385,7 @@ function renderLeaderboard(items = []) {
   leaderboardList.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="leader-item ${it.player_name === me ? 'mine' : ''}">
-          <span>${i + 1}. ${it.player_name}</span>
+          <span style="display:flex;align-items:center;gap:10px;">${avatarHtml(it, 34)} <span>${i + 1}. ${displayPlayerName(it)}</span></span>
           <strong>${it.total_score}</strong>
         </div>`).join('')
     : '<div class="leader-item"><span>尚無資料</span><strong>0</strong></div>';
@@ -383,7 +397,7 @@ function renderTop5(el, items = []) {
   el.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="result-top5-item ${it.player_name === me ? 'mine' : ''}">
-          <span>${i + 1}. ${it.player_name}</span>
+          <span style="display:flex;align-items:center;gap:10px;">${avatarHtml(it, 30)} <span>${i + 1}. ${displayPlayerName(it)}</span></span>
           <strong>${it.total_score}</strong>
         </div>`).join('')
     : '<div class="result-top5-item"><span>-</span></div>';
@@ -406,7 +420,7 @@ function renderPlayerSideList(answerStatus = []) {
     }
     return `<div class="psl-item ${p.answered ? 'done' : 'wait'} ${eliminated ? 'eliminated' : ''}">
       ${avatarHtml(p, 36)}
-      <span class="psl-name">${p.player_name}</span>
+      <span class="psl-name">${displayPlayerName(p)}</span>
       <span class="psl-icon">${icon}</span>
     </div>`;
   }).join('');
@@ -422,6 +436,7 @@ function updateHostAllDoneButton(answerStatus = []) {
 function setupTeamChatUI(data) {
   isTeamMode = !!data.isTeamMode;
   myTeamId   = Number(data.myTeamId || 0);
+  teamPlayMode = String(data.teamPlayMode || 'classic');
   const canUseTeamChat = isTeamMode && !isHost && myTeamId > 0;
   if (teamChatBox) teamChatBox.style.display = canUseTeamChat ? 'block' : 'none';
   if (!canUseTeamChat && teamChatList) {
@@ -429,6 +444,25 @@ function setupTeamChatUI(data) {
     latestTeamMsgCount = 0;
   }
 }
+function setupTeamQuestionPicker(data) {
+  const isFreeAssign = isTeamMode && teamPlayMode === 'free_assign' && !isHost;
+  if (!teamQuestionSelectWrap || !teamQuestionSelect) return null;
+  teamQuestionSelectWrap.style.display = isFreeAssign ? 'block' : 'none';
+  if (!isFreeAssign) return null;
+
+  const statusList = data.teamQuestionStatus || [];
+  const questionMap = Object.fromEntries((data.allQuestions || []).map((q) => [q.question_id, q]));
+  const unanswered = statusList.find((s) => !s.submitted);
+  const candidateId = teamQuestionSelect.value || unanswered?.question_id || statusList[0]?.question_id;
+
+  teamQuestionSelect.innerHTML = statusList.map((s) => {
+    const doneTag = s.submitted ? `✅ ${s.submitter || '已作答'}` : '🕒 未作答';
+    return `<option value="${s.question_id}">第 ${Number(s.seq || 0) + 1} 題｜${s.title || ''}｜${doneTag}</option>`;
+  }).join('');
+  if (candidateId) teamQuestionSelect.value = candidateId;
+  return questionMap[teamQuestionSelect.value] || null;
+}
+
 
 function renderTeamMessages(messages = []) {
   if (!teamChatList) return;
@@ -476,13 +510,10 @@ function renderHostQuestion(q, answeredCount, totalQuestions) {
   else { hostQuestionImage.style.display = 'none'; }
 
   if (hostOptionsList) {
-    const correctIndexes = q.correct_indexes || [];
     hostOptionsList.innerHTML = (q.options || []).map((opt, idx) => {
-      const ok = correctIndexes.includes(idx);
-      return `<div class="option-btn host-option ${ok ? 'host-correct-option' : ''}">
+      return `<div class="option-btn host-option">
         <span class="option-letter">${String.fromCharCode(65 + idx)}</span>
         <span>${opt.text}</span>
-        ${ok ? '<span class="correct-tag">✓ 正解</span>' : ''}
       </div>`;
     }).join('');
   }
@@ -499,7 +530,7 @@ function renderHostAnswerStatus(items = [], eliminatedThisRound = []) {
     ? players.map(it => `
         <div class="host-answer-item ${it.is_eliminated ? 'eliminated-item' : it.answered ? 'done' : 'wait'}">
           ${avatarHtml(it, 34)}
-          <span>${it.player_name}</span>
+          <span>${displayPlayerName(it)}</span>
           <strong class="${it.is_eliminated ? 'ans-wrong' : it.answered ? (it.is_correct ? 'ans-correct' : 'ans-wrong') : 'ans-wait'}">
             ${it.is_eliminated ? '💀 已淘汰' : it.answered ? (it.is_correct ? '✓ 正確' : '✗ 錯誤') : '等待中'}
           </strong>
@@ -534,7 +565,7 @@ function renderHostBreakdown(items = []) {
 }
 
 function openHostExplanation({ correctText, explanation, top5, eliminatedNames = [] }) {
-  if (hostCorrectAnswerText) hostCorrectAnswerText.textContent = correctText || '-';
+  if (hostCorrectAnswerText) hostCorrectAnswerText.textContent = '已為投影模式隱藏';
   if (hostExplanationText)   hostExplanationText.textContent   = explanation || '本題未提供解析。';
   renderTop5(hostResultTop5List, top5 || []);
   if (hostEliminatedList && hostEliminatedNames) {
@@ -753,6 +784,24 @@ function showView(view) {
 
 function handleState(data) {
   try {
+      if (isTeamMode && teamPlayMode === 'free_assign' && !isHost) {
+    stopTimer();
+    countdownText.textContent = '-';
+    const pickedQ = setupTeamQuestionPicker(data);
+    renderPlayerSideList(data.answerStatus || []);
+    updateHostAllDoneButton(data.answerStatus || []);
+    if (pickedQ) {
+      const answeredCount = (data.teamQuestionStatus || []).filter((x) => x.submitted).length;
+      renderPlayerQuestion(pickedQ, answeredCount, data.totalQuestions || 0);
+      const myStatus = (data.teamQuestionStatus || []).find((x) => x.question_id === pickedQ.question_id);
+      const locked = !!myStatus?.submitted;
+      if (submitAnswerBtn) submitAnswerBtn.style.display = locked ? 'none' : 'inline-block';
+      if (fillAnswerInput) fillAnswerInput.disabled = locked;
+      document.querySelectorAll('#optionsList .option-btn').forEach((b) => { b.style.pointerEvents = locked ? 'none' : ''; });
+      progressText.textContent = `團隊完成 ${answeredCount} / ${data.totalQuestions || 0} 題`;
+    }
+    return;
+  }
   const q     = data.nextQuestion;
   const qId   = q?.question_id || null;
   const phase = data.phase || 'question';
@@ -792,8 +841,8 @@ function handleState(data) {
       } else {
         renderPlayerQuestion(q, data.answeredCount, data.totalQuestions);
         AudioManager?.questionStart();
-        if (phase === 'question') {
-          startTimer((parseInt(String(q.time||'').replace(/[^0-9]/g,'')) || 20), () => submitAnswer(true));
+        if (phase === 'question' && !(isTeamMode && teamPlayMode === 'free_assign')) {
+           startTimer((parseInt(String(q.time||'').replace(/[^0-9]/g,'')) || 20), () => submitAnswer(true));
         }
       }
     }
@@ -1039,6 +1088,9 @@ function leaveRoomOnUnload() {
 
 /* ── 事件 ── */
 submitAnswerBtn?.addEventListener('click', () => submitAnswer(false));
+teamQuestionSelect?.addEventListener('change', () => {
+  loadState(true);
+});
 nextQuestionBtn?.addEventListener('click', closePlayerResult);
 teamChatForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -1051,11 +1103,15 @@ teamChatForm?.addEventListener('submit', async (e) => {
         pin,
         senderName: getPlayerName(),
         message: msg,
+        username: localStorage.getItem('currentUser') || '',
         teamId: myTeamId,
         face: playerProfile.face,
         hair: playerProfile.hair,
         eyes: playerProfile.eyes,
-        eyesOffsetY: playerProfile.eyesOffsetY || 0
+        eyesOffsetY: playerProfile.eyesOffsetY || 0,
+        avatarUrl: playerProfile.avatarUrl || '',
+        county: playerProfile.county || '',
+        title: playerProfile.title || ''
       })
     });
     if (teamChatInput) teamChatInput.value = '';

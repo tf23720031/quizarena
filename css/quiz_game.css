@@ -204,6 +204,8 @@ body.dark-mode::before {
 .ma-face { z-index: 1; }
 .ma-hair { z-index: 2; }
 .ma-eyes { z-index: 3; }
+.photo-avatar { border-radius: 50%; overflow: hidden; }
+.ma-photo { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 
 /* ── main board ── */
 .main-board { padding: 24px; }

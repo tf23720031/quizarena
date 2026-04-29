@@ -25,6 +25,10 @@ async function api(url, options = {}) {
 
 // ── 頭像 HTML ─────────────────────────────────────
 function avatarHtml(item) {
+  if (item.avatar_url || item.avatarUrl) {
+    const src = item.avatar_url || item.avatarUrl;
+    return `<div class="avatar-combo avatar-photo"><img src="${src}" alt=""></div>`;
+  }
   const oy = item.eyes_offset_y || 0;
   return `<div class="avatar-combo">
     <img src="${item.face || 'images/face/face.png'}" alt="">
@@ -32,6 +36,11 @@ function avatarHtml(item) {
     <img src="${item.eyes || 'images/face/eyes01.png'}" alt=""
          style="transform:translateY(${oy}px)">
   </div>`;
+}
+
+function playerMetaLine(item) {
+  const bits = [item.user_title || item.userTitle || "", item.county || ""].filter(Boolean);
+  return bits.length ? `<div class="chat-time">${bits.join("・")}</div>` : "";
 }
 
 // ── 隊伍顏色池 ────────────────────────────────────
@@ -106,6 +115,7 @@ function renderPlayerList(players) {
           ${p.player_name}
           ${p.is_host ? '<span class="host-badge">HOST</span>' : ''}
         </div>
+        ${playerMetaLine(p)}
         <div class="chat-time">
           ${new Date((p.joined_at || Date.now() / 1000) * 1000)
             .toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
@@ -198,11 +208,15 @@ async function sendMessage(e) {
         pin,
         senderName: playerProfile.name,
         message: msg,
+        username: localStorage.getItem('currentUser') || '',
         teamId: -1,
         face: playerProfile.face,
         hair: playerProfile.hair,
         eyes: playerProfile.eyes,
-        eyesOffsetY: playerProfile.eyesOffsetY || 0
+        eyesOffsetY: playerProfile.eyesOffsetY || 0,
+        avatarUrl: playerProfile.avatarUrl || '',
+        county: playerProfile.county || '',
+        title: playerProfile.title || ''
       })
     });
     document.getElementById('chatInput').value = '';

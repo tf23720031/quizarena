@@ -9,144 +9,90 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/quizarena_fix.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
-    .tr-shell { max-width: 1200px; margin: 0 auto; padding: 36px 20px 60px; }
+    .tr-shell { max-width: 1080px; margin: 0 auto; padding: 36px 20px 60px; }
     .tr-hero {
-      background: linear-gradient(135deg, #6c8fff 0%, #a875ff 55%, #7c5ce0 100%);
-      border-radius: 28px; padding: 30px 36px; color: #fff;
-      display: flex; align-items: center; gap: 20px;
-      box-shadow: 0 16px 40px rgba(67,198,172,0.28); margin-bottom: 28px;
+      background: linear-gradient(135deg, #43c6ac 0%, #1a9e89 55%, #0e7c6a 100%);
+      border-radius: 28px;
+      padding: 36px 40px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 16px 40px rgba(67,198,172,0.28);
+      margin-bottom: 32px;
     }
-    .tr-hero-icon { font-size: 3rem; opacity: 0.9; }
-    .tr-hero h1 { font-size: clamp(1.5rem,3vw,2.2rem); font-weight: 900; margin: 0 0 6px; }
-    .tr-hero p  { margin: 0; opacity: 0.88; font-size: 0.95rem; }
+    .tr-hero-icon { font-size: 3.2rem; opacity: 0.9; }
+    .tr-hero h1 { font-size: clamp(1.6rem,3vw,2.4rem); font-weight: 900; margin: 0 0 8px; }
+    .tr-hero p  { margin: 0; opacity: 0.88; font-size: 1rem; }
 
-    .tr-toolbar {
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
-    }
-    .tr-toolbar-btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 20px; border: none; border-radius: 12px;
-      font-size: 0.9rem; font-weight: 700; cursor: pointer;
-      transition: transform 0.18s, box-shadow 0.18s;
-    }
-    .tr-toolbar-btn:hover { transform: translateY(-2px); }
-    .btn-load-all  { background: linear-gradient(135deg,#43c6ac,#1a9e89); color:#fff; box-shadow: 0 6px 16px rgba(67,198,172,0.28); }
-    .btn-export-csv{ background: linear-gradient(135deg,#a875ff,#7c5ce0); color:#fff; box-shadow: 0 6px 16px rgba(140,80,230,0.28); }
-    .btn-clear     { background: rgba(255,255,255,0.75); color:#8b5e82; border:1.5px solid rgba(255,133,193,0.3); }
-    .tr-filter {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px;
-      background: rgba(255,255,255,0.72); padding: 14px 18px; border-radius: 18px;
-      border: 1.5px solid rgba(255,133,193,0.18); box-shadow: 0 4px 14px rgba(255,120,179,0.07);
-    }
-    .tr-filter label { font-size:0.82rem; font-weight:700; color:#a56b87; white-space:nowrap; }
-    .tr-filter input, .tr-filter select {
-      padding:7px 12px; border-radius:10px; border:1.5px solid rgba(255,133,193,0.25);
-      background:rgba(255,255,255,0.9); color:#663154; font-size:0.88rem; outline:none;
-    }
-    .tr-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 16px; margin-bottom: 24px; }
+    .tr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 20px; margin-bottom: 32px; }
     .tr-stat-card {
-      background: rgba(255,255,255,0.78); border: 1.5px solid rgba(255,133,193,0.18);
-      border-radius: 20px; padding: 20px 18px;
-      display: flex; align-items: center; gap: 14px;
-      box-shadow: 0 6px 18px rgba(67,198,172,0.08); transition: transform 0.18s;
+      background: rgba(255,255,255,0.78);
+      border: 1.5px solid rgba(255,133,193,0.18);
+      border-radius: 22px;
+      padding: 24px 20px;
+      box-shadow: 0 6px 18px rgba(67,198,172,0.1);
+      display: flex; align-items: center; gap: 16px;
+      transition: transform 0.2s;
     }
-    .tr-stat-card:hover { transform: translateY(-2px); }
+    .tr-stat-card:hover { transform: translateY(-3px); }
     .tr-stat-icon {
-      width: 48px; height: 48px; border-radius: 14px;
-      display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+      width: 54px; height: 54px;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
     }
-    .si-teal   { background: rgba(67,198,172,0.18); color:#1a9e89; }
-    .si-purple { background: rgba(168,117,255,0.15); color:#a875ff; }
-    .si-pink   { background: rgba(242,90,158,0.14);  color:#f25a9e; }
-    .si-orange { background: rgba(255,154,108,0.15); color:#ff7043; }
-    .si-blue   { background: rgba(80,130,255,0.14);  color:#5082ff; }
-    .tr-stat-label { font-size:0.78rem; color:#8e6280; font-weight:600; margin-bottom:3px; }
-    .tr-stat-value { font-size:1.7rem; font-weight:900; color:#663154; line-height:1; }
+    .tr-stat-icon.teal   { background: rgba(67,198,172,0.18); color: #1a9e89; }
+    .tr-stat-icon.purple { background: rgba(168,117,255,0.15); color: #a875ff; }
+    .tr-stat-icon.pink   { background: rgba(242,90,158,0.14);  color: #f25a9e; }
+    .tr-stat-icon.orange { background: rgba(255,154,108,0.15); color: #ff7043; }
+    .tr-stat-label { font-size: 0.82rem; color: #8e6280; font-weight: 600; margin-bottom: 4px; }
+    .tr-stat-value { font-size: 1.8rem; font-weight: 900; color: #663154; line-height: 1; }
 
-    /* Charts */
-    .tr-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-    @media(max-width:768px){ .tr-charts-grid { grid-template-columns:1fr; } }
-    .tr-chart-card {
-      background: rgba(255,255,255,0.78); border: 1.5px solid rgba(255,133,193,0.18);
-      border-radius: 20px; padding: 20px;
-      box-shadow: 0 6px 18px rgba(255,120,179,0.07);
+    .tr-section { margin-bottom: 28px; }
+    .tr-section-head {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
     }
-    .tr-chart-title {
-      font-size:0.9rem; font-weight:800; color:#663154; margin-bottom:14px;
-      display:flex; align-items:center; gap:7px;
+    .tr-section-head h2 { font-size: 1.2rem; font-weight: 800; color: #663154; margin: 0; }
+    .tr-section-head .tr-badge {
+      background: rgba(67,198,172,0.15); color: #1a9e89;
+      border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700;
     }
-    .tr-chart-title i { color:#43c6ac; }
-    .tr-chart-wrap { position:relative; height:220px; }
 
-    /* Table */
-    .tr-table-card {
-      background: rgba(255,255,255,0.78); border: 1.5px solid rgba(255,133,193,0.18);
-      border-radius: 20px; padding: 20px; margin-bottom: 24px;
-      box-shadow: 0 6px 18px rgba(255,120,179,0.07);
+    .tr-card {
+      background: rgba(255,255,255,0.78);
+      border: 1.5px solid rgba(255,133,193,0.18);
+      border-radius: 22px;
+      padding: 26px 24px;
+      box-shadow: 0 6px 18px rgba(255,120,179,0.08);
     }
-    .tr-table-title {
-      font-size:0.9rem; font-weight:800; color:#663154; margin-bottom:14px;
-      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    .tr-placeholder {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 140px; gap: 12px; opacity: 0.55;
     }
-    .tr-table-title i { color:#a875ff; }
-    .tr-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
-    .tr-table th {
-      background: linear-gradient(135deg,rgba(67,198,172,0.15),rgba(168,117,255,0.1));
-      color:#663154; font-weight:800; padding:10px 12px; text-align:left;
-      border-bottom:2px solid rgba(255,133,193,0.2); white-space:nowrap;
-    }
-    .tr-table td {
-      padding:10px 12px; border-bottom:1px solid rgba(255,133,193,0.12); color:#663154;
-      vertical-align:middle;
-    }
-    .tr-table tr:hover td { background: rgba(255,200,225,0.12); }
-    .rank-badge {
-      display:inline-flex; align-items:center; justify-content:center;
-      width:26px; height:26px; border-radius:50%; font-size:0.78rem; font-weight:900;
-    }
-    .rank-1 { background:linear-gradient(135deg,#ffd700,#ffa500); color:#fff; }
-    .rank-2 { background:linear-gradient(135deg,#c0c0c0,#a0a0a0); color:#fff; }
-    .rank-3 { background:linear-gradient(135deg,#cd7f32,#a0622b); color:#fff; }
-    .rank-other { background:rgba(255,133,193,0.15); color:#a56b87; }
-    .correct-bar-wrap { display:flex; align-items:center; gap:8px; min-width:120px; }
-    .correct-bar-bg { flex:1; height:8px; background:rgba(255,133,193,0.18); border-radius:4px; overflow:hidden; }
-    .correct-bar-fill { height:100%; border-radius:4px; background:linear-gradient(to right,#43c6ac,#1a9e89); }
-    .wrong-chip {
-      display:inline-flex; align-items:center; gap:4px;
-      padding:3px 10px; border-radius:999px; font-size:0.78rem; font-weight:700;
-      background:rgba(242,90,158,0.12); color:#f25a9e;
-    }
-    .no-data-hint {
-      text-align:center; padding:50px 20px;
-      color:#c09ab0; font-size:0.92rem;
-    }
-    .no-data-hint i { font-size:2.5rem; display:block; margin-bottom:12px; opacity:0.4; }
-    .tr-back { display:inline-flex; align-items:center; gap:8px; color:#43c6ac; font-weight:700; text-decoration:none; font-size:0.92rem; margin-bottom:20px; }
-    .tr-back:hover { color:#1a9e89; }
-    .tr-section-head { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
-    .tr-section-head h2 { font-size:1.1rem; font-weight:800; color:#663154; margin:0; }
-    .tr-badge { background:rgba(67,198,172,0.15); color:#1a9e89; border-radius:999px; padding:3px 12px; font-size:0.78rem; font-weight:700; }
+    .tr-placeholder i { font-size: 2.8rem; color: #c09ab0; }
+    .tr-placeholder p { color: #a56b87; font-size: 0.92rem; margin: 0; }
 
-    /* dark mode */
-    body.dark-mode .tr-filter { background:rgba(255,255,255,0.88); }
-    body.dark-mode .tr-filter input,
-    body.dark-mode .tr-filter select { background:rgba(255,255,255,0.95); color:#1a3a6a; border-color:rgba(100,140,200,0.3); }
-    body.dark-mode .tr-filter label { color:#3a5a8a; }
+    .tr-back {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: #43c6ac; font-weight: 700; text-decoration: none;
+      font-size: 0.95rem; margin-bottom: 24px;
+    }
+    .tr-back:hover { color: #1a9e89; }
+
+    /* dark */
     body.dark-mode .tr-stat-card,
-    body.dark-mode .tr-chart-card,
-    body.dark-mode .tr-table-card { background:rgba(255,255,255,0.92) !important; border-color:rgba(100,140,200,0.3) !important; }
-    body.dark-mode .tr-stat-value { color:#1a3a6a !important; }
-    body.dark-mode .tr-stat-label { color:#3a5a8a !important; }
-    body.dark-mode .tr-section-head h2,
-    body.dark-mode .tr-chart-title,
-    body.dark-mode .tr-table-title { color:#1a3a6a !important; }
-    body.dark-mode .tr-table th { color:#1a3a6a; background:rgba(200,220,255,0.3); }
-    body.dark-mode .tr-table td { color:#223a5a; border-bottom-color:rgba(100,140,200,0.15); }
-    body.dark-mode .btn-clear { background:rgba(255,255,255,0.08); color:#d4a0c0; }
+    body.dark-mode .tr-card { background: rgba(255,255,255,0.06); border-color: rgba(255,133,193,0.12); }
+    body.dark-mode .tr-stat-value,
+    body.dark-mode .tr-section-head h2 { color: #f0b8d8; }
+    body.dark-mode .tr-stat-label { color: #c09ab0; }
 
-    @media(max-width:600px){ .tr-hero { flex-direction:column; align-items:flex-start; padding:22px 20px; } }
+    @media(max-width:600px){
+      .tr-hero { flex-direction:column; align-items:flex-start; padding:24px 22px; }
+    }
   </style>
 </head>
 <body>
@@ -163,8 +109,11 @@
         </button>
       </div>
     </nav>
-    <button class="hamburger-btn" id="hamburgerBtn"><span></span><span></span><span></span></button>
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="選單">
+      <span></span><span></span><span></span>
+    </button>
   </header>
+
   <div class="mobile-drawer-overlay" id="mobileDrawerOverlay"></div>
   <aside class="mobile-drawer" id="mobileDrawer">
     <div class="mobile-drawer-header">
@@ -175,476 +124,125 @@
       <a href="index.html" class="custom-btn btn-join w-100"><i class="fa-solid fa-house"></i> 回首頁</a>
       <div class="mobile-drawer-tools">
         <span class="lang-switcher-slot"></span>
-        <button class="custom-btn dark-mode-btn" id="mobileDarkModeBtn"><i class="fa-solid fa-moon" id="mobileDarkModeIcon"></i></button>
+        <button class="custom-btn dark-mode-btn" id="mobileDarkModeBtn">
+          <i class="fa-solid fa-moon" id="mobileDarkModeIcon"></i>
+        </button>
       </div>
     </div>
   </aside>
 
   <div class="tr-shell">
+    <a href="index.html" class="tr-back"><i class="fa-solid fa-arrow-left"></i> 回首頁</a>
+
     <div class="tr-hero">
       <div class="tr-hero-icon"><i class="fa-solid fa-chart-column"></i></div>
       <div>
         <h1>老師看報表</h1>
-        <p>查看所有歷史房間紀錄、學生表現統計，並可匯出為 CSV（含圖表）。</p>
+        <p>一眼掌握全班答題率、學生排行與錯誤熱點，讓教學決策有數據支撐。</p>
       </div>
-    </div>
-
-    <!-- Toolbar -->
-    <div class="tr-toolbar">
-      <button class="tr-toolbar-btn btn-load-all" id="trLoadBtn">
-        <i class="fa-solid fa-rotate"></i> 載入所有房間紀錄
-      </button>
-      <button class="tr-toolbar-btn btn-export-csv" id="trExportBtn">
-        <i class="fa-solid fa-file-csv"></i> 匯出 CSV + 圖表
-      </button>
-      <button class="tr-toolbar-btn btn-clear" id="trClearBtn">
-        <i class="fa-solid fa-broom"></i> 清除篩選
-      </button>
-    </div>
-
-    <!-- Filters -->
-    <div class="tr-filter">
-      <label><i class="fa-solid fa-magnifying-glass"></i> 搜尋玩家</label>
-      <input type="text" id="trSearchPlayer" placeholder="輸入玩家名稱...">
-      <label><i class="fa-solid fa-calendar"></i> 起始日期</label>
-      <input type="date" id="trDateFrom">
-      <label>—</label>
-      <input type="date" id="trDateTo">
-      <label><i class="fa-solid fa-gamepad"></i> 賽制</label>
-      <select id="trModeFilter">
-        <option value="">全部</option>
-        <option value="individual">個人賽</option>
-        <option value="team">團體賽</option>
-      </select>
     </div>
 
     <!-- 概況統計 -->
-    <div class="tr-stat-grid">
-      <div class="tr-stat-card"><div class="tr-stat-icon si-teal"><i class="fa-solid fa-door-open"></i></div><div><div class="tr-stat-label">總房間數</div><div class="tr-stat-value" id="trStatRooms">—</div></div></div>
-      <div class="tr-stat-card"><div class="tr-stat-icon si-purple"><i class="fa-solid fa-users"></i></div><div><div class="tr-stat-label">不重複玩家</div><div class="tr-stat-value" id="trStatPlayers">—</div></div></div>
-      <div class="tr-stat-card"><div class="tr-stat-icon si-pink"><i class="fa-solid fa-percent"></i></div><div><div class="tr-stat-label">平均答對率</div><div class="tr-stat-value" id="trStatAccuracy">—</div></div></div>
-      <div class="tr-stat-card"><div class="tr-stat-icon si-orange"><i class="fa-solid fa-fire"></i></div><div><div class="tr-stat-label">最多人答錯題</div><div class="tr-stat-value" id="trStatTopWrong" style="font-size:0.95rem;">—</div></div></div>
-      <div class="tr-stat-card"><div class="tr-stat-icon si-blue"><i class="fa-solid fa-trophy"></i></div><div><div class="tr-stat-label">最高分玩家</div><div class="tr-stat-value" id="trStatTopPlayer" style="font-size:0.95rem;">—</div></div></div>
+    <div class="tr-grid">
+      <div class="tr-stat-card">
+        <div class="tr-stat-icon teal"><i class="fa-solid fa-users"></i></div>
+        <div>
+          <div class="tr-stat-label">總參與學生</div>
+          <div class="tr-stat-value" id="trTotalStudents">—</div>
+        </div>
+      </div>
+      <div class="tr-stat-card">
+        <div class="tr-stat-icon purple"><i class="fa-solid fa-percent"></i></div>
+        <div>
+          <div class="tr-stat-label">平均答對率</div>
+          <div class="tr-stat-value" id="trAvgCorrect">—</div>
+        </div>
+      </div>
+      <div class="tr-stat-card">
+        <div class="tr-stat-icon pink"><i class="fa-solid fa-gamepad"></i></div>
+        <div>
+          <div class="tr-stat-label">總場次</div>
+          <div class="tr-stat-value" id="trTotalGames">—</div>
+        </div>
+      </div>
+      <div class="tr-stat-card">
+        <div class="tr-stat-icon orange"><i class="fa-solid fa-fire"></i></div>
+        <div>
+          <div class="tr-stat-label">最多錯誤題型</div>
+          <div class="tr-stat-value" id="trTopWrong">—</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Charts row -->
-    <div class="tr-charts-grid">
-      <div class="tr-chart-card">
-        <div class="tr-chart-title"><i class="fa-solid fa-chart-bar"></i> 各房間答對率</div>
-        <div class="tr-chart-wrap"><canvas id="trChartAccuracy"></canvas></div>
+    <!-- 班級答對率 -->
+    <div class="tr-section">
+      <div class="tr-section-head">
+        <h2><i class="fa-solid fa-chart-pie"></i> 班級答對率</h2>
+        <span class="tr-badge">即時更新</span>
       </div>
-      <div class="tr-chart-card">
-        <div class="tr-chart-title"><i class="fa-solid fa-chart-pie"></i> 答題分布（對 vs 錯）</div>
-        <div class="tr-chart-wrap"><canvas id="trChartDist"></canvas></div>
-      </div>
-      <div class="tr-chart-card">
-        <div class="tr-chart-title"><i class="fa-solid fa-chart-line"></i> 每日遊戲場次趨勢</div>
-        <div class="tr-chart-wrap"><canvas id="trChartTrend"></canvas></div>
-      </div>
-      <div class="tr-chart-card">
-        <div class="tr-chart-title"><i class="fa-solid fa-ranking-star"></i> 玩家勝場排行（Top 10）</div>
-        <div class="tr-chart-wrap"><canvas id="trChartRanking"></canvas></div>
+      <div class="tr-card">
+        <div class="tr-placeholder">
+          <i class="fa-solid fa-chart-area"></i>
+          <p>串接場次資料後，班級答對率圖表會顯示在此。</p>
+        </div>
       </div>
     </div>
 
     <!-- 學生排行榜 -->
-    <div class="tr-table-card">
-      <div class="tr-table-title">
-        <span><i class="fa-solid fa-trophy"></i> 學生排行榜</span>
-        <span id="trPlayerCount" class="tr-badge">0 位玩家</span>
+    <div class="tr-section">
+      <div class="tr-section-head">
+        <h2><i class="fa-solid fa-trophy"></i> 學生排行榜</h2>
+        <span class="tr-badge">依總分排序</span>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="tr-table" id="trPlayerTable">
-          <thead><tr>
-            <th>名次</th><th>玩家</th><th>勝場</th><th>答對率</th><th>答對題數</th><th>答錯題數</th><th>參加場次</th>
-          </tr></thead>
-          <tbody id="trPlayerBody">
-            <tr><td colspan="7"><div class="no-data-hint"><i class="fa-solid fa-database"></i>點「載入所有房間紀錄」開始</div></td></tr>
-          </tbody>
-        </table>
+      <div class="tr-card">
+        <div class="tr-placeholder">
+          <i class="fa-solid fa-list-ol"></i>
+          <p>學生完成對戰後，排名與積分會自動同步到這裡。</p>
+        </div>
       </div>
     </div>
 
-    <!-- 房間明細 -->
-    <div class="tr-table-card">
-      <div class="tr-table-title">
-        <span><i class="fa-solid fa-list"></i> 歷史房間明細</span>
-        <span id="trRoomCount" class="tr-badge">0 間</span>
+    <!-- 錯誤熱點 -->
+    <div class="tr-section">
+      <div class="tr-section-head">
+        <h2><i class="fa-solid fa-fire-flame-curved"></i> 答錯熱點題目</h2>
+        <span class="tr-badge">重點複習</span>
       </div>
-      <div style="overflow-x:auto;">
-        <table class="tr-table" id="trRoomTable">
-          <thead><tr>
-            <th>房間 PIN</th><th>題庫名稱</th><th>賽制</th><th>玩家數</th><th>答對率</th><th>最高分</th><th>建立時間</th>
-          </tr></thead>
-          <tbody id="trRoomBody">
-            <tr><td colspan="7"><div class="no-data-hint"><i class="fa-solid fa-door-open"></i>尚未載入房間紀錄</div></td></tr>
-          </tbody>
-        </table>
+      <div class="tr-card">
+        <div class="tr-placeholder">
+          <i class="fa-solid fa-magnifying-glass-chart"></i>
+          <p>錯誤率最高的題目清單，幫助老師快速找出需要加強講解的知識點。</p>
+        </div>
       </div>
     </div>
-
-    <!-- 錯題熱點 -->
-    <div class="tr-table-card">
-      <div class="tr-table-title">
-        <span><i class="fa-solid fa-fire-flame-curved"></i> 答錯熱點題目</span>
-        <span id="trWrongCount" class="tr-badge">0 題</span>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="tr-table" id="trWrongTable">
-          <thead><tr>
-            <th>#</th><th>題目</th><th>題庫名稱</th><th>答錯次數</th><th>答錯率</th><th>最常選的錯誤答案</th>
-          </tr></thead>
-          <tbody id="trWrongBody">
-            <tr><td colspan="6"><div class="no-data-hint"><i class="fa-solid fa-magnifying-glass-chart"></i>載入紀錄後自動分析</div></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div><!-- tr-shell -->
+  </div>
 
   <div class="toast-qa" id="toast"></div>
   <script src="js/i18n.js"></script>
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/quizarena_fix.js"></script>
   <script>
-    /* ── Dark mode ── */
     function _applyDark(on) {
       document.body.classList.toggle('dark-mode', on);
-      ['darkModeIcon','mobileDarkModeIcon'].forEach(function(id){ var e=document.getElementById(id); if(e) e.className=on?'fa-solid fa-sun':'fa-solid fa-moon'; });
+      ['darkModeIcon','mobileDarkModeIcon'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el) el.className=on?'fa-solid fa-sun':'fa-solid fa-moon';
+      });
       localStorage.setItem('quizDarkMode', on?'1':'0');
-      if (_chartAccuracy) _updateChartColors();
     }
-    ['darkModeBtn','mobileDarkModeBtn'].forEach(function(id){ var b=document.getElementById(id); if(b) b.addEventListener('click',function(){ _applyDark(!document.body.classList.contains('dark-mode')); }); });
+    ['darkModeBtn','mobileDarkModeBtn'].forEach(function(id){
+      var b=document.getElementById(id);
+      if(b) b.addEventListener('click',function(){ _applyDark(!document.body.classList.contains('dark-mode')); });
+    });
     _applyDark(localStorage.getItem('quizDarkMode')==='1');
-    var _drawer=document.getElementById('mobileDrawer'), _overlay=document.getElementById('mobileDrawerOverlay');
+
+    var _drawer=document.getElementById('mobileDrawer');
+    var _overlay=document.getElementById('mobileDrawerOverlay');
     function _openDrawer(){ _drawer&&_drawer.classList.add('open'); _overlay&&_overlay.classList.add('show'); document.body.style.overflow='hidden'; }
     function _closeDrawer(){ _drawer&&_drawer.classList.remove('open'); _overlay&&_overlay.classList.remove('show'); document.body.style.overflow=''; }
     document.getElementById('hamburgerBtn')?.addEventListener('click',_openDrawer);
     document.getElementById('mobileDrawerClose')?.addEventListener('click',_closeDrawer);
     _overlay?.addEventListener('click',_closeDrawer);
-
-    /* ── State ── */
-    var _allRooms = [];
-    var _allPlayers = {};
-    var _chartAccuracy=null,_chartDist=null,_chartTrend=null,_chartRanking=null;
-
-    function _toast(msg) {
-      var t=document.getElementById('toast'); if(!t) return;
-      t.textContent=msg; t.classList.add('show');
-      setTimeout(function(){ t.classList.remove('show'); }, 2400);
-    }
-
-    /* ── Load all rooms ── */
-    document.getElementById('trLoadBtn').addEventListener('click', function() {
-      var user = localStorage.getItem('currentUser') || '';
-      _toast('載入中...');
-      fetch('/teacher_report' + (user ? '?username=' + encodeURIComponent(user) : ''))
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-          if (data.success === false) { _toast(data.message || '載入失敗'); return; }
-          _allRooms = data.rooms || [];
-          _allPlayers = data.players || {};
-          _renderAll();
-          _toast('載入完成！共 ' + _allRooms.length + ' 間房間');
-        })
-        .catch(function(e){ _toast('載入失敗：' + e.message); });
-    });
-
-    document.getElementById('trClearBtn').addEventListener('click', function() {
-      document.getElementById('trSearchPlayer').value = '';
-      document.getElementById('trDateFrom').value = '';
-      document.getElementById('trDateTo').value = '';
-      document.getElementById('trModeFilter').value = '';
-      _renderAll();
-    });
-
-    ['trSearchPlayer','trDateFrom','trDateTo','trModeFilter'].forEach(function(id){
-      document.getElementById(id)?.addEventListener('input', _renderAll);
-      document.getElementById(id)?.addEventListener('change', _renderAll);
-    });
-
-    function _getFiltered() {
-      var search = (document.getElementById('trSearchPlayer').value||'').toLowerCase();
-      var dateFrom = document.getElementById('trDateFrom').value;
-      var dateTo   = document.getElementById('trDateTo').value;
-      var mode     = document.getElementById('trModeFilter').value;
-      return _allRooms.filter(function(r){
-        if (mode && r.game_mode !== mode) return false;
-        if (dateFrom && r.created_at < dateFrom) return false;
-        if (dateTo   && r.created_at > dateTo+'T23:59:59') return false;
-        if (search) {
-          var players = (r.players||[]).map(function(p){ return (p.username||'').toLowerCase(); });
-          if (!players.some(function(n){ return n.includes(search); })) return false;
-        }
-        return true;
-      });
-    }
-
-    function _renderAll() {
-      var rooms = _getFiltered();
-      _renderStats(rooms);
-      _renderCharts(rooms);
-      _renderPlayerTable(rooms);
-      _renderRoomTable(rooms);
-      _renderWrongTable(rooms);
-    }
-
-    function _renderStats(rooms) {
-      var totalRooms = rooms.length;
-      var playerSet = new Set();
-      var totalCorrect=0, totalAnswers=0;
-      var wrongMap = {};
-      var playerWins = {};
-
-      rooms.forEach(function(r){
-        (r.players||[]).forEach(function(p){
-          playerSet.add(p.username||p.name||'');
-          totalCorrect += Number(p.correct||0);
-          totalAnswers += Number(p.correct||0) + Number(p.wrong||0);
-          if (p.wins) { playerWins[p.username||p.name||''] = (playerWins[p.username||p.name||'']||0)+1; }
-        });
-        (r.wrong_questions||[]).forEach(function(wq){
-          var key = (wq.question||wq.text||'').slice(0,40);
-          wrongMap[key] = (wrongMap[key]||0) + Number(wq.count||1);
-        });
-      });
-
-      var accuracy = totalAnswers ? Math.round(totalCorrect/totalAnswers*100) : 0;
-      var topWrong = Object.keys(wrongMap).sort(function(a,b){ return wrongMap[b]-wrongMap[a]; })[0]||'—';
-      var topPlayer = Object.keys(playerWins).sort(function(a,b){ return playerWins[b]-playerWins[a]; })[0]||'—';
-
-      document.getElementById('trStatRooms').textContent    = totalRooms;
-      document.getElementById('trStatPlayers').textContent  = playerSet.size;
-      document.getElementById('trStatAccuracy').textContent = accuracy + '%';
-      document.getElementById('trStatTopWrong').textContent = topWrong || '—';
-      document.getElementById('trStatTopPlayer').textContent= topPlayer || '—';
-    }
-
-    function _isDark() { return document.body.classList.contains('dark-mode'); }
-    function _chartColor(alpha) { return _isDark() ? 'rgba(240,184,216,'+alpha+')' : 'rgba(102,49,84,'+alpha+')'; }
-    function _gridColor() { return _isDark() ? 'rgba(255,133,193,0.12)' : 'rgba(255,133,193,0.2)'; }
-
-    function _renderCharts(rooms) {
-      /* 1. 各房間答對率 */
-      var accLabels=[], accData=[];
-      rooms.slice(-15).forEach(function(r){
-        var tc=0,ta=0;
-        (r.players||[]).forEach(function(p){ tc+=Number(p.correct||0); ta+=Number(p.correct||0)+Number(p.wrong||0); });
-        accLabels.push(r.pin || r.room_pin || '?');
-        accData.push(ta ? Math.round(tc/ta*100) : 0);
-      });
-      _renderBar('trChartAccuracy', accLabels, accData, '答對率 %',
-        _isDark() ? 'rgba(67,198,172,0.85)' : 'rgba(67,198,172,0.75)');
-
-      /* 2. 答題分布 */
-      var totalC=0,totalW=0;
-      rooms.forEach(function(r){ (r.players||[]).forEach(function(p){ totalC+=Number(p.correct||0); totalW+=Number(p.wrong||0); }); });
-      _renderDoughnut('trChartDist',
-        ['答對','答錯'], [totalC,totalW],
-        ['rgba(67,198,172,0.85)','rgba(242,90,158,0.8)']);
-
-      /* 3. 每日場次趨勢 */
-      var dateMap = {};
-      rooms.forEach(function(r){
-        var d = (r.created_at||'').slice(0,10) || '未知';
-        dateMap[d] = (dateMap[d]||0)+1;
-      });
-      var dates = Object.keys(dateMap).sort();
-      _renderLine('trChartTrend', dates, dates.map(function(d){ return dateMap[d]; }), '場次',
-        'rgba(168,117,255,0.85)');
-
-      /* 4. 玩家勝場 Top10 */
-      var winsMap = {};
-      rooms.forEach(function(r){
-        (r.players||[]).forEach(function(p){
-          var name = p.displayName||p.username||p.name||'?';
-          if (p.wins || p.rank===1) winsMap[name]=(winsMap[name]||0)+1;
-        });
-      });
-      var winsArr = Object.keys(winsMap).map(function(n){ return{name:n,wins:winsMap[n]}; })
-        .sort(function(a,b){ return b.wins-a.wins; }).slice(0,10);
-      _renderBar('trChartRanking', winsArr.map(function(x){ return x.name; }),
-        winsArr.map(function(x){ return x.wins; }), '勝場',
-        _isDark() ? 'rgba(168,117,255,0.85)' : 'rgba(168,117,255,0.75)');
-    }
-
-    function _chartDefaults(isDark) {
-      return {
-        color: isDark ? 'rgba(240,184,216,0.8)' : 'rgba(102,49,84,0.8)',
-        grid: isDark ? 'rgba(255,133,193,0.12)' : 'rgba(255,133,193,0.2)'
-      };
-    }
-
-    function _renderBar(canvasId, labels, data, label, color) {
-      var ctx = document.getElementById(canvasId); if(!ctx) return;
-      var existing = Chart.getChart(ctx); if(existing) existing.destroy();
-      var c = _chartDefaults(_isDark());
-      new Chart(ctx, { type:'bar', data:{ labels:labels, datasets:[{ label:label, data:data, backgroundColor:color, borderRadius:6 }]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-          scales:{ x:{ ticks:{color:c.color,font:{size:11}}, grid:{color:c.grid} }, y:{ ticks:{color:c.color,font:{size:11}}, grid:{color:c.grid} } } }});
-    }
-    function _renderDoughnut(canvasId, labels, data, colors) {
-      var ctx = document.getElementById(canvasId); if(!ctx) return;
-      var existing = Chart.getChart(ctx); if(existing) existing.destroy();
-      new Chart(ctx, { type:'doughnut', data:{ labels:labels, datasets:[{ data:data, backgroundColor:colors, borderWidth:2, borderColor:'rgba(255,255,255,0.3)' }]},
-        options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
-          plugins:{ legend:{ position:'bottom', labels:{color:_isDark()?'rgba(240,184,216,0.8)':'rgba(102,49,84,0.8)',font:{size:12}} } } }});
-    }
-    function _renderLine(canvasId, labels, data, label, color) {
-      var ctx = document.getElementById(canvasId); if(!ctx) return;
-      var existing = Chart.getChart(ctx); if(existing) existing.destroy();
-      var c = _chartDefaults(_isDark());
-      new Chart(ctx, { type:'line', data:{ labels:labels, datasets:[{ label:label, data:data,
-        borderColor:color, backgroundColor:color.replace('0.85','0.15'), fill:true, tension:0.4, pointRadius:4 }]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
-          scales:{ x:{ticks:{color:c.color,font:{size:10}},grid:{color:c.grid}}, y:{ticks:{color:c.color,font:{size:11}},grid:{color:c.grid}} } }});
-    }
-    function _updateChartColors() { if(_allRooms.length) _renderCharts(_getFiltered()); }
-
-    function _renderPlayerTable(rooms) {
-      var statsMap = {};
-      rooms.forEach(function(r){
-        (r.players||[]).forEach(function(p){
-          var name = p.displayName||p.username||p.name||'?';
-          if (!statsMap[name]) statsMap[name]={name:name,wins:0,correct:0,wrong:0,games:0};
-          statsMap[name].correct += Number(p.correct||0);
-          statsMap[name].wrong   += Number(p.wrong||0);
-          statsMap[name].games++;
-          if (p.wins||p.rank===1) statsMap[name].wins++;
-        });
-      });
-      var arr = Object.values(statsMap).sort(function(a,b){ return b.wins-a.wins||b.correct-a.correct; });
-      document.getElementById('trPlayerCount').textContent = arr.length + ' 位玩家';
-      var tbody = document.getElementById('trPlayerBody');
-      if (!arr.length) { tbody.innerHTML='<tr><td colspan="7"><div class="no-data-hint"><i class="fa-solid fa-users"></i>沒有玩家資料</div></td></tr>'; return; }
-      tbody.innerHTML = arr.map(function(p,i){
-        var total = p.correct+p.wrong;
-        var acc = total ? Math.round(p.correct/total*100) : 0;
-        var rankClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
-        return '<tr><td><span class="rank-badge '+rankClass+'">'+(i+1)+'</span></td>'
-          +'<td><strong>'+_esc(p.name)+'</strong></td>'
-          +'<td>'+p.wins+'</td>'
-          +'<td><div class="correct-bar-wrap"><div class="correct-bar-bg"><div class="correct-bar-fill" style="width:'+acc+'%"></div></div><span>'+acc+'%</span></div></td>'
-          +'<td>'+p.correct+'</td>'
-          +'<td><span class="wrong-chip"><i class="fa-solid fa-xmark"></i>'+p.wrong+'</span></td>'
-          +'<td>'+p.games+'</td></tr>';
-      }).join('');
-    }
-
-    function _renderRoomTable(rooms) {
-      document.getElementById('trRoomCount').textContent = rooms.length + ' 間';
-      var tbody = document.getElementById('trRoomBody');
-      if (!rooms.length) { tbody.innerHTML='<tr><td colspan="7"><div class="no-data-hint"><i class="fa-solid fa-door-open"></i>沒有房間資料</div></td></tr>'; return; }
-      tbody.innerHTML = rooms.slice().reverse().map(function(r){
-        var tc=0,ta=0,maxScore=0;
-        (r.players||[]).forEach(function(p){ tc+=Number(p.correct||0); ta+=tc+Number(p.wrong||0); if(Number(p.score||0)>maxScore) maxScore=Number(p.score||0); });
-        var acc = ta ? Math.round(tc/ta*100) : 0;
-        var modeLabel = r.game_mode==='team'?'<span class="badge-qa" style="background:rgba(67,198,172,0.15);color:#1a9e89">團體賽</span>':'<span class="badge-qa" style="background:rgba(168,117,255,0.13);color:#a875ff">個人賽</span>';
-        return '<tr><td><code>'+_esc(r.pin||r.room_pin||'—')+'</code></td>'
-          +'<td>'+_esc(r.quiz_bank_title||r.title||'—')+'</td>'
-          +'<td>'+modeLabel+'</td>'
-          +'<td>'+(r.players||[]).length+'</td>'
-          +'<td><div class="correct-bar-wrap"><div class="correct-bar-bg"><div class="correct-bar-fill" style="width:'+acc+'%"></div></div><span>'+acc+'%</span></div></td>'
-          +'<td>'+maxScore+'</td>'
-          +'<td>'+_esc((r.created_at||'—').slice(0,16).replace('T',' '))+'</td></tr>';
-      }).join('');
-    }
-
-    function _renderWrongTable(rooms) {
-      var wrongMap = {};
-      var answerMap = {};
-      var totalAnswersMap = {};
-      var wrongBankMap = {};
-      rooms.forEach(function(r){
-        var bankName = r.quiz_bank_title || r.bankTitle || '';
-        (r.wrong_questions||[]).forEach(function(wq){
-          // Use actual question text (content), fall back to title if needed
-          var key = (wq.content || wq.question || wq.text || '').slice(0,80);
-          if (!key) return;
-          wrongMap[key] = (wrongMap[key]||0)+Number(wq.count||1);
-          if (wq.most_wrong_answer) answerMap[key] = wq.most_wrong_answer;
-          if (wq.total_attempts) totalAnswersMap[key] = (totalAnswersMap[key]||0)+wq.total_attempts;
-          if (!wrongBankMap[key]) wrongBankMap[key] = bankName;
-        });
-      });
-      var arr = Object.keys(wrongMap).map(function(k){
-        return {q:k, count:wrongMap[k], ans:answerMap[k]||'—', total:totalAnswersMap[k]||wrongMap[k], bank:wrongBankMap[k]||''};
-      }).sort(function(a,b){ return b.count-a.count; });
-      document.getElementById('trWrongCount').textContent = arr.length + ' 題';
-      var tbody = document.getElementById('trWrongBody');
-      if (!arr.length) { tbody.innerHTML='<tr><td colspan="6"><div class="no-data-hint"><i class="fa-solid fa-magnifying-glass-chart"></i>沒有錯題資料</div></td></tr>'; return; }
-      tbody.innerHTML = arr.map(function(item,i){
-        var rate = item.total ? Math.round(item.count/item.total*100) : 100;
-        return '<tr><td>'+(i+1)+'</td>'
-          +'<td><strong>'+_esc(item.q)+'</strong></td>'
-          +'<td><span class="badge-qa" style="background:rgba(67,198,172,0.12);color:#1a9e89;font-size:0.78rem;padding:3px 9px;border-radius:999px">'+_esc(item.bank||'—')+'</span></td>'
-          +'<td><strong>'+item.count+'</strong></td>'
-          +'<td><div class="correct-bar-wrap"><div class="correct-bar-bg"><div class="correct-bar-fill" style="width:'+rate+'%;background:linear-gradient(to right,#f25a9e,#ff8db8)"></div></div><span>'+rate+'%</span></div></td>'
-          +'<td><span class="wrong-chip">'+_esc(item.ans)+'</span></td></tr>';
-      }).join('');
-    }
-
-    /* ── CSV Export ── */
-    document.getElementById('trExportBtn').addEventListener('click', function() {
-      var rooms = _getFiltered();
-      if (!rooms.length) { _toast('請先載入資料'); return; }
-
-      /* Build player stats */
-      var statsMap = {};
-      rooms.forEach(function(r){
-        (r.players||[]).forEach(function(p){
-          var name = p.displayName||p.username||p.name||'?';
-          if (!statsMap[name]) statsMap[name]={name:name,wins:0,correct:0,wrong:0,games:0};
-          statsMap[name].correct += Number(p.correct||0);
-          statsMap[name].wrong   += Number(p.wrong||0);
-          statsMap[name].games++;
-          if (p.wins||p.rank===1) statsMap[name].wins++;
-        });
-      });
-      var players = Object.values(statsMap).sort(function(a,b){ return b.wins-a.wins; });
-
-      /* CSV 1: rooms */
-      var csvRooms = '房間PIN,題庫名稱,賽制,玩家數,答對率(%),最高分,建立時間\n';
-      rooms.forEach(function(r){
-        var tc=0,ta=0,maxScore=0;
-        (r.players||[]).forEach(function(p){ tc+=Number(p.correct||0); ta+=tc+Number(p.wrong||0); if(Number(p.score||0)>maxScore) maxScore=Number(p.score||0); });
-        var acc = ta?Math.round(tc/ta*100):0;
-        csvRooms += [r.pin||r.room_pin||'',r.quiz_bank_title||r.title||'',(r.game_mode==='team'?'團體賽':'個人賽'),(r.players||[]).length,acc,maxScore,(r.created_at||'').slice(0,16)].map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',') + '\n';
-      });
-
-      /* CSV 2: players */
-      var csvPlayers = '名次,玩家,勝場,答對率(%),答對題數,答錯題數,參加場次\n';
-      players.forEach(function(p,i){
-        var total=p.correct+p.wrong; var acc=total?Math.round(p.correct/total*100):0;
-        csvPlayers += [i+1,p.name,p.wins,acc,p.correct,p.wrong,p.games].map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',') + '\n';
-      });
-
-      /* CSV 3: wrong questions */
-      var wrongMap={},answerMap={},totalMap={},wrongBankMap={};
-      rooms.forEach(function(r){ (r.wrong_questions||[]).forEach(function(wq){ var k=(wq.question||wq.text||'').slice(0,60); wrongMap[k]=(wrongMap[k]||0)+Number(wq.count||1); if(wq.most_wrong_answer) answerMap[k]=wq.most_wrong_answer; if(wq.total_attempts) totalMap[k]=(totalMap[k]||0)+wq.total_attempts; if(!wrongBankMap[k]) wrongBankMap[k]=r.quiz_bank_title||''; }); });
-      var wrongArr=Object.keys(wrongMap).map(function(k){ return{q:k,count:wrongMap[k],ans:answerMap[k]||'',total:totalMap[k]||wrongMap[k]}; }).sort(function(a,b){ return b.count-a.count; });
-      var csvWrong='排名,題目,答錯次數,答錯率(%),最常選錯誤答案\n';
-      wrongArr.forEach(function(item,i){ var rate=item.total?Math.round(item.count/item.total*100):100; csvWrong+=[i+1,item.q,item.count,rate,item.ans].map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',')+'\n'; });
-
-      /* Combine into one file with BOM for Excel */
-      var bom = '\uFEFF';
-      var combined = bom
-        + '=== 房間紀錄 ===\n' + csvRooms
-        + '\n=== 學生排行 ===\n' + csvPlayers
-        + '\n=== 錯題熱點 ===\n' + csvWrong;
-
-      var blob = new Blob([combined], {type:'text/csv;charset=utf-8;'});
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'QuizArena_報表_' + new Date().toISOString().slice(0,10) + '.csv';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      _toast('CSV 已匯出！（含房間、學生、錯題三個分頁）');
-    });
-
-    function _esc(s){ return String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   </script>
 </body>
 </html>

@@ -12,7 +12,7 @@
   <style>
     .wb-shell { max-width: 960px; margin: 0 auto; padding: 36px 20px 60px; }
     .wb-hero {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a875ff 100%);
+      background: linear-gradient(135deg, #ff9a6c 0%, #ff6b6b 50%, #f25a9e 100%);
       border-radius: 28px;
       padding: 36px 40px;
       color: #fff;
@@ -66,12 +66,10 @@
     .wb-back:hover { color: #8e5df0; }
 
     /* dark mode */
-    body.dark-mode .wb-card { background: rgba(255,255,255,0.92) !important; border-color: rgba(100,140,200,0.25) !important; }
-    body.dark-mode .wb-card h3 { color: #1a3a6a !important; }
-    body.dark-mode .wb-card p  { color: #2a4a7a !important; }
-    body.dark-mode .wb-empty { background: rgba(255,255,255,0.85) !important; border-color: rgba(100,140,200,0.2) !important; }
-    body.dark-mode .wb-empty h3 { color: #1a3a6a !important; }
-    body.dark-mode .wb-empty p  { color: #2a4a7a !important; }
+    body.dark-mode .wb-card { background: rgba(255,255,255,0.06); border-color: rgba(255,133,193,0.14); }
+    body.dark-mode .wb-card h3 { color: #f0b8d8; }
+    body.dark-mode .wb-card p  { color: #c09ab0; }
+    body.dark-mode .wb-empty { background: rgba(255,255,255,0.04); }
 
     @media(max-width:600px){
       .wb-hero { flex-direction:column; align-items:flex-start; padding:24px 22px; }
@@ -118,6 +116,8 @@
   </aside>
 
   <div class="wb-shell">
+    <a href="index.html" class="wb-back"><i class="fa-solid fa-arrow-left"></i> 回首頁</a>
+
     <div class="wb-hero">
       <div class="wb-hero-icon"><i class="fa-solid fa-book-bookmark"></i></div>
       <div>

@@ -20,17 +20,10 @@
         <img src="images/LOGO.png" class="logo-img" alt="QuizArena Logo">
       </div>
       <nav class="top-actions" id="topActions">
-        <!-- 登入狀態卡：icon 改為頭像 -->
         <div class="login-status-card" id="loginStatusCard">
-          <div class="login-status-icon" id="navAvatarWrap">
-            <div class="nav-avatar-stage" id="navAvatarStage">
-              <img id="navFaceImg"  class="avatar-layer face-layer" src="images/face/face.png" alt="">
-              <img id="navEyeImg"   class="avatar-layer eye-layer"  src="images/face/eyes01.png" alt="">
-              <img id="navHairImg"  class="avatar-layer hair-layer" src="images/hair/hair01.png" alt="">
-              <img id="navPhotoImg" class="nav-photo-preview" src="" alt="" style="display:none;">
-            </div>
-          </div>
+          <div class="login-status-icon"><i class="fa-solid fa-circle-user"></i></div>
           <div class="login-status-text">
+            <span class="status-label">目前登入帳號</span>
             <strong id="loginStatus" class="status-name">尚未登入</strong>
             <span id="loginSubStatus" class="status-subline">登入後可編輯個人檔案</span>
           </div>
@@ -49,6 +42,7 @@
           </button>
         </div>
       </nav>
+      <!-- Hamburger for mobile -->
       <button class="hamburger-btn" id="hamburgerBtn" aria-label="選單">
         <span></span><span></span><span></span>
       </button>
@@ -59,19 +53,15 @@
     <aside class="mobile-drawer" id="mobileDrawer">
       <div class="mobile-drawer-header">
         <img src="images/LOGO.png" class="mobile-drawer-logo" alt="QuizArena Logo">
-        <button class="mobile-drawer-close" id="mobileDrawerClose"><i class="fa-solid fa-xmark"></i></button>
+        <button class="mobile-drawer-close" id="mobileDrawerClose" aria-label="關閉">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
       <div class="mobile-drawer-body">
         <div class="login-status-card mobile-status-card">
-          <div class="login-status-icon" id="mobileNavAvatarWrap">
-            <div class="nav-avatar-stage" id="mobileNavAvatarStage">
-              <img id="mobileNavFaceImg"  class="avatar-layer face-layer" src="images/face/face.png" alt="">
-              <img id="mobileNavEyeImg"   class="avatar-layer eye-layer"  src="images/face/eyes01.png" alt="">
-              <img id="mobileNavHairImg"  class="avatar-layer hair-layer" src="images/hair/hair01.png" alt="">
-              <img id="mobileNavPhotoImg" class="nav-photo-preview" src="" alt="" style="display:none;">
-            </div>
-          </div>
+          <div class="login-status-icon"><i class="fa-solid fa-circle-user"></i></div>
           <div class="login-status-text">
+            <span class="status-label">目前登入帳號</span>
             <strong id="mobileLoginStatus" class="status-name">尚未登入</strong>
             <span id="mobileLoginSubStatus" class="status-subline">登入後可編輯個人檔案</span>
           </div>
@@ -171,28 +161,6 @@
     </section>
 
     <footer class="footer-text text-center">© 2026 QuizArena - Cute but dangerous for classmates</footer>
-
-    <!-- ===== RIGHT SIDE PANEL: 帳號狀態 + 登入/登出 + 音效 ===== -->
-    <div class="side-panel" id="sidePanel">
-      <!-- 帳號狀態（永遠顯示） -->
-      <div class="side-panel-btn side-panel-status d-md-none" id="sidePanelStatus">
-        <i class="fa-solid fa-circle-user"></i>
-        <span id="sidePanelStatusText">尚未登入</span>
-      </div>
-      <!-- 登入按鈕 -->
-      <button class="side-panel-btn side-panel-login d-md-none" id="sidePanelLoginBtn">
-        <i class="fa-solid fa-right-to-bracket"></i> 登入 / 註冊
-      </button>
-      <!-- 登出按鈕 -->
-      <button class="side-panel-btn side-panel-logout d-none d-md-none" id="sidePanelLogoutBtn">
-        <i class="fa-solid fa-right-from-bracket"></i> 登出
-      </button>
-      <!-- 音效開關 -->
-      <button class="side-panel-btn side-panel-mute d-md-none" id="sidePanelMuteBtn">
-        <i class="fa-solid fa-volume-high" id="sidePanelMuteIcon"></i>
-        <span id="sidePanelMuteText">音效開啟</span>
-      </button>
-    </div>
   </main>
 
   <!-- ===== MODALS ===== -->
@@ -302,17 +270,11 @@
     </div>
   </div>
 
-  <!-- ===== PROFILE MODAL — 全新版面 ===== -->
   <div class="modal fade" id="profileModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
       <div class="modal-content cute-modal profile-modal-shell">
         <div class="modal-body p-4 p-lg-5">
-
-          <!-- 頭部：頭像 + 名稱 + 關閉 -->
-          <!-- Profile Head: 三欄 [藍1:頭像+資訊] [藍2:稱號選擇] [藍3:關閉] -->
           <div class="profile-head">
-
-            <!-- 左：頭像（藍1位置） -->
             <div class="profile-hero">
               <div class="profile-avatar-wrap">
                 <div id="profileAvatarPreview" class="profile-avatar profile-avatar-stage">
@@ -321,9 +283,10 @@
                   <img id="profileHairPreview" class="avatar-layer hair-layer" alt="hair" src="images/hair/hair01.png">
                   <img id="profilePhotoPreview" class="profile-photo-preview" alt="avatar photo" src="">
                 </div>
+                <button type="button" class="profile-avatar-clear" id="clearProfileAvatarBtn" title="移除頭像">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
               </div>
-
-              <!-- 藍1 右側：PLAYER PROFILE / 名字 / 稱號 / 縣市+分類 -->
               <div class="profile-hero-copy">
                 <div class="profile-kicker">PLAYER PROFILE</div>
                 <h4 id="profileUsernameText" class="m-0">玩家</h4>
@@ -334,18 +297,9 @@
                 </div>
               </div>
             </div>
-
-            <!-- 藍2：稱號選擇（超出變滾輪） -->
-            <div class="profile-title-panel">
-              <div class="profile-title-panel-label">選擇稱號</div>
-              <div id="profileTitleSelector" class="profile-title-selector"></div>
-            </div>
-
-            <!-- 藍3：關閉按鈕 -->
-            <button type="button" class="btn-close profile-modal-close" data-bs-dismiss="modal"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
 
-          <!-- 四格統計 -->
           <div class="profile-stats-grid">
             <article class="profile-stat-card"><span>勝場</span><strong id="profileWinsText">0</strong></article>
             <article class="profile-stat-card"><span>已解鎖成就</span><strong id="profileAchievementsText">0 / 0</strong></article>
@@ -353,47 +307,55 @@
             <article class="profile-stat-card"><span>錯題收藏</span><strong id="profileWrongBookText">0</strong></article>
           </div>
 
-          <!-- 主要內容：左欄編輯 | 右欄：成就(上) + 頭像編輯器(下) -->
-          <div class="profile-main-grid">
-
-            <!-- 左欄：基本資料 -->
-            <div class="profile-info-col">
+          <div class="row g-4 mt-1">
+            <div class="col-lg-5">
               <div class="profile-edit-card">
                 <div class="section-label mb-3">編輯檔案</div>
-
-                <label class="profile-field-label">顯示名稱</label>
-                <input type="text" id="profileDisplayNameInput" class="profile-input mb-3" maxlength="20" placeholder="進房時會先帶入這個名字">
-
-                <label class="profile-field-label">上傳頭像</label>
-                <label class="profile-file-upload" for="profileAvatarInput">
-                  <i class="fa-solid fa-image"></i>
-                  <span id="profileAvatarFilename">選擇圖片（PNG / JPG）</span>
-                </label>
-                <input type="file" id="profileAvatarInput" class="profile-file-hidden" accept="image/png,image/jpeg,image/webp">
-
-                <label class="profile-field-label mt-3">所在縣市</label>
-                <select id="profileCountySelect" class="profile-input">
+                <label class="form-label pink-text">顯示名稱</label>
+                <input type="text" id="profileDisplayNameInput" class="form-control member-input mb-3" maxlength="20" placeholder="進房時會先帶入這個名字">
+                <label class="form-label pink-text">上傳頭像</label>
+                <input type="file" id="profileAvatarInput" class="form-control member-input" accept="image/png,image/jpeg,image/webp">
+                <div class="profile-avatar-builder mt-3">
+                  <div class="profile-avatar-builder-stage">
+                    <div id="profileAvatarBuilderStage" class="profile-builder-preview">
+                      <img id="profileBuilderFace" class="avatar-layer face-layer" alt="face" src="images/face/face.png">
+                      <img id="profileBuilderEyes" class="avatar-layer eye-layer" alt="eyes" src="images/face/eyes01.png">
+                      <img id="profileBuilderHair" class="avatar-layer hair-layer" alt="hair" src="images/hair/hair01.png">
+                    </div>
+                  </div>
+                  <div class="profile-avatar-builder-controls">
+                    <div class="tab-switch profile-builder-tabs">
+                      <button type="button" class="switch-btn active" id="profileHairTabBtn">髮型</button>
+                      <button type="button" class="switch-btn" id="profileEyeTabBtn">眼睛</button>
+                    </div>
+                    <div class="profile-builder-row">
+                      <button type="button" class="circle-arrow" id="profilePrevBtn"><i class="fa-solid fa-chevron-left"></i></button>
+                      <button type="button" class="circle-arrow" id="profileNextBtn"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <label class="form-label pink-text mt-2 mb-1">眼睛上下微調</label>
+                    <input type="range" min="-12" max="12" value="0" id="profileEyeSlider" class="form-range">
+                    <div class="profile-builder-row profile-builder-actions">
+                      <button type="button" class="mini-btn" id="profileRandomAvatarBtn"><i class="fa-solid fa-dice"></i> 隨機</button>
+                      <button type="button" class="mini-btn" id="profileResetAvatarBtn"><i class="fa-solid fa-rotate-left"></i> 重設</button>
+                    </div>
+                  </div>
+                </div>
+                <label class="form-label pink-text mt-3">所在縣市</label>
+                <select id="profileCountySelect" class="form-select member-input">
                   <option value="">請選擇縣市</option>
                 </select>
-
-                <label class="profile-field-label mt-3">擅長領域</label>
-                <input type="text" id="profileFavoriteCategoryInput" class="profile-input" maxlength="40" placeholder="例如：歷史、英文、自然">
-
-                <label class="profile-field-label mt-3">個人簡介</label>
-                <textarea id="profileBioInput" class="profile-input profile-textarea" rows="3" maxlength="180" placeholder="寫一句你的遊戲風格或自我介紹"></textarea>
-
+                <label class="form-label pink-text mt-3">擅長領域</label>
+                <input type="text" id="profileFavoriteCategoryInput" class="form-control member-input" maxlength="40" placeholder="例如：歷史、英文、自然">
+                <label class="form-label pink-text mt-3">個人簡介</label>
+                <textarea id="profileBioInput" class="form-control member-input" rows="4" maxlength="180" placeholder="寫一句你的遊戲風格或自我介紹"></textarea>
                 <div class="d-flex justify-content-end mt-3">
-                  <button type="button" class="profile-save-btn" id="saveProfileBtn">
+                  <button type="button" class="custom-btn btn-create" id="saveProfileBtn">
                     <i class="fa-solid fa-floppy-disk"></i> 儲存個人資料
                   </button>
                 </div>
               </div>
             </div>
-
-            <!-- 右欄 -->
-            <div class="profile-right-col">
-
-              <!-- 上：已解鎖成就（固定高度，超過捲動） -->
+            <div class="col-lg-7">
               <div class="profile-achievements-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                   <div>
@@ -402,70 +364,10 @@
                   </div>
                   <span id="profileUnlockedBadge" class="badge-qa">0 個</span>
                 </div>
-                <!-- 固定高度 + scroll -->
                 <div id="profileUnlockedAchievements" class="profile-unlocked-list"></div>
               </div>
-
-              <!-- 下：頭像編輯器 -->
-              <div class="profile-builder-card">
-                <div class="section-label mb-3">自訂角色</div>
-                <div class="profile-builder-layout">
-
-                  <!-- 頭像預覽 + 左右箭頭 -->
-                  <div class="profile-builder-left">
-                    <div class="builder-arrow-row">
-                      <button type="button" class="builder-arrow-btn" id="profilePrevBtn">
-                        <i class="fa-solid fa-chevron-left"></i>
-                      </button>
-                      <div id="profileAvatarBuilderStage" class="profile-builder-preview">
-                        <img id="profileBuilderFace" class="avatar-layer face-layer" alt="face" src="images/face/face.png">
-                        <img id="profileBuilderEyes" class="avatar-layer eye-layer" alt="eyes" src="images/face/eyes01.png">
-                        <img id="profileBuilderHair" class="avatar-layer hair-layer" alt="hair" src="images/hair/hair01.png">
-                      </div>
-                      <button type="button" class="builder-arrow-btn" id="profileNextBtn">
-                        <i class="fa-solid fa-chevron-right"></i>
-                      </button>
-                    </div>
-                    <!-- 隨機 / 重設 -->
-                    <div class="builder-action-row">
-                      <button type="button" class="builder-action-btn btn-random" id="profileRandomAvatarBtn">
-                        <i class="fa-solid fa-dice"></i> 隨機
-                      </button>
-                      <button type="button" class="builder-action-btn btn-reset" id="profileResetAvatarBtn">
-                        <i class="fa-solid fa-rotate-left"></i> 重設
-                      </button>
-                      <button type="button" class="builder-action-btn btn-apply" id="profileApplyAvatarBtn">
-                        <i class="fa-solid fa-check"></i> 套用
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- 右側控制：部位選擇 + 眼睛滑桿 -->
-                  <div class="profile-builder-right">
-                    <!-- 髮型 / 眼睛 切換 -->
-                    <div class="builder-tab-row">
-                      <button type="button" class="builder-tab active" id="profileHairTabBtn">
-                        <i class="fa-solid fa-hat-wizard"></i> 髮型
-                      </button>
-                      <button type="button" class="builder-tab" id="profileEyeTabBtn">
-                        <i class="fa-solid fa-eye"></i> 眼睛
-                      </button>
-                    </div>
-                    <!-- 眼睛滑桿 -->
-                    <div class="builder-slider-wrap">
-                      <label class="builder-slider-label">
-                        <i class="fa-solid fa-arrows-up-down"></i> 眼睛上下微調
-                      </label>
-                      <input type="range" min="-12" max="12" value="0" id="profileEyeSlider" class="builder-range">
-                    </div>
-                  </div>
-
-                </div>
-              </div><!-- end builder-card -->
-
-            </div><!-- end right-col -->
-          </div><!-- end main-grid -->
-
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -481,7 +383,7 @@
   <script src="js/quizarena_fix.js"></script>
 
   <script>
-    /* ── Dark Mode ── */
+    // ── Dark Mode ──
     function _applyDark(on) {
       document.body.classList.toggle('dark-mode', on);
       ['darkModeIcon','mobileDarkModeIcon'].forEach(function(id){
@@ -498,7 +400,7 @@
     });
     _applyDark(localStorage.getItem('quizDarkMode') === '1');
 
-    /* ── Mobile Drawer ── */
+    // ── Mobile Drawer ──
     var _drawer = document.getElementById('mobileDrawer');
     var _overlay = document.getElementById('mobileDrawerOverlay');
     function _openDrawer() {
@@ -517,7 +419,7 @@
     if (_closeBtn) _closeBtn.addEventListener('click', _closeDrawer);
     if (_overlay) _overlay.addEventListener('click', _closeDrawer);
 
-    /* Mirror mobile → desktop */
+    // Mirror mobile → desktop buttons
     [
       ['mobileLoginBtn','loginBtn'],
       ['mobileLogoutBtn','logoutBtn'],
@@ -535,11 +437,15 @@
       });
     });
 
-    /* Sync mobile auth + avatar */
+    // Sync mobile nav auth state
     function _syncMobileNav() {
       var user = localStorage.getItem('currentUser') || '';
-      ['mobileLoginBtn'].forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.toggle('d-none',!!user); });
-      ['mobileLogoutBtn','mobileProfileBtn'].forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.toggle('d-none',!user); });
+      var mLogin = document.getElementById('mobileLoginBtn');
+      var mLogout = document.getElementById('mobileLogoutBtn');
+      var mProfile = document.getElementById('mobileProfileBtn');
+      if (mLogin) mLogin.classList.toggle('d-none', !!user);
+      if (mLogout) mLogout.classList.toggle('d-none', !user);
+      if (mProfile) mProfile.classList.toggle('d-none', !user);
       var mStatus = document.getElementById('mobileLoginStatus');
       var mSub = document.getElementById('mobileLoginSubStatus');
       if (mStatus) mStatus.textContent = user || '尚未登入';
@@ -548,7 +454,7 @@
     setInterval(_syncMobileNav, 800);
     _syncMobileNav();
 
-    /* Sync FAB */
+    // Show FAB stack
     function _syncFab() {
       var user = localStorage.getItem('currentUser') || '';
       var fab = document.getElementById('friendsFabStack');
@@ -556,62 +462,6 @@
     }
     setInterval(_syncFab, 800);
     _syncFab();
-
-    /* ── Side Panel ── */
-    function _syncSidePanel() {
-      var user = localStorage.getItem('currentUser') || '';
-      var statusEl  = document.getElementById('sidePanelStatusText');
-      var loginBtn  = document.getElementById('sidePanelLoginBtn');
-      var logoutBtn = document.getElementById('sidePanelLogoutBtn');
-      if (statusEl) statusEl.innerHTML = user ? '<strong>' + user + '</strong>' : '尚未登入';
-      if (loginBtn)  loginBtn.classList.toggle('d-none', !!user);
-      if (logoutBtn) logoutBtn.classList.toggle('d-none', !user);
-    }
-    setInterval(_syncSidePanel, 800);
-    _syncSidePanel();
-
-    /* Wire side panel buttons to existing handlers */
-    document.getElementById('sidePanelLoginBtn')?.addEventListener('click', function(){
-      document.getElementById('loginBtn')?.click();
-    });
-    document.getElementById('sidePanelLogoutBtn')?.addEventListener('click', function(){
-      document.getElementById('logoutBtn')?.click();
-    });
-
-    /* Side panel mute button */
-    (function(){
-      var muted = localStorage.getItem('quizMuted') === '1';
-      function _applyMute(on) {
-        muted = on;
-        localStorage.setItem('quizMuted', on ? '1' : '0');
-        var icon = document.getElementById('sidePanelMuteIcon');
-        var txt  = document.getElementById('sidePanelMuteText');
-        var btn  = document.getElementById('sidePanelMuteBtn');
-        if (icon) icon.className = on ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
-        if (txt)  txt.textContent = on ? '音效關閉' : '音效開啟';
-        if (btn)  btn.classList.toggle('muted', on);
-        // Try to mute AudioManager if it exists
-        if (window.AudioManager) {
-          if (on) AudioManager.mute && AudioManager.mute();
-          else AudioManager.unmute && AudioManager.unmute();
-        }
-      }
-      _applyMute(muted);
-      document.getElementById('sidePanelMuteBtn')?.addEventListener('click', function(){
-        _applyMute(!muted);
-      });
-    })();
-
-    /* Show avatar filename */
-    var _avatarInput = document.getElementById('profileAvatarInput');
-    var _avatarFilename = document.getElementById('profileAvatarFilename');
-    if (_avatarInput && _avatarFilename) {
-      _avatarInput.addEventListener('change', function(){
-        var f = _avatarInput.files && _avatarInput.files[0];
-        if (f) _avatarFilename.textContent = f.name;
-        else _avatarFilename.textContent = '選擇圖片（PNG / JPG）';
-      });
-    }
   </script>
 </body>
 </html>

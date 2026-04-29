@@ -34,14 +34,6 @@ function getLastPlayerName() {
   }
 }
 
-function getSavedUserProfile() {
-  try {
-    return JSON.parse(localStorage.getItem("quizUserProfile") || "null") || {};
-  } catch {
-    return {};
-  }
-}
-
 async function api(url, options = {}) {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -126,8 +118,28 @@ const state = {
   eyeIndex: 0,
   eyesOffsetY: 0,
   context: getJoinContext(),
-  savedProfile: getSavedUserProfile()
+  profileSummary: null
 };
+
+async function loadProfileSummary() {
+  const username = localStorage.getItem("currentUser") || "";
+  if (!username) return null;
+  try {
+    const data = await api(`/profile_summary?username=${encodeURIComponent(username)}`);
+    state.profileSummary = data;
+    const hint = document.getElementById("profileSyncHint");
+    const hintText = document.getElementById("profileSyncText");
+    if (hint && hintText) {
+      hint.style.display = "block";
+      hintText.textContent = data.avatarUrl
+        ? `已套用 ${data.title || "個人稱號"}、${data.county || "未設定縣市"} 與上傳頭像`
+        : `已套用 ${data.title || "個人稱號"} 與 ${data.county || "未設定縣市"}`;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 function populateRoomInfo() {
   const room = state.context?.room;
@@ -147,10 +159,9 @@ function populateRoomInfo() {
 
   const lastPlayerName = getLastPlayerName();
   playerNameInput.value =
-    lastPlayerName || state.savedProfile.username || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
+    lastPlayerName || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
 
   updateNamePreview();
-  hydrateSavedAvatar();
 }
 
 function updateNamePreview() {
@@ -174,17 +185,6 @@ function syncAvatarImages() {
   previewEye.src = eyes;
 
   applyEyesOffset();
-}
-
-function hydrateSavedAvatar() {
-  const profile = state.savedProfile || {};
-  const hairIdx = HAIRS.indexOf(profile.hair);
-  const eyeIdx = EYES.indexOf(profile.eyes);
-  if (hairIdx >= 0) state.hairIndex = hairIdx;
-  if (eyeIdx >= 0) state.eyeIndex = eyeIdx;
-  state.eyesOffsetY = Number(profile.eyesOffsetY || 0);
-  if (eyeSlider) eyeSlider.value = String(state.eyesOffsetY);
-  syncAvatarImages();
 }
 
 function updatePartTabs() {
@@ -255,11 +255,15 @@ async function joinRoom() {
     pin: context.room.pin,
     roomKey: context.roomKey || "",
     player: {
+      username: localStorage.getItem("currentUser") || "",
       name: playerName,
       face: "images/face/face.png",
       hair: HAIRS[state.hairIndex],
       eyes: EYES[state.eyeIndex],
       eyesOffsetY: state.eyesOffsetY,
+      avatarUrl: state.profileSummary?.avatarUrl || "",
+      county: state.profileSummary?.county || "",
+      title: state.profileSummary?.title || "",
       isHost: isHost
     }
   };
@@ -312,6 +316,7 @@ joinRoomBtn?.addEventListener("click", joinRoom);
 
 populateRoomInfo();
 syncAvatarImages();
+loadProfileSummary();
 
 // ── 房主在選頭像期間發 heartbeat，防止房間被系統刪除 ──────
 (function startHostHeartbeat() {
@@ -339,3 +344,83 @@ syncAvatarImages();
   setInterval(beat, 20000);
 })();
 updatePartTabs();
+
+function applyProfileAppearanceToJoin(data = {}) {
+  const hairIndex = HAIRS.indexOf(data.hair || "");
+  const eyeIndex = EYES.indexOf(data.eyes || "");
+  state.hairIndex = hairIndex >= 0 ? hairIndex : 0;
+  state.eyeIndex = eyeIndex >= 0 ? eyeIndex : 0;
+  state.eyesOffsetY = Number(data.eyesOffsetY || 0);
+  eyeSlider.value = String(state.eyesOffsetY);
+  syncAvatarImages();
+  updatePartTabs();
+}
+
+async function loadProfileSummary() {
+  const username = localStorage.getItem("currentUser") || "";
+  if (!username) return null;
+  try {
+    const data = await api(`/profile_summary?username=${encodeURIComponent(username)}`);
+    state.profileSummary = data;
+    applyProfileAppearanceToJoin(data);
+    const preferredName = data.displayName || data.username || "";
+    if (preferredName && (!playerNameInput.value.trim() || playerNameInput.value.startsWith("PLAYER_"))) {
+      playerNameInput.value = preferredName;
+      updateNamePreview();
+    }
+    const hint = document.getElementById("profileSyncHint");
+    const hintText = document.getElementById("profileSyncText");
+    if (hint && hintText) {
+      hint.style.display = "block";
+      hintText.textContent = `${preferredName || "玩家"} ・ ${data.title || "冒險起步者"}${data.county ? ` ・ ${data.county}` : ""}`;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function populateRoomInfo() {
+  const room = state.context?.room;
+  if (!room?.pin) {
+    showToast("找不到待加入的房間，請重新從首頁進入。");
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 1600);
+    return;
+  }
+
+  roomNameText.textContent = room.room_name || room.display_name || "-";
+  roomPinText.textContent = room.pin || "------";
+  roomBankText.textContent = room.bank_title || "-";
+  roomModeText.textContent = room.team_mode ? "團隊模式" : "個人模式";
+
+  const lastPlayerName = getLastPlayerName();
+  playerNameInput.value =
+    lastPlayerName ||
+    state.profileSummary?.displayName ||
+    state.profileSummary?.username ||
+    `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
+  updateNamePreview();
+}
+
+function resetAvatar() {
+  if (state.profileSummary) {
+    applyProfileAppearanceToJoin(state.profileSummary);
+    state.currentPart = "hair";
+    updatePartTabs();
+    return;
+  }
+  state.hairIndex = 0;
+  state.eyeIndex = 0;
+  state.eyesOffsetY = 0;
+  state.currentPart = "hair";
+  eyeSlider.value = "0";
+  syncAvatarImages();
+  updatePartTabs();
+}
+
+loadProfileSummary().then(() => {
+  populateRoomInfo();
+  updateNamePreview();
+});
