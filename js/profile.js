@@ -105,11 +105,10 @@ function renderProfile(profile) {
   $("profileWins").textContent = String(profile.wins || 0);
   const level = profile.level || {};
   $("profileLevel").textContent = `Lv.${Number(level.level || 1)}`;
-  $("profileXpText").textContent = `${Number(level.currentLevelXp || 0)} / ${Number(level.nextLevelXp || 180)} XP`;
-  $("profileLevelBar").style.width = `${Number(level.progress || 0)}%`;
+
   $("profileLanguageSelect").value = profile.language || "zh";
   $("profileCountySelect").value = profile.county || "";
-  $("profileLanguageText").textContent = languageText(profile.language || "zh");
+
   $("profileLocationChip").textContent = profile.county || "尚未設定所在地";
   $("profileCategoryChip").textContent = profile.displayTitle || "尚未設定常玩分類";
 
@@ -246,7 +245,6 @@ $("resetAvatarBtn")?.addEventListener("click", () => {
 });
 $("profileLanguageSelect")?.addEventListener("change", () => {
   const lang = $("profileLanguageSelect").value;
-  $("profileLanguageText").textContent = languageText(lang);
   if (window.I18N?.applyLang) window.I18N.applyLang(lang);
 });
 $("profileCountySelect")?.addEventListener("change", () => {
