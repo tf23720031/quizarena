@@ -635,3 +635,170 @@ body.dark-mode .avatar-tabs button.active {
     flex-wrap: wrap !important;
   }
 }
+
+/* =========================================================
+   DARK MODE READABILITY PATCH
+   修正深色模式看不到字、白格太亮、區塊貼邊問題。
+   不重新設計好友戰績榜，好友淺色版只放在 style.css。
+========================================================= */
+body.dark-mode .tool-shell {
+  width: min(1100px, calc(100% - 32px)) !important;
+  padding: 28px 0 48px !important;
+}
+body.dark-mode .tool-card,
+body.dark-mode .summary-grid article,
+body.dark-mode .question-card,
+body.dark-mode .history-card,
+body.dark-mode .analysis-card,
+body.dark-mode .profile-achievement-card,
+body.dark-mode .profile-title-option,
+body.dark-mode .story-subject-card,
+body.dark-mode .story-branch-card,
+body.dark-mode .story-progress-card,
+body.dark-mode .distribution-item,
+body.dark-mode .report-empty,
+body.dark-mode .radar-legend span,
+body.dark-mode .practice-box > p,
+body.dark-mode .insight-list li,
+body.dark-mode .option-list li,
+body.dark-mode .explanation-box {
+  color: #f7f3ff !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.115), rgba(255,255,255,.045)) !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  box-shadow: 0 18px 45px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.10) !important;
+  backdrop-filter: blur(18px) saturate(135%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+}
+body.dark-mode .tool-card {
+  padding: 22px !important;
+  border-radius: 24px !important;
+}
+body.dark-mode .tool-topbar h1,
+body.dark-mode .tool-card h2,
+body.dark-mode .tool-card h3,
+body.dark-mode .tool-card h4,
+body.dark-mode .summary-grid strong,
+body.dark-mode .history-card strong,
+body.dark-mode .question-card h3,
+body.dark-mode .analysis-card h3,
+body.dark-mode .story-subject-card strong,
+body.dark-mode .story-branch-card strong,
+body.dark-mode .profile-main h2,
+body.dark-mode .profile-achievement-card strong,
+body.dark-mode .profile-title-option strong,
+body.dark-mode .bar-row,
+body.dark-mode .distribution-item strong {
+  color: #fffaff !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: 0 8px 22px rgba(0,0,0,.22) !important;
+}
+body.dark-mode .tool-kicker,
+body.dark-mode .tool-note,
+body.dark-mode .summary-grid span,
+body.dark-mode .question-card p,
+body.dark-mode .history-card span,
+body.dark-mode .wrong-insight-grid span,
+body.dark-mode .report-table th,
+body.dark-mode .story-subject-card span,
+body.dark-mode .story-branch-card span,
+body.dark-mode .story-hero-card p,
+body.dark-mode .story-play-area > p,
+body.dark-mode .profile-main p,
+body.dark-mode .profile-achievement-card span,
+body.dark-mode .profile-title-option span,
+body.dark-mode .distribution-item span,
+body.dark-mode .radar-legend span,
+body.dark-mode .practice-box > p,
+body.dark-mode .insight-list li {
+  color: rgba(246, 241, 255, .78) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+body.dark-mode .tool-btn,
+body.dark-mode .profile-soft-btn,
+body.dark-mode .profile-main-btn,
+body.dark-mode .profile-upload-btn,
+body.dark-mode .avatar-tabs button,
+body.dark-mode .profile-count-badge,
+body.dark-mode .profile-chip-row span,
+body.dark-mode .profile-title-pill {
+  color: #fffaff !important;
+  -webkit-text-fill-color: currentColor !important;
+  border-color: rgba(255,255,255,.18) !important;
+  background: linear-gradient(135deg, rgba(255,125,195,.36), rgba(101,211,255,.22)) !important;
+}
+body.dark-mode .report-search input,
+body.dark-mode .practice-input,
+body.dark-mode .profile-select,
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+  color: #fffaff !important;
+  -webkit-text-fill-color: currentColor !important;
+  background: rgba(255,255,255,.08) !important;
+  border: 1px solid rgba(255,255,255,.20) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 12px 28px rgba(0,0,0,.18) !important;
+}
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+  color: rgba(255,250,255,.62) !important;
+}
+body.dark-mode .radar-layout canvas,
+body.dark-mode canvas {
+  background: rgba(255,255,255,.07) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+}
+body.dark-mode .level-track,
+body.dark-mode .bar-track {
+  background: rgba(255,255,255,.80) !important;
+}
+body.dark-mode .bar-fill,
+body.dark-mode .level-track span {
+  background: linear-gradient(90deg, #ff79c6, #8d7cff, #45d7df) !important;
+}
+body.dark-mode .report-search-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+body.dark-mode .report-search-row input {
+  flex: 1 1 220px !important;
+}
+body.dark-mode .analysis-panel,
+body.dark-mode .story-subject-grid,
+body.dark-mode .story-branch-list,
+body.dark-mode .summary-grid,
+body.dark-mode .question-list,
+body.dark-mode .profile-achievements {
+  gap: 16px !important;
+}
+body.dark-mode .story-subject-grid {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)) !important;
+}
+body.dark-mode .story-subject-card,
+body.dark-mode .story-branch-card {
+  padding: 22px !important;
+  min-height: 170px !important;
+}
+body.dark-mode .story-subject-card em {
+  color: #9f8cff !important;
+}
+body.dark-mode .profile-title-list {
+  display: grid !important;
+  gap: 12px !important;
+}
+body.dark-mode .profile-title-option {
+  padding: 14px 16px !important;
+  border-radius: 18px !important;
+}
+body.dark-mode .profile-hero,
+body.dark-mode .level-card,
+body.dark-mode .profile-achievement-panel {
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+@media (max-width: 768px) {
+  body.dark-mode .tool-shell { width: min(100% - 22px, 1100px) !important; }
+  body.dark-mode .tool-card { padding: 18px !important; }
+}

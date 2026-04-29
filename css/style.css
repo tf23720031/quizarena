@@ -2160,77 +2160,95 @@ body:not(.dark-mode) .room-pin {
   color: #f0629a !important;
 }
 
-
-
-/* ===== FRIEND LEADERBOARD LIGHT THEME ONLY ===== */
-
-.friend-rank-section,
-.friend-board,
-.friend-leaderboard,
-.friends-ranking-panel,
-.friend-ranking-wrap{
-    background:
-    linear-gradient(
-        135deg,
-        #fff7fd 0%,
-        #ffe7fb 35%,
-        #f1e8ff 70%,
-        #eef3ff 100%
-    ) !important;
-
-    border: 1px solid rgba(255,255,255,.8) !important;
-
-    box-shadow:
-    0 10px 30px rgba(255,180,240,.18),
-    inset 0 1px 0 rgba(255,255,255,.85) !important;
-
-    color:#5e538b !important;
+/* =========================================================
+   FRIEND LEADERBOARD - LIGHT STYLE ONLY
+   只影響 style.css 的好友戰績榜淺色粉紫漸層；dark_mode.css 不改這區。
+========================================================= */
+body:not(.dark-mode) .friends-drawer {
+  width: min(382px, calc(100vw - 24px)) !important;
+  padding: 30px 20px 28px !important;
+  color: #4f5483 !important;
+  background:
+    radial-gradient(circle at 84% 8%, rgba(255, 123, 205, .22), transparent 30%),
+    radial-gradient(circle at 18% 94%, rgba(123, 170, 255, .18), transparent 34%),
+    linear-gradient(145deg, #fff7ff 0%, #ffe8f8 38%, #f1eaff 70%, #edf5ff 100%) !important;
+  border-right: 1px solid rgba(255, 255, 255, .82) !important;
+  box-shadow: 24px 0 60px rgba(114, 94, 178, .24) !important;
 }
-
-/* cards */
-.friend-rank-section .rank-card,
-.friend-rank-section .friend-card,
-.friend-board .rank-card{
-    background: rgba(255,255,255,.72) !important;
-    backdrop-filter: blur(14px);
-    border:1px solid rgba(255,255,255,.8);
+body:not(.dark-mode) .friends-drawer::after {
+  opacity: .28 !important;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(255,255,255,.68), transparent 18%),
+    linear-gradient(rgba(154, 129, 255, .08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(154, 129, 255, .08) 1px, transparent 1px) !important;
+  background-size: auto, 42px 42px, 42px 42px !important;
 }
-
-/* titles */
-.friend-rank-section h1,
-.friend-rank-section .section-title,
-.friend-board h1{
-    color:#db62cb !important;
-    text-shadow: 0 4px 12px rgba(255,170,240,.22);
+body:not(.dark-mode) .friends-drawer-glow {
+  right: -62px !important;
+  top: 30px !important;
+  opacity: .55 !important;
+  background: linear-gradient(135deg, rgba(255, 126, 203, .32), rgba(169, 143, 255, .16)) !important;
 }
-
-/* text */
-.friend-rank-section p,
-.friend-rank-section span,
-.friend-rank-section div,
-.friend-board p,
-.friend-board span,
-.friend-board div{
-    color:#6d6498 !important;
+body:not(.dark-mode) .friends-drawer-head h2 {
+  color: #d85bc6 !important;
+  text-shadow: 0 8px 22px rgba(255, 139, 218, .28) !important;
 }
-
-/* buttons */
-.friend-rank-section button,
-.friend-rank-section .glass-btn,
-.friend-board button{
-    background:
-    linear-gradient(
-        135deg,
-        #ffd7f1,
-        #f3e6ff
-    ) !important;
-
-    color:#7d5be0 !important;
+body:not(.dark-mode) .friends-drawer-head p {
+  color: #68709a !important;
+  font-weight: 800 !important;
 }
-
-/* remove extra tiny input */
-.practice-mini-input,
-.secondary-answer-input,
-.extra-answer-box{
-    display:none !important;
+body:not(.dark-mode) .friends-close-btn {
+  background: linear-gradient(135deg, #ff8ecb, #b68cff) !important;
+  color: #fff !important;
+}
+body:not(.dark-mode) .friends-rank-caption {
+  color: #e453a9 !important;
+  background: rgba(255, 255, 255, .66) !important;
+  border: 1px solid rgba(255, 176, 226, .58) !important;
+  box-shadow: 0 12px 26px rgba(255, 164, 221, .18), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+body:not(.dark-mode) .friends-empty-card,
+body:not(.dark-mode) .friends-record-card,
+body:not(.dark-mode) .friend-request-card,
+body:not(.dark-mode) .friends-list-text,
+body:not(.dark-mode) .achievements-panel,
+body:not(.dark-mode) .friends-request-trigger {
+  color: #3f4874 !important;
+  background: rgba(255, 255, 255, .72) !important;
+  border: 1px solid rgba(255, 255, 255, .82) !important;
+  box-shadow: 0 16px 34px rgba(135, 112, 205, .13), inset 0 1px 0 rgba(255,255,255,.88) !important;
+  backdrop-filter: blur(18px) saturate(135%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+}
+body:not(.dark-mode) .friends-record-card.is-top {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .84), rgba(255, 245, 232, .76), rgba(255, 235, 251, .72)) !important;
+  border-color: rgba(255, 224, 167, .75) !important;
+}
+body:not(.dark-mode) .friends-record-rank,
+body:not(.dark-mode) .friend-request-meta,
+body:not(.dark-mode) .achievement-card span {
+  color: #7a82ab !important;
+}
+body:not(.dark-mode) .friends-record-name,
+body:not(.dark-mode) .friend-request-name,
+body:not(.dark-mode) .achievement-card strong {
+  color: #303a67 !important;
+}
+body:not(.dark-mode) .friends-record-title { color: #9b67c8 !important; }
+body:not(.dark-mode) .friends-record-wins,
+body:not(.dark-mode) .achievements-head strong {
+  color: #5b60d9 !important;
+  background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(239, 230, 255, .82)) !important;
+}
+body:not(.dark-mode) .achievement-card {
+  background: rgba(255, 255, 255, .78) !important;
+  border-color: rgba(255,255,255,.86) !important;
+  color: #4a537c !important;
+}
+body:not(.dark-mode) .friends-request-trigger {
+  color: #4a4f80 !important;
+  font-weight: 900 !important;
+}
+body:not(.dark-mode) .friends-request-icon-wrap {
+  background: linear-gradient(135deg, #ff8cc8, #a78cff) !important;
 }
