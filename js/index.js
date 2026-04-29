@@ -771,6 +771,25 @@
     setText("profileWrongBookText", String(Number(data.wrongBookCount || 0)));
     setText("profileUnlockedBadge", `${unlocked.length} 項`);
 
+    // ── Render earned titles selector ──
+    const earnedTitles = Array.isArray(data.earnedTitles) ? data.earnedTitles : [title];
+    const selectedTitle = data.selectedTitle || title;
+    const titleSelectorEl = $("profileTitleSelector");
+    if (titleSelectorEl) {
+      titleSelectorEl.innerHTML = earnedTitles.map(t =>
+        `<button type="button" class="title-chip ${t === selectedTitle ? 'active' : ''}" data-title="${escapeHtml(t)}">${escapeHtml(t)}</button>`
+      ).join('');
+      titleSelectorEl.querySelectorAll('.title-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          titleSelectorEl.querySelectorAll('.title-chip').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const newTitle = btn.dataset.title;
+          setText("profileTitleText", newTitle);
+          if (state.profileSummary) state.profileSummary._selectedTitle = newTitle;
+        });
+      });
+    }
+
     if ($("profileCountyBadge")) $("profileCountyBadge").textContent = county;
     if ($("profileFavCategoryBadge")) $("profileFavCategoryBadge").textContent = favoriteCategory;
     if ($("profileDisplayNameInput")) $("profileDisplayNameInput").value = displayName;
@@ -980,15 +999,32 @@
       hair: state.profileAppearanceDraft?.hair || HAIRS[0],
       eyes: state.profileAppearanceDraft?.eyes || EYES[0],
       eyesOffsetY: state.profileAppearanceDraft?.eyesOffsetY ?? 0,
+      selectedTitle: state.profileSummary?._selectedTitle || "",
     };
 
     const data = await api("/save_profile", {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    state.profileAvatarDraft = "";
     state.profileViewer = user;
+    // Keep avatarUrl from saved profile so photo stays visible after save
+    if (data.profile && data.profile.avatarUrl) {
+      state.profileAvatarDraft = data.profile.avatarUrl;
+    } else {
+      state.profileAvatarDraft = "";
+    }
     renderProfileSummary(data.profile || {});
+    // Update nav avatar immediately
+    if (data.profile) {
+      localStorage.setItem('qa_nav_appearance', JSON.stringify({
+        face: data.profile.face || 'images/face/face.png',
+        hair: data.profile.hair || 'images/hair/hair01.png',
+        eyes: data.profile.eyes || 'images/face/eyes01.png',
+        eyesOffsetY: data.profile.eyesOffsetY || 0,
+      }));
+      if (data.profile.avatarUrl) localStorage.setItem('qa_avatar_draft', data.profile.avatarUrl);
+      else localStorage.removeItem('qa_avatar_draft');
+    }
     showToast(data.message || "個人資料已更新");
     await loadFriendsOverview();
     await loadAchievementsSummary();

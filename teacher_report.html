@@ -292,10 +292,10 @@
       <div style="overflow-x:auto;">
         <table class="tr-table" id="trWrongTable">
           <thead><tr>
-            <th>#</th><th>題目</th><th>答錯次數</th><th>答錯率</th><th>最常選的錯誤答案</th>
+            <th>#</th><th>題目</th><th>題庫名稱</th><th>答錯次數</th><th>答錯率</th><th>最常選的錯誤答案</th>
           </tr></thead>
           <tbody id="trWrongBody">
-            <tr><td colspan="5"><div class="no-data-hint"><i class="fa-solid fa-magnifying-glass-chart"></i>載入紀錄後自動分析</div></td></tr>
+            <tr><td colspan="6"><div class="no-data-hint"><i class="fa-solid fa-magnifying-glass-chart"></i>載入紀錄後自動分析</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -555,23 +555,30 @@
       var wrongMap = {};
       var answerMap = {};
       var totalAnswersMap = {};
+      var wrongBankMap = {};
       rooms.forEach(function(r){
+        var bankName = r.quiz_bank_title || r.bankTitle || '';
         (r.wrong_questions||[]).forEach(function(wq){
-          var key = (wq.question||wq.text||'').slice(0,60);
+          // Use actual question text (content), fall back to title if needed
+          var key = (wq.content || wq.question || wq.text || '').slice(0,80);
+          if (!key) return;
           wrongMap[key] = (wrongMap[key]||0)+Number(wq.count||1);
           if (wq.most_wrong_answer) answerMap[key] = wq.most_wrong_answer;
           if (wq.total_attempts) totalAnswersMap[key] = (totalAnswersMap[key]||0)+wq.total_attempts;
+          if (!wrongBankMap[key]) wrongBankMap[key] = bankName;
         });
       });
-      var arr = Object.keys(wrongMap).map(function(k){ return{q:k,count:wrongMap[k],ans:answerMap[k]||'—',total:totalAnswersMap[k]||wrongMap[k]}; })
-        .sort(function(a,b){ return b.count-a.count; });
+      var arr = Object.keys(wrongMap).map(function(k){
+        return {q:k, count:wrongMap[k], ans:answerMap[k]||'—', total:totalAnswersMap[k]||wrongMap[k], bank:wrongBankMap[k]||''};
+      }).sort(function(a,b){ return b.count-a.count; });
       document.getElementById('trWrongCount').textContent = arr.length + ' 題';
       var tbody = document.getElementById('trWrongBody');
-      if (!arr.length) { tbody.innerHTML='<tr><td colspan="5"><div class="no-data-hint"><i class="fa-solid fa-magnifying-glass-chart"></i>沒有錯題資料</div></td></tr>'; return; }
+      if (!arr.length) { tbody.innerHTML='<tr><td colspan="6"><div class="no-data-hint"><i class="fa-solid fa-magnifying-glass-chart"></i>沒有錯題資料</div></td></tr>'; return; }
       tbody.innerHTML = arr.map(function(item,i){
         var rate = item.total ? Math.round(item.count/item.total*100) : 100;
         return '<tr><td>'+(i+1)+'</td>'
-          +'<td>'+_esc(item.q)+'</td>'
+          +'<td><strong>'+_esc(item.q)+'</strong></td>'
+          +'<td><span class="badge-qa" style="background:rgba(67,198,172,0.12);color:#1a9e89;font-size:0.78rem;padding:3px 9px;border-radius:999px">'+_esc(item.bank||'—')+'</span></td>'
           +'<td><strong>'+item.count+'</strong></td>'
           +'<td><div class="correct-bar-wrap"><div class="correct-bar-bg"><div class="correct-bar-fill" style="width:'+rate+'%;background:linear-gradient(to right,#f25a9e,#ff8db8)"></div></div><span>'+rate+'%</span></div></td>'
           +'<td><span class="wrong-chip">'+_esc(item.ans)+'</span></td></tr>';
@@ -614,8 +621,8 @@
       });
 
       /* CSV 3: wrong questions */
-      var wrongMap={},answerMap={},totalMap={};
-      rooms.forEach(function(r){ (r.wrong_questions||[]).forEach(function(wq){ var k=(wq.question||wq.text||'').slice(0,60); wrongMap[k]=(wrongMap[k]||0)+Number(wq.count||1); if(wq.most_wrong_answer) answerMap[k]=wq.most_wrong_answer; if(wq.total_attempts) totalMap[k]=(totalMap[k]||0)+wq.total_attempts; }); });
+      var wrongMap={},answerMap={},totalMap={},wrongBankMap={};
+      rooms.forEach(function(r){ (r.wrong_questions||[]).forEach(function(wq){ var k=(wq.question||wq.text||'').slice(0,60); wrongMap[k]=(wrongMap[k]||0)+Number(wq.count||1); if(wq.most_wrong_answer) answerMap[k]=wq.most_wrong_answer; if(wq.total_attempts) totalMap[k]=(totalMap[k]||0)+wq.total_attempts; if(!wrongBankMap[k]) wrongBankMap[k]=r.quiz_bank_title||''; }); });
       var wrongArr=Object.keys(wrongMap).map(function(k){ return{q:k,count:wrongMap[k],ans:answerMap[k]||'',total:totalMap[k]||wrongMap[k]}; }).sort(function(a,b){ return b.count-a.count; });
       var csvWrong='排名,題目,答錯次數,答錯率(%),最常選錯誤答案\n';
       wrongArr.forEach(function(item,i){ var rate=item.total?Math.round(item.count/item.total*100):100; csvWrong+=[i+1,item.q,item.count,rate,item.ans].map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',')+'\n'; });

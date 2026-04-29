@@ -681,3 +681,147 @@ body.dark-mode .tr-placeholder p { color: #b890a8 !important; }
   box-shadow: 0 4px 12px rgba(67,198,172,0.28);
 }
 .btn-apply:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(67,198,172,0.38); }
+
+/* ================================================================
+   RIGHT SIDE FLOATING PANEL: 帳號狀態 + 登入/登出 + 音效
+   ================================================================ */
+.side-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 100px;   /* above friends FAB */
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.side-panel-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 50px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+.side-panel-btn:hover { transform: translateX(-4px); }
+.side-panel-status {
+  background: rgba(255,255,255,0.88);
+  border: 1.5px solid rgba(255,133,193,0.25);
+  color: #663154;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+  font-size: 0.82rem;
+}
+.side-panel-status strong { color: #f25a9e; }
+.side-panel-login  { background: linear-gradient(135deg,#ff8db8,#f25a9e); color:#fff; box-shadow:0 6px 18px rgba(242,90,158,0.3); }
+.side-panel-logout { background: linear-gradient(135deg,#a0b0c8,#7888a0); color:#fff; box-shadow:0 6px 18px rgba(100,130,170,0.28); }
+.side-panel-mute   { background: linear-gradient(135deg,#a875ff,#7c5ce0); color:#fff; box-shadow:0 6px 18px rgba(124,92,224,0.28); }
+.side-panel-mute.muted { background: linear-gradient(135deg,#c0c0c0,#909090); }
+
+body.dark-mode .side-panel-status {
+  background: rgba(30,15,50,0.88);
+  border-color: rgba(255,133,193,0.2);
+  color: #f0b8d8;
+}
+body.dark-mode .side-panel-status strong { color: #ff8db8; }
+
+/* Mobile: side panel on right, smaller */
+@media (max-width: 820px) {
+  .side-panel { bottom: 90px; right: 12px; }
+  .side-panel-btn { padding: 9px 14px; font-size: 0.82rem; }
+}
+
+/* ================================================================
+   TITLE SELECTOR in Profile Modal
+   ================================================================ */
+.profile-title-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+.title-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border: 1.5px solid rgba(255,133,193,0.3);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  color: #a56b87;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.title-chip:hover { background: rgba(255,200,225,0.4); border-color: rgba(242,90,158,0.4); }
+.title-chip.active {
+  background: linear-gradient(135deg, #ff8db8, #f25a9e);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 10px rgba(242,90,158,0.3);
+}
+body.dark-mode .title-chip {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,133,193,0.2);
+  color: #c09ab0;
+}
+body.dark-mode .title-chip.active {
+  background: linear-gradient(135deg, #ff8db8, #f25a9e);
+  color: #fff;
+}
+
+/* ================================================================
+   CURSOR POINTER for all clickable elements
+   ================================================================ */
+a,
+button,
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+input[type="file"],
+select,
+label[for],
+.custom-btn,
+.bank-card,
+.lobby-card,
+.room-card,
+.friends-dock-btn,
+.friends-fab-mini,
+.profile-stat-card,
+.achievement-item,
+.profile-achievement-item,
+.title-chip,
+.builder-arrow-btn,
+.builder-action-btn,
+.builder-tab,
+.side-panel-btn,
+.profile-save-btn,
+.tr-toolbar-btn,
+.profile-file-upload,
+.member-switch-btn,
+.switch-btn,
+.mini-btn,
+.tool-btn,
+.add-question-btn,
+.circle-arrow,
+.top-action,
+.friends-request-trigger,
+.hamburger-btn,
+.mobile-drawer-close,
+[data-bs-dismiss],
+[data-bs-toggle],
+[onclick],
+.clickable {
+  cursor: pointer !important;
+}
+/* Range should use grab */
+input[type="range"] { cursor: grab !important; }
+input[type="range"]:active { cursor: grabbing !important; }

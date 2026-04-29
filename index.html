@@ -171,6 +171,28 @@
     </section>
 
     <footer class="footer-text text-center">© 2026 QuizArena - Cute but dangerous for classmates</footer>
+
+    <!-- ===== RIGHT SIDE PANEL: 帳號狀態 + 登入/登出 + 音效 ===== -->
+    <div class="side-panel" id="sidePanel">
+      <!-- 帳號狀態（永遠顯示） -->
+      <div class="side-panel-btn side-panel-status" id="sidePanelStatus">
+        <i class="fa-solid fa-circle-user"></i>
+        <span id="sidePanelStatusText">尚未登入</span>
+      </div>
+      <!-- 登入按鈕 -->
+      <button class="side-panel-btn side-panel-login" id="sidePanelLoginBtn">
+        <i class="fa-solid fa-right-to-bracket"></i> 登入 / 註冊
+      </button>
+      <!-- 登出按鈕 -->
+      <button class="side-panel-btn side-panel-logout d-none" id="sidePanelLogoutBtn">
+        <i class="fa-solid fa-right-from-bracket"></i> 登出
+      </button>
+      <!-- 音效開關 -->
+      <button class="side-panel-btn side-panel-mute" id="sidePanelMuteBtn">
+        <i class="fa-solid fa-volume-high" id="sidePanelMuteIcon"></i>
+        <span id="sidePanelMuteText">音效開啟</span>
+      </button>
+    </div>
   </main>
 
   <!-- ===== MODALS ===== -->
@@ -302,6 +324,7 @@
                 <div class="profile-kicker">PLAYER PROFILE</div>
                 <h4 id="profileUsernameText" class="m-0">玩家</h4>
                 <p id="profileTitleText" class="profile-earned-title">新手冒險家</p>
+                <div id="profileTitleSelector" class="profile-title-selector"></div>
                 <div class="profile-meta-line">
                   <span id="profileCountyBadge" class="badge-qa">未設定縣市</span>
                   <span id="profileFavCategoryBadge" class="badge-qa">尚未設定擅長領域</span>
@@ -522,6 +545,51 @@
     }
     setInterval(_syncFab, 800);
     _syncFab();
+
+    /* ── Side Panel ── */
+    function _syncSidePanel() {
+      var user = localStorage.getItem('currentUser') || '';
+      var statusEl  = document.getElementById('sidePanelStatusText');
+      var loginBtn  = document.getElementById('sidePanelLoginBtn');
+      var logoutBtn = document.getElementById('sidePanelLogoutBtn');
+      if (statusEl) statusEl.innerHTML = user ? '<strong>' + user + '</strong>' : '尚未登入';
+      if (loginBtn)  loginBtn.classList.toggle('d-none', !!user);
+      if (logoutBtn) logoutBtn.classList.toggle('d-none', !user);
+    }
+    setInterval(_syncSidePanel, 800);
+    _syncSidePanel();
+
+    /* Wire side panel buttons to existing handlers */
+    document.getElementById('sidePanelLoginBtn')?.addEventListener('click', function(){
+      document.getElementById('loginBtn')?.click();
+    });
+    document.getElementById('sidePanelLogoutBtn')?.addEventListener('click', function(){
+      document.getElementById('logoutBtn')?.click();
+    });
+
+    /* Side panel mute button */
+    (function(){
+      var muted = localStorage.getItem('quizMuted') === '1';
+      function _applyMute(on) {
+        muted = on;
+        localStorage.setItem('quizMuted', on ? '1' : '0');
+        var icon = document.getElementById('sidePanelMuteIcon');
+        var txt  = document.getElementById('sidePanelMuteText');
+        var btn  = document.getElementById('sidePanelMuteBtn');
+        if (icon) icon.className = on ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+        if (txt)  txt.textContent = on ? '音效關閉' : '音效開啟';
+        if (btn)  btn.classList.toggle('muted', on);
+        // Try to mute AudioManager if it exists
+        if (window.AudioManager) {
+          if (on) AudioManager.mute && AudioManager.mute();
+          else AudioManager.unmute && AudioManager.unmute();
+        }
+      }
+      _applyMute(muted);
+      document.getElementById('sidePanelMuteBtn')?.addEventListener('click', function(){
+        _applyMute(!muted);
+      });
+    })();
 
     /* Show avatar filename */
     var _avatarInput = document.getElementById('profileAvatarInput');

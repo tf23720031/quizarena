@@ -886,6 +886,28 @@ def build_player_title(username, wins=0, friend_count=0, unlocked_count=0, wrong
     return '🌱 冒險起步者'
 
 
+def build_earned_titles(wins=0, friend_count=0, unlocked_count=0, wrong_book_count=0, bank_count=0):
+    """Return list of all titles the player has earned based on current stats."""
+    titles = []
+    # Always earned
+    titles.append('🌱 冒險起步者')
+    if friend_count >= 1:  titles.append('🤝 好友同行')
+    if friend_count >= 3:  titles.append('👥 三人同行')
+    if friend_count >= 5:  titles.append('🎉 派對召集人')
+    if friend_count >= 10: titles.append('🦋 社交達人')
+    if wrong_book_count >= 10: titles.append('📚 錯題蒐集家')
+    if bank_count >= 3:    titles.append('📝 題庫大師')
+    if unlocked_count >= 5: titles.append('✨ 成就收藏家')
+    if unlocked_count >= 8: titles.append('🏅 成就達人')
+    if wins >= 1:  titles.append('🌟 首勝新秀')
+    if wins >= 3:  titles.append('🥇 三連佳績')
+    if wins >= 5:  titles.append('🏆 常勝旅人')
+    if wins >= 10: titles.append('👑 競技場之星')
+    if wins >= 25: titles.append('💎 傳說冠軍')
+    if wins >= 50: titles.append('⚡ 閃電戰神')
+    return titles
+
+
 def build_profile_summary(username):
     username = str(username or '').strip()
     if not username:
@@ -919,6 +941,12 @@ def build_profile_summary(username):
     wrong_book = build_wrong_book_detail(username)
     unlocked = [item for item in achievements.get('achievements', []) if item.get('unlocked')]
 
+    auto_title = build_player_title(username, wins=wins, friend_count=len(friends), unlocked_count=len(unlocked), wrong_book_count=len((wrong_book or {}).get('items', [])), bank_count=0)
+    selected_title = sanitize_profile_text(profile.get('selected_title') or '', 30)
+    # Build list of all earned titles
+    earned_titles = build_earned_titles(wins=wins, friend_count=len(friends), unlocked_count=len(unlocked), wrong_book_count=len((wrong_book or {}).get('items', [])))
+    active_title = selected_title if selected_title in earned_titles else auto_title
+
     return {
         'username': username,
         'displayName': sanitize_profile_text(profile.get('display_name') or username, 20),
@@ -933,7 +961,9 @@ def build_profile_summary(username):
         'wins': int(wins or 0),
         'friendCount': len(friends),
         'wrongBookCount': len((wrong_book or {}).get('items', [])),
-        'title': build_player_title(username, wins=wins, friend_count=len(friends), unlocked_count=len(unlocked), wrong_book_count=len((wrong_book or {}).get('items', [])), bank_count=0),
+        'title': active_title,
+        'selectedTitle': selected_title,
+        'earnedTitles': earned_titles,
         'achievements': achievements.get('achievements', []),
         'unlockedAchievements': unlocked,
         'unlockedCount': achievements.get('unlockedCount', 0),
@@ -1682,7 +1712,9 @@ def list_teacher_report_history_full(username=''):
             wrong_count = answered - correct
             if wrong_count > 0:
                 wrong_questions.append({
-                    'question': q.get('title') or q.get('content') or '',
+                    'question': q.get('content') or q.get('title') or '',
+                    'content': q.get('content') or '',  # actual question text
+                    'title': q.get('title') or '',      # usually "第N題"
                     'count': wrong_count,
                     'total_attempts': answered,
                 })
@@ -1861,6 +1893,7 @@ def init_postgres_users_db():
                     hair TEXT DEFAULT 'images/hair/hair01.png',
                     eyes TEXT DEFAULT 'images/face/eyes01.png',
                     eyes_offset_y INTEGER DEFAULT 0,
+                    selected_title TEXT DEFAULT '',
                     updated_at BIGINT
                 )
             ''')
@@ -1874,6 +1907,7 @@ def init_postgres_users_db():
                 ('hair', f"TEXT DEFAULT '{DEFAULT_HAIR}'"),
                 ('eyes', f"TEXT DEFAULT '{DEFAULT_EYES}'"),
                 ('eyes_offset_y', 'INTEGER DEFAULT 0'),
+                ('selected_title', "TEXT DEFAULT ''"),
                 ('updated_at', 'BIGINT'),
             ]:
                 c.execute(f'ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS {col} {typ}')
@@ -2364,6 +2398,7 @@ def save_profile_api():
         hair = sanitize_avatar_asset(data.get('hair', DEFAULT_HAIR), HAIR_ASSETS, DEFAULT_HAIR)
         eyes = sanitize_avatar_asset(data.get('eyes', DEFAULT_EYES), EYE_ASSETS, DEFAULT_EYES)
         eyes_offset_y = sanitize_eyes_offset(data.get('eyesOffsetY', 0))
+        selected_title = sanitize_profile_text(data.get('selectedTitle', ''), 30)
 
         if county and county not in TAIWAN_COUNTIES:
             return jsonify(success=False, message='請選擇有效的縣市'), 400
@@ -2374,8 +2409,8 @@ def save_profile_api():
                     cur.execute('''
                         INSERT INTO user_profiles
                         (username, display_name, avatar_url, county, bio, favorite_category,
-                         face, hair, eyes, eyes_offset_y, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                         face, hair, eyes, eyes_offset_y, selected_title, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT(username)
                         DO UPDATE SET
                             display_name=EXCLUDED.display_name,
@@ -2387,17 +2422,18 @@ def save_profile_api():
                             hair=EXCLUDED.hair,
                             eyes=EXCLUDED.eyes,
                             eyes_offset_y=EXCLUDED.eyes_offset_y,
+                            selected_title=EXCLUDED.selected_title,
                             updated_at=EXCLUDED.updated_at
                     ''', (username, display_name, avatar_url, county, bio, favorite_category,
-                          face, hair, eyes, eyes_offset_y, now_ts()))
+                          face, hair, eyes, eyes_offset_y, selected_title, now_ts()))
                 conn.commit()
         else:
             with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
                 conn.execute('''
                     INSERT INTO user_profiles
                     (username, display_name, avatar_url, county, bio, favorite_category,
-                     face, hair, eyes, eyes_offset_y, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     face, hair, eyes, eyes_offset_y, selected_title, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(username)
                     DO UPDATE SET
                         display_name=excluded.display_name,
@@ -2409,9 +2445,10 @@ def save_profile_api():
                         hair=excluded.hair,
                         eyes=excluded.eyes,
                         eyes_offset_y=excluded.eyes_offset_y,
+                        selected_title=excluded.selected_title,
                         updated_at=excluded.updated_at
                 ''', (username, display_name, avatar_url, county, bio, favorite_category,
-                      face, hair, eyes, eyes_offset_y, now_ts()))
+                      face, hair, eyes, eyes_offset_y, selected_title, now_ts()))
                 conn.commit()
 
         return jsonify(
