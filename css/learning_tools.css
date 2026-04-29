@@ -487,7 +487,9 @@ body.dark-mode .tool-btn.primary {
 }
 
 .radar-layout {
-  display: grid;
+  display: grid;   
+    padding: 5px;
+    margin: 20px;
   grid-template-columns: minmax(260px, 420px) minmax(180px, 1fr);
   align-items: center;
   gap: 18px;
@@ -519,13 +521,15 @@ body.dark-mode .tool-btn.primary {
   background: #f4f6ff;
 }
 
-.radar-legend b {
+.radar-legend b { 
+      border-radius: 15px;
   display: block;
   color: #5963d9;
 }
 
 .practice-card {
   display: grid;
+      border-radius: 15px;
   gap: 14px;
 }
 
