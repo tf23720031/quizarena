@@ -639,7 +639,6 @@ body.dark-mode .avatar-tabs button.active {
 /* =========================================================
    DARK MODE READABILITY PATCH
    修正深色模式看不到字、白格太亮、區塊貼邊問題。
-   不重新設計好友戰績榜，好友淺色版只放在 style.css。
 ========================================================= */
 body.dark-mode .tool-shell {
   width: min(1100px, calc(100% - 32px)) !important;
@@ -764,6 +763,9 @@ body.dark-mode .report-search-row {
 }
 body.dark-mode .report-search-row input {
   flex: 1 1 220px !important;
+}
+body.dark-mode .achievements-list p{
+  color: rgba(246, 241, 255, .78) !important;
 }
 body.dark-mode .analysis-panel,
 body.dark-mode .story-subject-grid,
