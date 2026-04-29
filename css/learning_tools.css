@@ -514,10 +514,11 @@ body.dark-mode .tool-btn.primary {
 .practice-box > p {
   width: 100%;
   max-width: 100%;
-  padding: 12px 14px;
+  padding:15px;
   border-radius: 14px;
   color: #66709b;
   font-weight: 800;
+  margin:15px 0 ;
   background: #f4f6ff;
 }
 
