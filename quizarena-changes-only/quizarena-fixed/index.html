@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuizArena 首頁</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/quizarena_fix.css">
+</head>
+<body>
+  <div class="sparkle-layer"></div>
+  <main class="page-wrap home-page">
+
+    <!-- DESKTOP NAVBAR -->
+    <header class="top-bar container-fluid" id="desktopNav">
+      <div class="logo-area">
+        <img src="images/LOGO.png" class="logo-img" alt="QuizArena Logo">
+      </div>
+      <nav class="top-actions" id="topActions">
+        <div class="login-status-card" id="loginStatusCard">
+          <div class="login-status-icon"><i class="fa-solid fa-circle-user"></i></div>
+          <div class="login-status-text">
+            <span class="status-label">目前登入帳號</span>
+            <strong id="loginStatus" class="status-name">尚未登入</strong>
+            <span id="loginSubStatus" class="status-subline">登入後可編輯個人檔案</span>
+          </div>
+        </div>
+        <button class="custom-btn btn-auth" id="loginBtn"><i class="fa fa-user"></i> 登入 / 註冊</button>
+        <button class="custom-btn btn-logout d-none" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> 登出</button>
+        <button class="custom-btn btn-play d-none" id="profileBtn"><i class="fa-solid fa-user-gear"></i> 個人資料</button>
+        <button class="custom-btn btn-create" id="createQuizBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫</button>
+        <button class="custom-btn btn-wrong-book" id="wrongBookBtn"><i class="fa-solid fa-book-bookmark"></i> 錯題練習</button>
+        <button class="custom-btn btn-teacher" id="teacherReportBtn"><i class="fa-solid fa-chart-column"></i> 老師看報表</button>
+        <button class="custom-btn btn-join" id="refreshLobbyBtn"><i class="fa-solid fa-rotate"></i> 重新整理大廳</button>
+        <div class="nav-inline-tools">
+          <span class="lang-switcher-slot"></span>
+          <button class="custom-btn dark-mode-btn" id="darkModeBtn" title="切換深色模式">
+            <i class="fa-solid fa-moon" id="darkModeIcon"></i>
+          </button>
+        </div>
+      </nav>
+      <!-- Hamburger for mobile -->
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="選單">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
+
+    <!-- MOBILE DRAWER -->
+    <div class="mobile-drawer-overlay" id="mobileDrawerOverlay"></div>
+    <aside class="mobile-drawer" id="mobileDrawer">
+      <div class="mobile-drawer-header">
+        <img src="images/LOGO.png" class="mobile-drawer-logo" alt="QuizArena Logo">
+        <button class="mobile-drawer-close" id="mobileDrawerClose" aria-label="關閉">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="mobile-drawer-body">
+        <div class="login-status-card mobile-status-card">
+          <div class="login-status-icon"><i class="fa-solid fa-circle-user"></i></div>
+          <div class="login-status-text">
+            <span class="status-label">目前登入帳號</span>
+            <strong id="mobileLoginStatus" class="status-name">尚未登入</strong>
+            <span id="mobileLoginSubStatus" class="status-subline">登入後可編輯個人檔案</span>
+          </div>
+        </div>
+        <button class="custom-btn btn-auth w-100" id="mobileLoginBtn"><i class="fa fa-user"></i> 登入 / 註冊</button>
+        <button class="custom-btn btn-logout d-none w-100" id="mobileLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> 登出</button>
+        <button class="custom-btn btn-play d-none w-100" id="mobileProfileBtn"><i class="fa-solid fa-user-gear"></i> 個人資料</button>
+        <button class="custom-btn btn-create w-100" id="mobileCreateQuizBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫</button>
+        <button class="custom-btn btn-wrong-book w-100" id="mobileWrongBookBtn"><i class="fa-solid fa-book-bookmark"></i> 錯題練習</button>
+        <button class="custom-btn btn-teacher w-100" id="mobileTeacherReportBtn"><i class="fa-solid fa-chart-column"></i> 老師看報表</button>
+        <button class="custom-btn btn-join w-100" id="mobileRefreshLobbyBtn"><i class="fa-solid fa-rotate"></i> 重新整理大廳</button>
+        <div class="mobile-drawer-tools">
+          <span class="lang-switcher-slot"></span>
+          <button class="custom-btn dark-mode-btn" id="mobileDarkModeBtn" title="切換深色模式">
+            <i class="fa-solid fa-moon" id="mobileDarkModeIcon"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="main-section text-center container">
+      <div class="decor decor-q1">?</div>
+      <div class="decor decor-star">★</div>
+      <div class="decor decor-q2">?</div>
+      <div class="hero-box mb-4">
+        <img src="images/girl.png" alt="girl" class="girl-img-banner">
+      </div>
+      <div class="join-panel">
+        <input type="text" id="pinInput" class="pin-input" maxlength="6" placeholder="輸入 6 碼 PIN">
+        <button id="startBtn" class="start-btn">Join Room</button>
+      </div>
+    </section>
+
+    <div class="welcome-copy text-center">
+      <h1>歡迎來到 QuizArena 即時對戰大廳</h1>
+      <p>輸入房間 PIN 可以立即進房，也可以先看看公開房、私人房和團隊對戰，挑一局最適合你的節奏加入。</p>
+    </div>
+
+    <!-- FAB: 好友排行 + 加入好友 並排 -->
+    <div class="friends-fab-stack" id="friendsFabStack" style="display:none;">
+      <button id="friendsDockBtn" class="friends-dock-btn" type="button">
+        <i class="fa-solid fa-user-group"></i>
+        <span id="friendDockBadge" class="friends-dock-badge d-none">0</span>
+        <span>好友排行</span>
+      </button>
+      <button id="openAddFriendBtn" class="friends-fab-mini" type="button" aria-label="加入好友">
+        <i class="fa-solid fa-user-plus"></i>
+      </button>
+    </div>
+
+    <section class="friends-drawer" id="friendsShell" style="display:none;">
+      <div class="friends-drawer-glow"></div>
+      <div class="friends-drawer-head">
+        <div>
+          <h2>好友戰績榜</h2>
+          <p>左側快速查看自己和好友的第一名勝場。</p>
+        </div>
+        <button id="closeFriendsDrawerBtn" class="friends-close-btn" type="button">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+      </div>
+      <div class="friends-rank-caption">
+        <span><i class="fa-solid fa-crown"></i> 只計算每局第一名的勝場</span>
+      </div>
+      <div id="friendsRecords" class="friends-records"></div>
+      <div id="friendsList" class="friends-list-text"></div>
+      <button id="openFriendRequestsBtn" class="friends-request-trigger" type="button">
+        <span class="friends-request-icon-wrap">
+          <i class="fa-solid fa-envelope-open-text"></i>
+          <span id="friendRequestBadge" class="friends-request-badge d-none">0</span>
+        </span>
+        <span>好友申請</span>
+        <i class="fa-solid fa-angle-right"></i>
+      </button>
+      <section class="achievements-panel">
+        <div class="achievements-head">
+          <span><i class="fa-solid fa-award"></i> 成就</span>
+          <strong id="achievementCount">0/0</strong>
+        </div>
+        <div id="achievementsList" class="achievements-list"></div>
+      </section>
+    </section>
+
+    <section class="lobby-shell">
+      <div class="lobby-header">
+        <div>
+          <h2>Game Lobby</h2>
+          <p>這裡會列出目前可加入的公開房、私人房與團隊房，進房前也能先看房主、題庫與人數。</p>
+        </div>
+        <div class="lobby-stats">
+          <div class="stat-card"><span>等待中房間</span><strong id="waitingRoomCount">0</strong></div>
+          <div class="stat-card"><span>目前在線人數</span><strong id="onlinePlayerCount">0</strong></div>
+          <div class="stat-card"><span>私人房數量</span><strong id="privateRoomCount">0</strong></div>
+        </div>
+      </div>
+      <div id="lobbyGrid" class="lobby-grid"></div>
+    </section>
+
+    <footer class="footer-text text-center">© 2026 QuizArena - Cute but dangerous for classmates</footer>
+  </main>
+
+  <!-- ===== MODALS ===== -->
+  <div class="modal fade" id="pinModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content cute-modal">
+        <div class="modal-body text-center p-4">
+          <h5 class="mb-2">提示</h5>
+          <p id="modalMessage" class="mb-3">訊息</p>
+          <button class="custom-btn btn-create" data-bs-dismiss="modal">關閉</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="roomKeyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content cute-modal">
+        <div class="modal-body p-4">
+          <h5 class="mb-2">私人房驗證</h5>
+          <p id="roomKeyPrompt">請輸入房間金鑰</p>
+          <input type="text" id="roomKeyInput" class="pin-input small-pin-input" placeholder="輸入房間密碼">
+          <div class="d-flex gap-2 justify-content-end mt-3">
+            <button class="custom-btn btn-join" data-bs-dismiss="modal">取消</button>
+            <button class="custom-btn btn-create" id="confirmRoomKeyBtn">確認加入</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="addFriendModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content cute-modal">
+        <div class="modal-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">加入好友</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <p class="text-pink mb-3">輸入玩家帳號後送出好友申請。</p>
+          <input type="text" id="friendUsernameInput" class="pin-input small-pin-input friends-modal-input" placeholder="輸入玩家帳號">
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button class="custom-btn btn-join px-4" data-bs-dismiss="modal">取消</button>
+            <button class="custom-btn btn-create px-4" id="addFriendBtn">送出申請</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="friendRequestsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content cute-modal">
+        <div class="modal-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">好友申請紀錄</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div id="friendRequestsContent" class="friend-requests-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="memberModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content pin-modal member-modal-box">
+        <div class="modal-body p-3 p-md-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="modal-title m-0" id="memberModalTitle">會員中心</h4>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="member-tab mb-3 d-flex gap-2">
+            <button id="showLoginBtn" class="btn member-switch-btn active flex-fill" type="button">登入</button>
+            <button id="showRegisterBtn" class="btn member-switch-btn flex-fill" type="button">註冊</button>
+          </div>
+          <div id="memberMessage" class="member-message mb-3"></div>
+          <hr>
+          <form id="loginForm">
+            <div class="mb-3">
+              <label class="form-label pink-text">帳號</label>
+              <input type="text" id="loginUsername" class="form-control member-input" placeholder="請輸入帳號" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label pink-text">密碼</label>
+              <input type="password" id="loginPassword" class="form-control member-input" placeholder="請輸入密碼" required>
+            </div>
+            <button type="submit" class="btn modal-ok-btn w-100 p-3">登入</button>
+          </form>
+          <form id="registerForm" style="display:none;">
+            <div class="mb-3">
+              <label class="form-label pink-text">帳號</label>
+              <input type="text" id="registerUsername" class="form-control member-input" placeholder="請輸入帳號" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label pink-text">Email</label>
+              <input type="email" id="registerEmail" class="form-control member-input" placeholder="請輸入 Email" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label pink-text">密碼</label>
+              <input type="password" id="registerPassword" class="form-control member-input" placeholder="請輸入密碼" required>
+            </div>
+            <button type="submit" class="btn modal-ok-btn w-100 p-3">註冊</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+      <div class="modal-content cute-modal profile-modal-shell">
+        <div class="modal-body p-4 p-lg-5">
+          <div class="profile-head">
+            <div class="profile-hero">
+              <div class="profile-avatar-wrap">
+                <div id="profileAvatarPreview" class="profile-avatar profile-avatar-stage">
+                  <img id="profileFacePreview" class="avatar-layer face-layer" alt="face" src="images/face/face.png">
+                  <img id="profileEyesPreview" class="avatar-layer eye-layer" alt="eyes" src="images/face/eyes01.png">
+                  <img id="profileHairPreview" class="avatar-layer hair-layer" alt="hair" src="images/hair/hair01.png">
+                  <img id="profilePhotoPreview" class="profile-photo-preview" alt="avatar photo" src="">
+                </div>
+                <button type="button" class="profile-avatar-clear" id="clearProfileAvatarBtn" title="移除頭像">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div class="profile-hero-copy">
+                <div class="profile-kicker">PLAYER PROFILE</div>
+                <h4 id="profileUsernameText" class="m-0">玩家</h4>
+                <p id="profileTitleText" class="profile-earned-title">新手冒險家</p>
+                <div class="profile-meta-line">
+                  <span id="profileCountyBadge" class="badge-qa">未設定縣市</span>
+                  <span id="profileFavCategoryBadge" class="badge-qa">尚未設定擅長領域</span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="profile-stats-grid">
+            <article class="profile-stat-card"><span>勝場</span><strong id="profileWinsText">0</strong></article>
+            <article class="profile-stat-card"><span>已解鎖成就</span><strong id="profileAchievementsText">0 / 0</strong></article>
+            <article class="profile-stat-card"><span>好友數</span><strong id="profileFriendsText">0</strong></article>
+            <article class="profile-stat-card"><span>錯題收藏</span><strong id="profileWrongBookText">0</strong></article>
+          </div>
+
+          <div class="row g-4 mt-1">
+            <div class="col-lg-5">
+              <div class="profile-edit-card">
+                <div class="section-label mb-3">編輯檔案</div>
+                <label class="form-label pink-text">顯示名稱</label>
+                <input type="text" id="profileDisplayNameInput" class="form-control member-input mb-3" maxlength="20" placeholder="進房時會先帶入這個名字">
+                <label class="form-label pink-text">上傳頭像</label>
+                <input type="file" id="profileAvatarInput" class="form-control member-input" accept="image/png,image/jpeg,image/webp">
+                <div class="profile-avatar-builder mt-3">
+                  <div class="profile-avatar-builder-stage">
+                    <div id="profileAvatarBuilderStage" class="profile-builder-preview">
+                      <img id="profileBuilderFace" class="avatar-layer face-layer" alt="face" src="images/face/face.png">
+                      <img id="profileBuilderEyes" class="avatar-layer eye-layer" alt="eyes" src="images/face/eyes01.png">
+                      <img id="profileBuilderHair" class="avatar-layer hair-layer" alt="hair" src="images/hair/hair01.png">
+                    </div>
+                  </div>
+                  <div class="profile-avatar-builder-controls">
+                    <div class="tab-switch profile-builder-tabs">
+                      <button type="button" class="switch-btn active" id="profileHairTabBtn">髮型</button>
+                      <button type="button" class="switch-btn" id="profileEyeTabBtn">眼睛</button>
+                    </div>
+                    <div class="profile-builder-row">
+                      <button type="button" class="circle-arrow" id="profilePrevBtn"><i class="fa-solid fa-chevron-left"></i></button>
+                      <button type="button" class="circle-arrow" id="profileNextBtn"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <label class="form-label pink-text mt-2 mb-1">眼睛上下微調</label>
+                    <input type="range" min="-12" max="12" value="0" id="profileEyeSlider" class="form-range">
+                    <div class="profile-builder-row profile-builder-actions">
+                      <button type="button" class="mini-btn" id="profileRandomAvatarBtn"><i class="fa-solid fa-dice"></i> 隨機</button>
+                      <button type="button" class="mini-btn" id="profileResetAvatarBtn"><i class="fa-solid fa-rotate-left"></i> 重設</button>
+                    </div>
+                  </div>
+                </div>
+                <label class="form-label pink-text mt-3">所在縣市</label>
+                <select id="profileCountySelect" class="form-select member-input">
+                  <option value="">請選擇縣市</option>
+                </select>
+                <label class="form-label pink-text mt-3">擅長領域</label>
+                <input type="text" id="profileFavoriteCategoryInput" class="form-control member-input" maxlength="40" placeholder="例如：歷史、英文、自然">
+                <label class="form-label pink-text mt-3">個人簡介</label>
+                <textarea id="profileBioInput" class="form-control member-input" rows="4" maxlength="180" placeholder="寫一句你的遊戲風格或自我介紹"></textarea>
+                <div class="d-flex justify-content-end mt-3">
+                  <button type="button" class="custom-btn btn-create" id="saveProfileBtn">
+                    <i class="fa-solid fa-floppy-disk"></i> 儲存個人資料
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-7">
+              <div class="profile-achievements-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div>
+                    <div class="section-label">已解鎖成就</div>
+                    <div class="small-text">這裡只顯示你已經拿到的成就與目前稱號。</div>
+                  </div>
+                  <span id="profileUnlockedBadge" class="badge-qa">0 個</span>
+                </div>
+                <div id="profileUnlockedAchievements" class="profile-unlocked-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-qa" id="toast"></div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/bootstrap.bundle.min.js"></script>
+  <script src="js/Audio_manager.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/index.js"></script>
+  <script src="js/quizarena_fix.js"></script>
+
+  <script>
+    // ── Dark Mode ──
+    function _applyDark(on) {
+      document.body.classList.toggle('dark-mode', on);
+      ['darkModeIcon','mobileDarkModeIcon'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.className = on ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      });
+      localStorage.setItem('quizDarkMode', on ? '1' : '0');
+    }
+    ['darkModeBtn','mobileDarkModeBtn'].forEach(function(id){
+      var btn = document.getElementById(id);
+      if (btn) btn.addEventListener('click', function(){
+        _applyDark(!document.body.classList.contains('dark-mode'));
+      });
+    });
+    _applyDark(localStorage.getItem('quizDarkMode') === '1');
+
+    // ── Mobile Drawer ──
+    var _drawer = document.getElementById('mobileDrawer');
+    var _overlay = document.getElementById('mobileDrawerOverlay');
+    function _openDrawer() {
+      if (_drawer) _drawer.classList.add('open');
+      if (_overlay) _overlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    function _closeDrawer() {
+      if (_drawer) _drawer.classList.remove('open');
+      if (_overlay) _overlay.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+    var _hamBtn = document.getElementById('hamburgerBtn');
+    if (_hamBtn) _hamBtn.addEventListener('click', _openDrawer);
+    var _closeBtn = document.getElementById('mobileDrawerClose');
+    if (_closeBtn) _closeBtn.addEventListener('click', _closeDrawer);
+    if (_overlay) _overlay.addEventListener('click', _closeDrawer);
+
+    // Mirror mobile → desktop buttons
+    [
+      ['mobileLoginBtn','loginBtn'],
+      ['mobileLogoutBtn','logoutBtn'],
+      ['mobileProfileBtn','profileBtn'],
+      ['mobileCreateQuizBtn','createQuizBtn'],
+      ['mobileWrongBookBtn','wrongBookBtn'],
+      ['mobileTeacherReportBtn','teacherReportBtn'],
+      ['mobileRefreshLobbyBtn','refreshLobbyBtn']
+    ].forEach(function(pair){
+      var mob = document.getElementById(pair[0]);
+      var desk = document.getElementById(pair[1]);
+      if (mob && desk) mob.addEventListener('click', function(){
+        _closeDrawer();
+        desk.click();
+      });
+    });
+
+    // Sync mobile nav auth state
+    function _syncMobileNav() {
+      var user = localStorage.getItem('currentUser') || '';
+      var mLogin = document.getElementById('mobileLoginBtn');
+      var mLogout = document.getElementById('mobileLogoutBtn');
+      var mProfile = document.getElementById('mobileProfileBtn');
+      if (mLogin) mLogin.classList.toggle('d-none', !!user);
+      if (mLogout) mLogout.classList.toggle('d-none', !user);
+      if (mProfile) mProfile.classList.toggle('d-none', !user);
+      var mStatus = document.getElementById('mobileLoginStatus');
+      var mSub = document.getElementById('mobileLoginSubStatus');
+      if (mStatus) mStatus.textContent = user || '尚未登入';
+      if (mSub) mSub.textContent = user ? '點此查看個人資料' : '登入後可編輯個人檔案';
+    }
+    setInterval(_syncMobileNav, 800);
+    _syncMobileNav();
+
+    // Show FAB stack
+    function _syncFab() {
+      var user = localStorage.getItem('currentUser') || '';
+      var fab = document.getElementById('friendsFabStack');
+      if (fab) fab.style.display = user ? 'flex' : 'none';
+    }
+    setInterval(_syncFab, 800);
+    _syncFab();
+  </script>
+</body>
+</html>
