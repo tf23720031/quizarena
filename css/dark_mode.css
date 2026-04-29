@@ -417,3 +417,221 @@ body.dark-mode .bg-layer {
     box-shadow: 0 16px 36px rgba(0,0,0,.36) !important;
   }
 }
+
+/* =========================================================
+   Dark mode readability patch - learning pages + create_home
+   需求：深色模式文字改淺、白色區塊改透明毛玻璃、題庫頁按鈕水平不換行
+   ========================================================= */
+body.dark-mode,
+body.dark-mode * {
+  text-shadow: none;
+}
+
+body.dark-mode .tool-shell,
+body.dark-mode .page-wrap,
+body.dark-mode .container,
+body.dark-mode .create-page-container {
+  color: var(--qa-dark-text) !important;
+}
+
+/* 讓所有深色模式中的說明文字都不再灰到看不見 */
+body.dark-mode .small-muted,
+body.dark-mode .tool-note,
+body.dark-mode .setting-label,
+body.dark-mode .section-label,
+body.dark-mode .profile-kicker,
+body.dark-mode .profile-language-row,
+body.dark-mode .eye-slider-label,
+body.dark-mode .radar-legend,
+body.dark-mode .wrong-insight-grid,
+body.dark-mode .wrong-insight-grid *,
+body.dark-mode .practice-box,
+body.dark-mode .practice-box *,
+body.dark-mode .question-list,
+body.dark-mode .question-list *,
+body.dark-mode .profile-chip-row span,
+body.dark-mode .profile-title-pill,
+body.dark-mode .profile-count-badge,
+body.dark-mode .teacher-report-page,
+body.dark-mode .teacher-report-page *,
+body.dark-mode .daily-mission-page,
+body.dark-mode .daily-mission-page *,
+body.dark-mode .story-mode-page,
+body.dark-mode .story-mode-page * {
+  color: rgba(248, 244, 255, .88) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+body.dark-mode .tool-kicker,
+body.dark-mode .section-label,
+body.dark-mode .setting-label,
+body.dark-mode .profile-kicker {
+  color: #ff9dcb !important;
+  font-weight: 900 !important;
+  letter-spacing: .08em;
+}
+
+body.dark-mode .tool-card h2,
+body.dark-mode .tool-card h3,
+body.dark-mode .summary-grid strong,
+body.dark-mode .profile-main h2,
+body.dark-mode #profileUsername,
+body.dark-mode #wrongUserName,
+body.dark-mode #wrongItemCount,
+body.dark-mode #wrongTotalCount,
+body.dark-mode #profileLevel,
+body.dark-mode #profileWins,
+body.dark-mode #profileAchievementCount,
+body.dark-mode #profileLanguageText {
+  color: #fff7ff !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* 原本深色模式會出現太白的格子，統一變透明毛玻璃 */
+body.dark-mode .summary-grid article,
+body.dark-mode .tool-card,
+body.dark-mode .practice-box,
+body.dark-mode .question-card,
+body.dark-mode .history-card,
+body.dark-mode .analysis-card,
+body.dark-mode .profile-hero,
+body.dark-mode .level-card,
+body.dark-mode .profile-style-panel,
+body.dark-mode .profile-title-panel,
+body.dark-mode .profile-achievement-panel,
+body.dark-mode .profile-achievement-card,
+body.dark-mode .profile-title-option,
+body.dark-mode .profile-upload-btn,
+body.dark-mode .profile-soft-btn,
+body.dark-mode .profile-main-btn,
+body.dark-mode .profile-select,
+body.dark-mode .avatar-stage,
+body.dark-mode .avatar-arrow,
+body.dark-mode .avatar-tabs button,
+body.dark-mode .radar-layout,
+body.dark-mode .radar-legend,
+body.dark-mode #weaknessRadar,
+body.dark-mode .wrong-insight-grid > *,
+body.dark-mode .mission-card,
+body.dark-mode .story-card,
+body.dark-mode .report-card,
+body.dark-mode .soft-box,
+body.dark-mode .cute-input,
+body.dark-mode .cute-select,
+body.dark-mode .cute-textarea,
+body.dark-mode .option-row,
+body.dark-mode .answer-option,
+body.dark-mode .question-chip,
+body.dark-mode .no-title,
+body.dark-mode .mini-list-box,
+body.dark-mode .bank-list-box,
+body.dark-mode .bank-card,
+body.dark-mode .question-item {
+  background: linear-gradient(145deg, rgba(255,255,255,.105), rgba(255,255,255,.045)) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  color: var(--qa-dark-text) !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.10) !important;
+  backdrop-filter: blur(18px) saturate(135%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(135%) !important;
+}
+
+body.dark-mode canvas,
+body.dark-mode .chart-box,
+body.dark-mode .chart-card,
+body.dark-mode .radar-box {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  border-radius: 22px !important;
+}
+
+/* 表單文字與選項明亮化 */
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode option,
+body.dark-mode .form-control,
+body.dark-mode .form-select,
+body.dark-mode .cute-input,
+body.dark-mode .cute-select,
+body.dark-mode .profile-select {
+  color: #fffaff !important;
+  -webkit-text-fill-color: currentColor !important;
+  background-color: rgba(10, 13, 32, .58) !important;
+}
+
+body.dark-mode option {
+  background: #151a34 !important;
+  color: #fffaff !important;
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+  color: rgba(248, 244, 255, .56) !important;
+}
+
+/* create_home：右上與題庫編輯按鈕維持水平，不要被擠成換行 */
+body.dark-mode .top-bar {
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
+
+body.dark-mode .top-actions-wrap,
+body.dark-mode .editor-top > .d-flex,
+body.dark-mode .editor-top .d-flex.flex-wrap {
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+body.dark-mode .top-action,
+body.dark-mode .btn-create,
+body.dark-mode .btn-play,
+body.dark-mode .btn-join,
+body.dark-mode .tool-btn,
+body.dark-mode .profile-soft-btn,
+body.dark-mode .profile-main-btn {
+  white-space: nowrap !important;
+  min-height: 44px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900 !important;
+  letter-spacing: .02em;
+}
+
+body.dark-mode .title-main,
+body.dark-mode .title-sub {
+  color: #fff7ff !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* 讓左側我的題庫文字、卡片標題更清楚 */
+body.dark-mode .left-box .section-label,
+body.dark-mode .left-box .small-muted,
+body.dark-mode .question-chip,
+body.dark-mode .question-chip *,
+body.dark-mode .bank-card,
+body.dark-mode .bank-card *,
+body.dark-mode .mini-list-box,
+body.dark-mode .mini-list-box * {
+  color: rgba(255, 248, 255, .9) !important;
+}
+
+body.dark-mode .question-chip.active,
+body.dark-mode .bank-card.active,
+body.dark-mode .avatar-tabs button.active {
+  background: linear-gradient(135deg, rgba(255,102,171,.38), rgba(105,215,255,.22)) !important;
+  border-color: rgba(255,160,210,.55) !important;
+  color: #fff !important;
+}
+
+/* 小螢幕才允許換行，不然會爆版 */
+@media (max-width: 768px) {
+  body.dark-mode .top-bar,
+  body.dark-mode .top-actions-wrap,
+  body.dark-mode .editor-top > .d-flex,
+  body.dark-mode .editor-top .d-flex.flex-wrap {
+    flex-wrap: wrap !important;
+  }
+}
