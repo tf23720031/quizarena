@@ -1502,6 +1502,51 @@ def serialize_room(room):
     return room
 
 
+def truthy_option_value(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value == 1
+    return str(value or '').strip().lower() in {'1', 'true', 'yes', 'y', 'correct', '正確', '答案'}
+
+
+def infer_answer_indexes(answer_json, options):
+    try:
+        raw = json.loads(answer_json or '[]')
+    except Exception:
+        raw = []
+    if not isinstance(raw, list):
+        raw = [raw]
+
+    indexes = []
+    for item in raw:
+        try:
+            indexes.append(int(item))
+            continue
+        except Exception:
+            pass
+        text = str(item or '').strip()
+        if len(text) == 1 and text.upper() in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
+            indexes.append(ord(text.upper()) - 65)
+            continue
+        for idx, option in enumerate(options or []):
+            option_text = str((option or {}).get('text') or '').strip() if isinstance(option, dict) else str(option or '').strip()
+            if text and option_text == text:
+                indexes.append(idx)
+
+    if not indexes:
+        for idx, option in enumerate(options or []):
+            if not isinstance(option, dict):
+                continue
+            if (
+                truthy_option_value(option.get('correct')) or
+                truthy_option_value(option.get('isCorrect')) or
+                truthy_option_value(option.get('answer'))
+            ):
+                indexes.append(idx)
+    return sorted({idx for idx in indexes if isinstance(idx, int) and idx >= 0})
+
+
 def build_teacher_report_from_conn(conn, pin):
     room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
     if not room:
@@ -1555,22 +1600,7 @@ def build_teacher_report_from_conn(conn, pin):
             options = json.loads(q.get('options_json') or '[]')
         except Exception:
             options = []
-        try:
-            answer_indexes = sorted(json.loads(q.get('answer_json') or '[]'))
-        except Exception:
-            answer_indexes = []
-        normalized_answer_indexes = []
-        for idx in answer_indexes:
-            try:
-                normalized_answer_indexes.append(int(idx))
-            except Exception:
-                continue
-        answer_indexes = sorted(set(normalized_answer_indexes))
-        if not answer_indexes:
-            answer_indexes = [
-                idx for idx, option in enumerate(options)
-                if isinstance(option, dict) and bool(option.get('correct'))
-            ]
+        answer_indexes = infer_answer_indexes(q.get('answer_json'), options)
         correct_parts = []
         for idx in answer_indexes:
             label = chr(65 + idx) if isinstance(idx, int) and idx >= 0 else str(idx)
@@ -1637,6 +1667,8 @@ def build_teacher_report_from_conn(conn, pin):
                 text = str((options[idx] or {}).get('text') or '').strip()
             selected_parts.append(f'{label}. {text}' if text else label)
         selected_text = '、'.join(selected_parts) if selected_parts else ('未選擇' if q_types.get(row['question_id']) != 'fill' else '填答內容未保存')
+        if is_correct and row['question_id'] in per_question and per_question[row['question_id']].get('correctAnswerText') in {'', '-', '無'}:
+            per_question[row['question_id']]['correctAnswerText'] = selected_text
         enriched.append({
             'playerName': player_name,
             'teamId': int(row.get('team_id') or 0),
@@ -2413,6 +2445,8 @@ def generate_quiz_bank_api():
         count = max(1, min(requested_count, 20))
         source_mode = str(data.get('sourceMode', 'ai')).strip()
         api_key = str(data.get('apiKey', '')).strip()
+        if data.get('storyMode'):
+            topic = f'{topic}，請每題完全不同，題目概念不可重複，並在解析中加入一小段不同的劇情線索'
         bank = generate_ai_quiz_bank(topic, category, difficulty, count, source_mode=source_mode, api_key_override=api_key, language=language)
         return jsonify(success=True, quizBank=bank)
     except Exception as e:

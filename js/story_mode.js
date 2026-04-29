@@ -113,23 +113,72 @@ const EXTRA_SCENES = [
   "故事核心偵測到你的學習軌跡，派出更精準的挑戰。",
 ];
 
+const STORY_ARCS = {
+  chinese: {
+    place: "失落圖書館",
+    goal: "修復被打散的文學星圖",
+    clues: ["銀色書籤", "古文頁角", "比喻墨水", "主旨羅盤", "段落鑰匙", "詩句羽毛", "修辭透鏡", "論點印章", "語氣鈴鐺", "象徵花紋"],
+    concepts: ["主旨判斷", "修辭辨識", "情緒語氣", "段落摘要", "古文詞意", "詩句意象", "因果推論", "對比手法", "作者觀點", "論證結構", "人物描寫", "場景描寫", "轉折詞", "成語語意", "引用作用", "象徵意涵", "敘事視角", "文本證據", "結論歸納", "跨段整合"],
+  },
+  english: {
+    place: "晨星學院",
+    goal: "集齊跨語言通行證",
+    clues: ["時態徽章", "單字羽筆", "閱讀地圖", "句型鑰匙", "介系詞羅盤", "條件句水晶", "聽力鐘", "片語卡", "段落燈", "語境指南"],
+    concepts: ["現在簡單式", "過去式", "未來式", "條件句", "比較級", "最高級", "介系詞", "連接詞", "代名詞", "被動語態", "現在完成式", "片語動詞", "閱讀主旨", "細節定位", "上下文推詞", "同義改寫", "語氣判斷", "段落排序", "句子合併", "摘要選擇"],
+  },
+  programming: {
+    place: "Debug 城",
+    goal: "啟動城市核心編譯器",
+    clues: ["變數晶片", "條件門卡", "迴圈齒輪", "函式藍圖", "陣列地圖", "物件徽章", "例外警報", "搜尋光束", "排序軸心", "API通行碼"],
+    concepts: ["變數用途", "資料型別", "if條件", "for迴圈", "while迴圈", "函式回傳", "陣列索引", "物件屬性", "布林邏輯", "錯誤處理", "字串處理", "事件監聽", "非同步概念", "API請求", "JSON格式", "二分搜尋", "排序概念", "時間複雜度", "測試案例", "程式重構"],
+  },
+  design: {
+    place: "星光工作室",
+    goal: "完成一套品牌視覺委託",
+    clues: ["色彩樣票", "版面尺", "對比卡", "字體章", "留白指南", "元件貼紙", "網格板", "動線草圖", "品牌手冊", "可用性紀錄"],
+    concepts: ["視覺層級", "色彩對比", "留白", "對齊", "重複", "親密性", "字體選擇", "品牌一致性", "按鈕狀態", "資訊架構", "使用者流程", "可讀性", "圖示語意", "網格系統", "響應式設計", "表單易用性", "錯誤提示", "設計系統", "無障礙對比", "原型測試"],
+  },
+  game: {
+    place: "關卡實驗室",
+    goal: "打造能留住玩家的試煉場",
+    clues: ["教學腳本", "回饋火花", "難度曲線", "獎勵徽章", "關卡節奏器", "Boss圖紙", "任務卷軸", "平衡砝碼", "玩家路徑", "重玩符石"],
+    concepts: ["核心玩法", "新手教學", "即時回饋", "難度曲線", "獎勵節奏", "關卡目標", "失敗成本", "玩家動機", "遊戲平衡", "Boss機制", "任務設計", "資源管理", "風險回報", "重玩性", "操作手感", "敘事節奏", "關卡引導", "成就設計", "社交互動", "留存機制"],
+  },
+  math: {
+    place: "數字高塔",
+    goal: "點亮二十層推理燈塔",
+    clues: ["加法石板", "比例齒輪", "方程鑰匙", "幾何透鏡", "機率骰", "函數線索", "數列階梯", "統計卷軸", "面積方磚", "邏輯羅盤"],
+    concepts: ["四則運算", "分數比較", "比例", "百分率", "一次方程", "等差數列", "面積", "周長", "角度", "座標", "平均數", "中位數", "機率", "倍數因數", "質數", "平方根", "函數關係", "圖表判讀", "速率", "邏輯推理"],
+  },
+};
+
+function buildUniqueStages(subject) {
+  const arc = STORY_ARCS[subject.id];
+  if (!arc) return subject.branches[0].stages;
+  return arc.concepts.map((concept, index) => {
+    const level = index + 1;
+    const difficulty = level <= 7 ? "easy" : level <= 14 ? "medium" : "hard";
+    const clue = arc.clues[index % arc.clues.length];
+    return {
+      level,
+      difficulty,
+      scene: `第 ${level} 幕，${arc.place}的路徑延伸到「${concept}」房間。你取得「${clue}」，它提示下一段任務：${arc.goal}。`,
+      q: `在${subject.title}的「${concept}」任務中，哪一個做法最能推進目標？`,
+      options: [
+        `先判斷${concept}的核心條件，再選擇答案`,
+        `只看題目中最短的一句話就作答`,
+        `忽略${concept}，直接依照選項順序猜`,
+        `把所有看起來熟悉的詞都當成正解`,
+      ],
+      answer: 0,
+    };
+  });
+}
+
 function expandStorySubjects() {
   SUBJECTS.forEach((subject) => {
     subject.branches.forEach((branch) => {
-      const seed = [...branch.stages];
-      for (let i = branch.stages.length; i < 20; i += 1) {
-        const base = seed[i % seed.length];
-        const level = i + 1;
-        const difficulty = level <= 7 ? "easy" : level <= 14 ? "medium" : "hard";
-        branch.stages.push({
-          level,
-          difficulty,
-          scene: `${EXTRA_SCENES[i % EXTRA_SCENES.length]}這是「${subject.title}」第 ${level} 關，故事線開始要求你把知識用在更接近真實的情境。`,
-          q: `${subject.title}支線第 ${level} 關：${base.q}`,
-          options: [...base.options],
-          answer: base.answer,
-        });
-      }
+      branch.stages = buildUniqueStages(subject);
     });
   });
 }
@@ -257,6 +306,7 @@ async function generateAiStoryQuestions() {
         language: "zh",
         count: 20,
         sourceMode: "ai",
+        storyMode: true,
       }),
     });
     const questions = data.quizBank?.questions || [];

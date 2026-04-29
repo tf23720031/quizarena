@@ -89,7 +89,7 @@ function selectedTextForRow(row = {}, report = latestReport) {
   return parts.length ? parts.join("、") : "未選擇";
 }
 
-function correctTextForQuestion(question = {}) {
+function correctTextForQuestion(question = {}, report = latestReport) {
   const existing = String(question.correctAnswerText || "").trim();
   if (existing && existing !== "-" && existing !== "無") return existing;
 
@@ -99,13 +99,19 @@ function correctTextForQuestion(question = {}) {
     : options
       .map((option, index) => (option && typeof option === "object" && option.correct ? index : -1))
       .filter((index) => index >= 0);
-  if (!indexes.length) return "-";
-  return indexes.map((idx) => {
-    const option = options[idx] || {};
-    const label = option.label || String.fromCharCode(65 + idx);
-    const text = String(option.text || "").trim();
-    return text ? `${label}. ${text}` : label;
-  }).join("、");
+  if (indexes.length) {
+    return indexes.map((idx) => {
+      const option = options[idx] || {};
+      const label = option.label || String.fromCharCode(65 + idx);
+      const text = String(option.text || "").trim();
+      return text ? `${label}. ${text}` : label;
+    }).join("、");
+  }
+
+  const qKey = questionKey(question);
+  const correctRow = (report?.results || []).find((row) => resultQuestionKey(row) === qKey && row.isCorrect);
+  if (correctRow) return selectedTextForRow(correctRow, report);
+  return "-";
 }
 
 function normalizeResultRow(row = {}) {
@@ -432,7 +438,7 @@ function renderReport(data) {
           <span>作答 ${Number(question.answered || 0)} 人</span>
           <span>答對 ${Number(question.correct || 0)} 人</span>
           <span>答錯 ${Math.max(0, Number(question.answered || 0) - Number(question.correct || 0))} 人</span>
-          <span>正解 ${escapeHtml(correctTextForQuestion(question))}</span>
+          <span>正解 ${escapeHtml(correctTextForQuestion(question, cleanData))}</span>
         </div>
         ${question.explanation ? `<div class="explanation-box">${escapeHtml(question.explanation)}</div>` : ""}
       </article>
@@ -520,7 +526,7 @@ function downloadCsv() {
       question.seq,
       question.title,
       question.content,
-      correctTextForQuestion(question),
+      correctTextForQuestion(question, latestReport),
       question.explanation || "",
       question.answered || 0,
       question.correct || 0,
@@ -673,7 +679,7 @@ function buildExcelReport(report) {
       (question) => question.seq,
       (question) => question.title,
       (question) => question.content,
-      (question) => correctTextForQuestion(question),
+      (question) => correctTextForQuestion(question, report),
       (question) => question.explanation || "",
       (question) => question.answered || 0,
       (question) => question.correct || 0,
@@ -806,7 +812,7 @@ function buildHtmlReport(report) {
           ${analysis.questions.map((question) => {
             const accuracy = toNumber(question.accuracy);
             const status = toNumber(question.answered) === 0 ? "未作答" : accuracy < 60 ? "建議複習" : "掌握良好";
-            return `<tr><td>Q${toNumber(question.seq)}</td><td>${escapeHtml(question.title || question.content || "未命名題目")}</td><td>${escapeHtml(correctTextForQuestion(question))}</td><td>${toNumber(question.answered)}</td><td>${toNumber(question.correct)}</td><td>${accuracy}%</td><td><span class="tag">${status}</span></td></tr>`;
+            return `<tr><td>Q${toNumber(question.seq)}</td><td>${escapeHtml(question.title || question.content || "未命名題目")}</td><td>${escapeHtml(correctTextForQuestion(question, report))}</td><td>${toNumber(question.answered)}</td><td>${toNumber(question.correct)}</td><td>${accuracy}%</td><td><span class="tag">${status}</span></td></tr>`;
           }).join("")}
         </tbody>
       </table>
