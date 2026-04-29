@@ -946,6 +946,40 @@ def build_title_options(achievement_summary):
     return options
 
 
+def build_player_level(username, achievement_summary=None):
+    username = str(username or '').strip()
+    if achievement_summary is None:
+        achievement_summary = build_achievement_summary(username)
+    wins = get_user_wins_map([username]).get(username, 0)
+    try:
+        wrong_book = build_wrong_book_detail(username)
+    except Exception:
+        wrong_book = {'items': [], 'totalWrongCount': 0}
+    try:
+        banks = [bank for bank in load_quiz_banks_for_user(username) if not (bank.get('readonly') or bank.get('isSystem') or bank.get('isWrongBook'))]
+    except Exception:
+        banks = []
+    questions = sum(len(bank.get('questions') or []) for bank in banks)
+    xp = (
+        int(wins or 0) * 120 +
+        int(achievement_summary.get('unlockedCount') or 0) * 80 +
+        len(wrong_book.get('items') or []) * 20 +
+        int(wrong_book.get('totalWrongCount') or 0) * 8 +
+        len(banks) * 50 +
+        questions * 10
+    )
+    level = max(1, xp // 180 + 1)
+    current_floor = (level - 1) * 180
+    next_floor = level * 180
+    return {
+        'level': int(level),
+        'xp': int(xp),
+        'currentLevelXp': int(max(0, xp - current_floor)),
+        'nextLevelXp': int(max(1, next_floor - current_floor)),
+        'progress': int(min(100, max(0, ((xp - current_floor) / max(1, next_floor - current_floor)) * 100))),
+    }
+
+
 def build_user_profile(username):
     username = str(username or '').strip()
     if not username:
@@ -958,6 +992,7 @@ def build_user_profile(username):
         return None
     wins = get_user_wins_map([username]).get(username, 0)
     achievements = build_achievement_summary(username)
+    level_info = build_player_level(username, achievements)
     title_options = build_title_options(achievements)
     selected = profile.get('displayTitle') or '新手挑戰者'
     if selected not in {opt['id'] for opt in title_options}:
@@ -969,6 +1004,7 @@ def build_user_profile(username):
         'language': normalize_profile_language(profile.get('language')),
         'county': normalize_profile_county(profile.get('county')),
         'wins': int(wins or 0),
+        'level': level_info,
         'achievements': achievements,
         'titleOptions': title_options,
     }
@@ -2504,6 +2540,43 @@ def wrong_book_summary_api():
     if not username:
         return jsonify(success=False, message='缺少使用者帳號'), 400
     return jsonify(success=True, **build_wrong_book_detail(username))
+
+
+@app.route('/ai_tutor', methods=['POST'])
+def ai_tutor_api():
+    data = request.get_json() or {}
+    question = str(data.get('question') or '').strip()
+    selected = str(data.get('selected') or '').strip()
+    correct = str(data.get('correct') or '').strip()
+    explanation = str(data.get('explanation') or '').strip()
+    target_lang = normalize_language(data.get('language'))
+    fallback = (
+        f'家教提示：先找題目關鍵字，再比較你的選擇與正解。\n'
+        f'你的答案：{selected or "尚未作答"}\n'
+        f'正解：{correct or "請看綠色選項"}\n'
+        f'解析：{explanation or "這題可以從定義、條件、排除錯誤選項三步驟重新理解。"}'
+    )
+    hf_api_key = os.environ.get('HF_API_KEY', '').strip()
+    if not hf_api_key or requests is None:
+        return jsonify(success=True, tutor=fallback)
+    try:
+        prompt = (
+            f'你是 QuizArena 的溫柔 AI 家教，請用 {language_name(target_lang)} 回答。\n'
+            '請針對學生答錯的題目，用 3 個短段落教學：1 關鍵概念 2 為什麼錯 3 下次怎麼判斷。\n'
+            f'題目：{question}\n學生選擇：{selected}\n正解：{correct}\n原解析：{explanation}'
+        )
+        response = requests.post(
+            HF_API_URL,
+            headers={'Authorization': f'Bearer {hf_api_key}', 'Content-Type': 'application/json'},
+            json={'model': HF_MODEL, 'messages': [{'role': 'user', 'content': prompt}], 'max_tokens': 900, 'temperature': 0.35},
+            timeout=35
+        )
+        if response.status_code != 200:
+            return jsonify(success=True, tutor=fallback)
+        content = response.json().get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+        return jsonify(success=True, tutor=content or fallback)
+    except Exception:
+        return jsonify(success=True, tutor=fallback)
 
 
 @app.route('/send_friend_request', methods=['POST'])

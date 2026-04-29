@@ -538,6 +538,15 @@ body.dark-mode .tool-btn.primary {
   background: linear-gradient(135deg, #8d6cff, #5ab9e8);
 }
 
+.tool-btn.tutor {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #33d0b8, #5bb8ff);
+}
+
+.ai-tutor-box:empty {
+  display: none;
+}
+
 .option-list .is-correct {
   color: #2f9f6f;
   font-weight: 900;
@@ -718,6 +727,21 @@ body.dark-mode .tool-btn.primary {
   color: #66709b;
   font-weight: 800;
   line-height: 1.7;
+}
+
+.level-track {
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf0fb;
+}
+
+.level-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff75ad, #8d6cff, #33d0b8);
 }
 
 .distribution-grid {

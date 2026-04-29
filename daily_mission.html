@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日任務 - QuizArena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/learning_tools.css">
+</head>
+<body>
+  <script>document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');</script>
+  <main class="tool-shell">
+    <header class="tool-topbar">
+      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <div><p class="tool-kicker">Daily Quest</p><h1>每日任務</h1></div>
+      <span class="lang-switcher-slot"></span>
+    </header>
+    <section class="summary-grid">
+      <article><span>今日進度</span><strong id="dailyProgress">0/3</strong></article>
+      <article><span>連續登入</span><strong id="dailyStreak">0 天</strong></article>
+      <article><span>今日獎勵</span><strong id="dailyReward">稱號進度</strong></article>
+    </section>
+    <section class="tool-card">
+      <div class="tool-card-head"><h2>今日三題</h2><button id="resetDailyBtn" class="tool-btn secondary"><i class="fa-solid fa-rotate"></i> 重抽今日題</button></div>
+      <div id="dailyMissionList" class="question-list"></div>
+    </section>
+  </main>
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/daily_mission.js"></script>
+</body>
+</html>

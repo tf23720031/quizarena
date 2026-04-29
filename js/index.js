@@ -167,6 +167,7 @@
     $("createQuizBtn")?.classList.toggle("d-none", !user);
     $("wrongBookBtn")?.classList.toggle("d-none", !user);
     $("storyModeBtn")?.classList.toggle("d-none", !user);
+    $("dailyMissionBtn")?.classList.toggle("d-none", !user);
     $("teacherReportBtn")?.classList.toggle("d-none", !user);
     if (!user) document.body.classList.remove("nav-drawer-open");
 
@@ -818,6 +819,15 @@
     window.location.href = "story_mode.html";
   }
 
+  function handleDailyMissionClick() {
+    if (!getCurrentUser()) {
+      showToast("請先登入，才能保存每日任務");
+      openLoginModal();
+      return;
+    }
+    window.location.href = "daily_mission.html";
+  }
+
   function handleProfileClick() {
     if (!getCurrentUser()) {
       showToast("請先登入");
@@ -877,6 +887,7 @@
     $("createQuizBtn")?.addEventListener("click", handleCreateQuizClick);
     $("wrongBookBtn")?.addEventListener("click", handleWrongBookClick);
     $("storyModeBtn")?.addEventListener("click", handleStoryModeClick);
+    $("dailyMissionBtn")?.addEventListener("click", handleDailyMissionClick);
     $("teacherReportBtn")?.addEventListener("click", handleTeacherReportClick);
     $("businessDashboardBtn")?.addEventListener("click", handleBusinessDashboardClick);
 

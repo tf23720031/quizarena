@@ -337,6 +337,12 @@ body.dark-mode .btn-close {
   filter: brightness(1.04);
 }
 
+.btn-daily {
+  background: linear-gradient(135deg, #ffd15c, #ff8f70) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 28px rgba(255, 143, 112, 0.28) !important;
+}
+
 .nav-actions-drawer {
   position: fixed;
   top: 0;

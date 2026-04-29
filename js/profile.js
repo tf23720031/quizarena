@@ -103,6 +103,10 @@ function renderProfile(profile) {
   $("profileUsername").textContent = profile.username || "-";
   $("profileDisplayTitle").textContent = profile.displayTitle || "新手挑戰者";
   $("profileWins").textContent = String(profile.wins || 0);
+  const level = profile.level || {};
+  $("profileLevel").textContent = `Lv.${Number(level.level || 1)}`;
+  $("profileXpText").textContent = `${Number(level.currentLevelXp || 0)} / ${Number(level.nextLevelXp || 180)} XP`;
+  $("profileLevelBar").style.width = `${Number(level.progress || 0)}%`;
   $("profileLanguageSelect").value = profile.language || "zh";
   $("profileCountySelect").value = profile.county || "";
   $("profileLanguageText").textContent = languageText(profile.language || "zh");

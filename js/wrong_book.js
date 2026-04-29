@@ -19,8 +19,8 @@ function showToast(message, delay = 2200) {
   showToast.timer = setTimeout(() => toast.classList.remove("show"), delay);
 }
 
-async function api(url) {
-  const res = await fetch(url);
+async function api(url, options = {}) {
+  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
   const data = await res.json();
   if (!res.ok || data.success === false) throw new Error(data.message || "讀取失敗");
   return data;
@@ -214,7 +214,9 @@ function renderPractice() {
       <div class="practice-actions">
         <button id="checkPracticeBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 檢查答案</button>
         <button id="nextPracticeBtn" class="tool-btn secondary"><i class="fa-solid fa-forward"></i> 下一題</button>
+        <button id="aiTutorBtn" class="tool-btn tutor" style="${practiceState.checked ? "" : "display:none;"}"><i class="fa-solid fa-chalkboard-user"></i> AI 家教講解</button>
       </div>
+      <div id="aiTutorBox" class="ai-tutor-box"></div>
       ${practiceState.checked ? `
         <div class="explanation-box">
           ${item.explanation ? `<strong>解析</strong><br>${escapeHtml(item.explanation)}` : "綠色選項就是正確答案。"}
@@ -239,6 +241,7 @@ function renderPractice() {
   });
   $("checkPracticeBtn")?.addEventListener("click", checkPracticeAnswer);
   $("nextPracticeBtn")?.addEventListener("click", nextPracticeQuestion);
+  $("aiTutorBtn")?.addEventListener("click", loadAiTutor);
 }
 
 function startPractice() {
@@ -274,6 +277,29 @@ function checkPracticeAnswer() {
   practiceState.checked = true;
   showToast(picked === answer ? "答對了" : "答錯了，下面有正解");
   renderPractice();
+}
+
+async function loadAiTutor() {
+  const item = currentPracticeItem();
+  const box = $("aiTutorBox");
+  if (!item || !box) return;
+  const pickedText = practiceState.selected.map((idx) => `${String.fromCharCode(65 + idx)}. ${optionText(item.options?.[idx], idx)}`).join("、");
+  box.innerHTML = `<div class="explanation-box"><i class="fa-solid fa-spinner fa-spin"></i> AI 家教正在整理講解...</div>`;
+  try {
+    const data = await api("/ai_tutor", {
+      method: "POST",
+      body: JSON.stringify({
+        question: item.content,
+        selected: pickedText,
+        correct: correctAnswerText(item),
+        explanation: item.explanation || "",
+        language: localStorage.getItem("quizLang") || "zh",
+      }),
+    });
+    box.innerHTML = `<div class="explanation-box"><strong>AI 家教</strong><br>${escapeHtml(data.tutor || "").replaceAll("\n", "<br>")}</div>`;
+  } catch (error) {
+    box.innerHTML = `<div class="explanation-box">AI 家教暫時無法回應，請先看綠色正解與解析。</div>`;
+  }
 }
 
 function nextPracticeQuestion() {
