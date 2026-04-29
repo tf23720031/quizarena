@@ -856,10 +856,13 @@
     if (state.profileAvatarDraft) {
       data.avatarUrl = state.profileAvatarDraft;
     }
-    // Don't overwrite appearance draft while user is editing (modal open)
+    // Don't overwrite appearance draft while user is editing OR has selected a file
     const modalEl = document.getElementById('profileModal');
-    const isModalOpen = modalEl && modalEl.classList.contains('show');
-    renderProfileSummary(data, { skipAppearance: isModalOpen && state.profileAppearanceDraft !== null });
+    const isModalOpen = modalEl && (modalEl.classList.contains('show') || modalEl.classList.contains('showing'));
+    const hasDraft = state.profileAppearanceDraft !== null;
+    const hasAvatarDraft = !!state.profileAvatarDraft;
+    // Skip appearance init if: modal open with draft, OR user has uploaded a file
+    renderProfileSummary(data, { skipAppearance: (isModalOpen && hasDraft) || hasAvatarDraft });
     return data;
   }
 
@@ -900,7 +903,6 @@
         <article class="friends-record-card ${index === 0 ? "is-top" : ""}" data-username="${escapeHtml(item.username)}">
           <div class="friends-record-top">
             <div class="friends-record-left">
-              <div class="friends-rank-medal">${index + 1}</div>
               ${buildFriendAvatarHtml(item)}
               <div>
                 <div class="friends-record-rank">${index === 0 ? "NO.1 WINNER" : `RANK ${index + 1}`}</div>

@@ -827,10 +827,10 @@ input[type="range"] { cursor: grab !important; }
 input[type="range"]:active { cursor: grabbing !important; }
 
 /* ================================================================
-   AVATAR FIX v5 — complete rewrite of avatar layers
+   AVATAR FIX — profile modal & builder
    ================================================================ */
 
-/* ── Head preview (112×112) ── */
+/* Head preview */
 #profileAvatarPreview.profile-avatar-stage {
   width: 112px !important;
   height: 112px !important;
@@ -842,7 +842,6 @@ input[type="range"]:active { cursor: grabbing !important; }
   overflow: hidden !important;
   flex-shrink: 0 !important;
 }
-/* All layers inside head preview */
 #profileAvatarPreview .avatar-layer {
   position: absolute !important;
   left: 50% !important;
@@ -853,7 +852,6 @@ input[type="range"]:active { cursor: grabbing !important; }
 }
 #profileAvatarPreview .face-layer { z-index: 1 !important; }
 #profileAvatarPreview .hair-layer { z-index: 2 !important; }
-/* eye-layer transform is set inline by syncAvatarStage */
 #profileAvatarPreview .eye-layer  { z-index: 3 !important; }
 #profileAvatarPreview .profile-photo-preview {
   position: absolute !important;
@@ -863,9 +861,10 @@ input[type="range"]:active { cursor: grabbing !important; }
   object-fit: cover !important;
   z-index: 10 !important;
   border-radius: 20px !important;
+  display: none;  /* shown by JS when avatarUrl exists */
 }
 
-/* ── Builder preview (120×120) ── */
+/* Builder preview */
 #profileAvatarBuilderStage {
   width: 120px !important;
   height: 120px !important;
@@ -889,7 +888,7 @@ input[type="range"]:active { cursor: grabbing !important; }
 #profileAvatarBuilderStage .hair-layer { z-index: 2 !important; }
 #profileAvatarBuilderStage .eye-layer  { z-index: 3 !important; }
 
-/* ── Nav avatar (36×36) ── */
+/* Nav avatar */
 .nav-avatar-stage .avatar-layer {
   position: absolute !important;
   left: 50% !important;
@@ -899,44 +898,129 @@ input[type="range"]:active { cursor: grabbing !important; }
   pointer-events: none !important;
 }
 
-/* ── PROFILE TEXT COLOURS (light bg) ── */
-.profile-kicker {
-  color: #9b6ff5 !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.08em !important;
+/* ================================================================
+   PROFILE MODAL — header layout
+   ================================================================ */
+.profile-head {
+  display: grid !important;
+  grid-template-columns: auto 1fr auto !important;
+  align-items: start !important;
+  gap: 16px !important;
+  margin-bottom: 20px !important;
 }
-#profileUsernameText {
-  color: #3a1e5a !important;
-  font-size: 1.4rem !important;
+.profile-hero {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
 }
-.profile-earned-title {
-  color: #f25a9e !important;
-  font-weight: 800 !important;
-  font-size: 1rem !important;
-  margin: 4px 0 6px !important;
+.profile-hero-copy { min-width: 0; }
+#profileUsernameText { color: #3a1e5a !important; font-size: 1.3rem !important; }
+.profile-kicker { color: #9b6ff5 !important; font-size: 0.7rem !important; font-weight: 900 !important; letter-spacing: 0.1em !important; }
+.profile-earned-title { color: #f25a9e !important; font-weight: 800 !important; font-size: 0.95rem !important; margin: 3px 0 5px !important; }
+.profile-meta-line { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.profile-meta-line .badge-qa { font-size: 0.78rem !important; }
+
+/* 藍2: title panel — max height + scroll */
+.profile-title-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,120,179,0.3) transparent;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.65);
+  border: 1.5px solid rgba(255,133,193,0.22);
+  border-radius: 16px;
+  align-self: start;
 }
-.profile-hero-copy .profile-meta-line .badge-qa {
-  background: rgba(168,117,255,0.14) !important;
-  color: #7c42a8 !important;
+.profile-title-panel::-webkit-scrollbar { width: 4px; }
+.profile-title-panel::-webkit-scrollbar-thumb { background: rgba(255,120,179,0.3); border-radius: 4px; }
+.profile-title-panel-label {
+  font-size: 0.72rem; font-weight: 800;
+  color: #a875ff; letter-spacing: 0.06em;
+  text-transform: uppercase; white-space: nowrap;
 }
-.profile-head .btn-close {
-  align-self: flex-start !important;
-  margin-top: 4px !important;
+.profile-title-selector { display: flex; flex-direction: column; gap: 5px; }
+.title-chip {
+  display: block; width: 100%; text-align: left;
+  padding: 5px 10px; border-radius: 8px;
+  border: 1.5px solid rgba(255,133,193,0.25);
+  background: rgba(255,255,255,0.7);
+  color: #8b5e82; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.15s;
+}
+.title-chip:hover { background: rgba(255,200,225,0.4); }
+.title-chip.active {
+  background: linear-gradient(135deg,#ff8db8,#f25a9e);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 3px 8px rgba(242,90,158,0.28);
 }
 
+/* close btn in grid */
+.profile-modal-close { flex-shrink: 0; margin-top: 2px; }
 
+/* ================================================================
+   FRIENDS DRAWER — restore original pink-purple, avatar left
+   ================================================================ */
 
-/* ── Side panel: mobile only (desktop uses nav) ── */
-@media (min-width: 821px) {
-  .side-panel { display: none !important; }
+/* Light mode: original gradient from style.css already set.
+   Override any accidental overrides: */
+.friends-drawer {
+  background: linear-gradient(45deg, #ff9fbc 0%, #8f7bff 100%) !important;
 }
+body.dark-mode .friends-drawer {
+  background: radial-gradient(circle at 75% 10%,rgba(78,149,255,0.22) 0 11%,transparent 35%),
+              linear-gradient(45deg,#1c1f3a 0%,#2c2f66 100%) !important;
+}
+
+/* Friends avatar in record cards — bigger, no number badge */
+.friends-avatar-stack {
+  position: relative !important;
+  width: 52px !important; height: 52px !important;
+  flex-shrink: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: linear-gradient(135deg,#ffe4ef,#eef4ff) !important;
+  border: 3px solid rgba(255,255,255,0.85) !important;
+  box-shadow: 0 6px 18px rgba(100,80,200,0.16) !important;
+}
+.friends-avatar-stack .avatar-layer {
+  position: absolute !important;
+  left: 50% !important; bottom: -2px !important;
+  width: 160% !important;
+  transform: translateX(-50%) !important;
+  pointer-events: none !important;
+}
+.friends-avatar-stack .face-layer { z-index: 1 !important; }
+.friends-avatar-stack .hair-layer { z-index: 2 !important; }
+.friends-avatar-stack .eye-layer  { z-index: 3 !important; }
+.friends-avatar-stack.is-photo img {
+  position: absolute !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  object-fit: cover !important; z-index: 4 !important;
+}
+
+/* Hide rank medal number */
+.friends-rank-medal { display: none !important; }
+
+/* ================================================================
+   SIDE PANEL — mobile only
+   ================================================================ */
+@media (min-width: 821px) { .side-panel { display: none !important; } }
 @media (max-width: 820px) {
-  .side-panel {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-end !important;
-  }
+  .side-panel { display: flex !important; flex-direction: column !important; align-items: flex-end !important; }
   .side-panel .d-md-none { display: flex !important; }
   .side-panel .side-panel-logout.d-none { display: none !important; }
   .side-panel .side-panel-logout:not(.d-none) { display: flex !important; }
+}
+
+/* ================================================================
+   RESPONSIVE tweaks for profile head
+   ================================================================ */
+@media (max-width: 700px) {
+  .profile-head { grid-template-columns: 1fr auto !important; }
+  .profile-title-panel { grid-column: 1 / -1 !important; max-height: 90px; }
 }

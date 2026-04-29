@@ -309,10 +309,12 @@
         <div class="modal-body p-4 p-lg-5">
 
           <!-- 頭部：頭像 + 名稱 + 關閉 -->
+          <!-- Profile Head: 三欄 [藍1:頭像+資訊] [藍2:稱號選擇] [藍3:關閉] -->
           <div class="profile-head">
+
+            <!-- 左：頭像（藍1位置） -->
             <div class="profile-hero">
               <div class="profile-avatar-wrap">
-                <!-- 只顯示用、無叉叉 -->
                 <div id="profileAvatarPreview" class="profile-avatar profile-avatar-stage">
                   <img id="profileFacePreview" class="avatar-layer face-layer" alt="face" src="images/face/face.png">
                   <img id="profileEyesPreview" class="avatar-layer eye-layer" alt="eyes" src="images/face/eyes01.png">
@@ -320,18 +322,27 @@
                   <img id="profilePhotoPreview" class="profile-photo-preview" alt="avatar photo" src="">
                 </div>
               </div>
+
+              <!-- 藍1 右側：PLAYER PROFILE / 名字 / 稱號 / 縣市+分類 -->
               <div class="profile-hero-copy">
                 <div class="profile-kicker">PLAYER PROFILE</div>
                 <h4 id="profileUsernameText" class="m-0">玩家</h4>
                 <p id="profileTitleText" class="profile-earned-title">新手冒險家</p>
-                <div id="profileTitleSelector" class="profile-title-selector"></div>
                 <div class="profile-meta-line">
                   <span id="profileCountyBadge" class="badge-qa">未設定縣市</span>
                   <span id="profileFavCategoryBadge" class="badge-qa">尚未設定擅長領域</span>
                 </div>
               </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+            <!-- 藍2：稱號選擇（超出變滾輪） -->
+            <div class="profile-title-panel">
+              <div class="profile-title-panel-label">選擇稱號</div>
+              <div id="profileTitleSelector" class="profile-title-selector"></div>
+            </div>
+
+            <!-- 藍3：關閉按鈕 -->
+            <button type="button" class="btn-close profile-modal-close" data-bs-dismiss="modal"></button>
           </div>
 
           <!-- 四格統計 -->
