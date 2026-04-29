@@ -1,248 +1,236 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QuizArena — 老師看報表</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-  <link rel="stylesheet" href="css/bootstrap.min.css">
-  <link rel="stylesheet" href="css/theme.css">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/quizarena_fix.css">
-  <style>
-    .tr-shell { max-width: 1080px; margin: 0 auto; padding: 36px 20px 60px; }
-    .tr-hero {
-      background: linear-gradient(135deg, #43c6ac 0%, #1a9e89 55%, #0e7c6a 100%);
-      border-radius: 28px;
-      padding: 36px 40px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      box-shadow: 0 16px 40px rgba(67,198,172,0.28);
-      margin-bottom: 32px;
-    }
-    .tr-hero-icon { font-size: 3.2rem; opacity: 0.9; }
-    .tr-hero h1 { font-size: clamp(1.6rem,3vw,2.4rem); font-weight: 900; margin: 0 0 8px; }
-    .tr-hero p  { margin: 0; opacity: 0.88; font-size: 1rem; }
-
-    .tr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 20px; margin-bottom: 32px; }
-    .tr-stat-card {
-      background: rgba(255,255,255,0.78);
-      border: 1.5px solid rgba(255,133,193,0.18);
-      border-radius: 22px;
-      padding: 24px 20px;
-      box-shadow: 0 6px 18px rgba(67,198,172,0.1);
-      display: flex; align-items: center; gap: 16px;
-      transition: transform 0.2s;
-    }
-    .tr-stat-card:hover { transform: translateY(-3px); }
-    .tr-stat-icon {
-      width: 54px; height: 54px;
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem;
-      flex-shrink: 0;
-    }
-    .tr-stat-icon.teal   { background: rgba(67,198,172,0.18); color: #1a9e89; }
-    .tr-stat-icon.purple { background: rgba(168,117,255,0.15); color: #a875ff; }
-    .tr-stat-icon.pink   { background: rgba(242,90,158,0.14);  color: #f25a9e; }
-    .tr-stat-icon.orange { background: rgba(255,154,108,0.15); color: #ff7043; }
-    .tr-stat-label { font-size: 0.82rem; color: #8e6280; font-weight: 600; margin-bottom: 4px; }
-    .tr-stat-value { font-size: 1.8rem; font-weight: 900; color: #663154; line-height: 1; }
-
-    .tr-section { margin-bottom: 28px; }
-    .tr-section-head {
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 16px;
-    }
-    .tr-section-head h2 { font-size: 1.2rem; font-weight: 800; color: #663154; margin: 0; }
-    .tr-section-head .tr-badge {
-      background: rgba(67,198,172,0.15); color: #1a9e89;
-      border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700;
-    }
-
-    .tr-card {
-      background: rgba(255,255,255,0.78);
-      border: 1.5px solid rgba(255,133,193,0.18);
-      border-radius: 22px;
-      padding: 26px 24px;
-      box-shadow: 0 6px 18px rgba(255,120,179,0.08);
-    }
-    .tr-placeholder {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 140px; gap: 12px; opacity: 0.55;
-    }
-    .tr-placeholder i { font-size: 2.8rem; color: #c09ab0; }
-    .tr-placeholder p { color: #a56b87; font-size: 0.92rem; margin: 0; }
-
-    .tr-back {
-      display: inline-flex; align-items: center; gap: 8px;
-      color: #43c6ac; font-weight: 700; text-decoration: none;
-      font-size: 0.95rem; margin-bottom: 24px;
-    }
-    .tr-back:hover { color: #1a9e89; }
-
-    /* dark */
-    body.dark-mode .tr-stat-card,
-    body.dark-mode .tr-card { background: rgba(255,255,255,0.06); border-color: rgba(255,133,193,0.12); }
-    body.dark-mode .tr-stat-value,
-    body.dark-mode .tr-section-head h2 { color: #f0b8d8; }
-    body.dark-mode .tr-stat-label { color: #c09ab0; }
-
-    @media(max-width:600px){
-      .tr-hero { flex-direction:column; align-items:flex-start; padding:24px 22px; }
-    }
-  </style>
-</head>
-<body>
-  <header class="top-bar container-fluid">
-    <div class="logo-area">
-      <a href="index.html"><img src="images/LOGO.png" class="logo-img" alt="QuizArena Logo"></a>
-    </div>
-    <nav class="top-actions">
-      <a href="index.html" class="custom-btn btn-join"><i class="fa-solid fa-house"></i> 回首頁</a>
-      <div class="nav-inline-tools">
-        <span class="lang-switcher-slot"></span>
-        <button class="custom-btn dark-mode-btn" id="darkModeBtn" title="切換深色模式">
-          <i class="fa-solid fa-moon" id="darkModeIcon"></i>
-        </button>
-      </div>
-    </nav>
-    <button class="hamburger-btn" id="hamburgerBtn" aria-label="選單">
-      <span></span><span></span><span></span>
-    </button>
-  </header>
-
-  <div class="mobile-drawer-overlay" id="mobileDrawerOverlay"></div>
-  <aside class="mobile-drawer" id="mobileDrawer">
-    <div class="mobile-drawer-header">
-      <img src="images/LOGO.png" class="mobile-drawer-logo" alt="QuizArena Logo">
-      <button class="mobile-drawer-close" id="mobileDrawerClose"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="mobile-drawer-body">
-      <a href="index.html" class="custom-btn btn-join w-100"><i class="fa-solid fa-house"></i> 回首頁</a>
-      <div class="mobile-drawer-tools">
-        <span class="lang-switcher-slot"></span>
-        <button class="custom-btn dark-mode-btn" id="mobileDarkModeBtn">
-          <i class="fa-solid fa-moon" id="mobileDarkModeIcon"></i>
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <div class="tr-shell">
-    <a href="index.html" class="tr-back"><i class="fa-solid fa-arrow-left"></i> 回首頁</a>
-
-    <div class="tr-hero">
-      <div class="tr-hero-icon"><i class="fa-solid fa-chart-column"></i></div>
-      <div>
-        <h1>老師看報表</h1>
-        <p>一眼掌握全班答題率、學生排行與錯誤熱點，讓教學決策有數據支撐。</p>
-      </div>
-    </div>
-
-    <!-- 概況統計 -->
-    <div class="tr-grid">
-      <div class="tr-stat-card">
-        <div class="tr-stat-icon teal"><i class="fa-solid fa-users"></i></div>
-        <div>
-          <div class="tr-stat-label">總參與學生</div>
-          <div class="tr-stat-value" id="trTotalStudents">—</div>
-        </div>
-      </div>
-      <div class="tr-stat-card">
-        <div class="tr-stat-icon purple"><i class="fa-solid fa-percent"></i></div>
-        <div>
-          <div class="tr-stat-label">平均答對率</div>
-          <div class="tr-stat-value" id="trAvgCorrect">—</div>
-        </div>
-      </div>
-      <div class="tr-stat-card">
-        <div class="tr-stat-icon pink"><i class="fa-solid fa-gamepad"></i></div>
-        <div>
-          <div class="tr-stat-label">總場次</div>
-          <div class="tr-stat-value" id="trTotalGames">—</div>
-        </div>
-      </div>
-      <div class="tr-stat-card">
-        <div class="tr-stat-icon orange"><i class="fa-solid fa-fire"></i></div>
-        <div>
-          <div class="tr-stat-label">最多錯誤題型</div>
-          <div class="tr-stat-value" id="trTopWrong">—</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 班級答對率 -->
-    <div class="tr-section">
-      <div class="tr-section-head">
-        <h2><i class="fa-solid fa-chart-pie"></i> 班級答對率</h2>
-        <span class="tr-badge">即時更新</span>
-      </div>
-      <div class="tr-card">
-        <div class="tr-placeholder">
-          <i class="fa-solid fa-chart-area"></i>
-          <p>串接場次資料後，班級答對率圖表會顯示在此。</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- 學生排行榜 -->
-    <div class="tr-section">
-      <div class="tr-section-head">
-        <h2><i class="fa-solid fa-trophy"></i> 學生排行榜</h2>
-        <span class="tr-badge">依總分排序</span>
-      </div>
-      <div class="tr-card">
-        <div class="tr-placeholder">
-          <i class="fa-solid fa-list-ol"></i>
-          <p>學生完成對戰後，排名與積分會自動同步到這裡。</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- 錯誤熱點 -->
-    <div class="tr-section">
-      <div class="tr-section-head">
-        <h2><i class="fa-solid fa-fire-flame-curved"></i> 答錯熱點題目</h2>
-        <span class="tr-badge">重點複習</span>
-      </div>
-      <div class="tr-card">
-        <div class="tr-placeholder">
-          <i class="fa-solid fa-magnifying-glass-chart"></i>
-          <p>錯誤率最高的題目清單，幫助老師快速找出需要加強講解的知識點。</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="toast-qa" id="toast"></div>
-  <script src="js/i18n.js"></script>
-  <script src="js/bootstrap.bundle.min.js"></script>
-  <script src="js/quizarena_fix.js"></script>
-  <script>
-    function _applyDark(on) {
-      document.body.classList.toggle('dark-mode', on);
-      ['darkModeIcon','mobileDarkModeIcon'].forEach(function(id){
-        var el=document.getElementById(id);
-        if(el) el.className=on?'fa-solid fa-sun':'fa-solid fa-moon';
-      });
-      localStorage.setItem('quizDarkMode', on?'1':'0');
-    }
-    ['darkModeBtn','mobileDarkModeBtn'].forEach(function(id){
-      var b=document.getElementById(id);
-      if(b) b.addEventListener('click',function(){ _applyDark(!document.body.classList.contains('dark-mode')); });
-    });
-    _applyDark(localStorage.getItem('quizDarkMode')==='1');
-
-    var _drawer=document.getElementById('mobileDrawer');
-    var _overlay=document.getElementById('mobileDrawerOverlay');
-    function _openDrawer(){ _drawer&&_drawer.classList.add('open'); _overlay&&_overlay.classList.add('show'); document.body.style.overflow='hidden'; }
-    function _closeDrawer(){ _drawer&&_drawer.classList.remove('open'); _overlay&&_overlay.classList.remove('show'); document.body.style.overflow=''; }
-    document.getElementById('hamburgerBtn')?.addEventListener('click',_openDrawer);
-    document.getElementById('mobileDrawerClose')?.addEventListener('click',_closeDrawer);
-    _overlay?.addEventListener('click',_closeDrawer);
-  </script>
-</body>
-</html>
+{
+  "users": {
+    "mingjia": [
+      {
+        "id": "bank_1776913119024_in06n",
+        "questions": [],
+        "title": "211211",
+        "updatedAt": 1776913122
+      },
+      {
+        "id": "bank_1776913091_3298",
+        "questions": [
+          {
+            "content": "fdhdghg",
+            "fakeAnswer": false,
+            "id": "1776664142863_u4ho53",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "gfhdghfg"
+              },
+              {
+                "correct": true,
+                "text": "hfghfghf"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 1",
+            "type": "single"
+          },
+          {
+            "content": "nvbnvbnvbn",
+            "fakeAnswer": false,
+            "id": "1776664152810_czp7qd",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnbvnbvn"
+              },
+              {
+                "correct": true,
+                "text": "vcbcvbcv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "bvnvbnvb",
+            "type": "single"
+          },
+          {
+            "content": "fdbc",
+            "fakeAnswer": false,
+            "id": "1776664177336_zfstrx",
+            "image": "",
+            "mode": "團體賽",
+            "options": [
+              {
+                "correct": true,
+                "text": "是"
+              },
+              {
+                "correct": false,
+                "text": "否"
+              }
+            ],
+            "score": "1000",
+            "time": "30 秒",
+            "title": "cvbvcbcvb",
+            "type": "tf"
+          },
+          {
+            "content": "bnvbn",
+            "fakeAnswer": false,
+            "id": "1776664186114_sjma24",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnvbnvbn"
+              },
+              {
+                "correct": true,
+                "text": "vbnvbnvb"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 2",
+            "type": "single"
+          },
+          {
+            "content": "cxvcxv",
+            "fakeAnswer": false,
+            "id": "1776664192719_3cp9vm",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "cxv"
+              },
+              {
+                "correct": true,
+                "text": "cxvvv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 3",
+            "type": "single"
+          }
+        ],
+        "title": "其中",
+        "updatedAt": 1776917440
+      },
+      {
+        "id": "1776664282932_5eb6g3",
+        "questions": [
+          {
+            "content": "fdhdghg",
+            "fakeAnswer": false,
+            "id": "1776664142863_u4ho53",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "gfhdghfg"
+              },
+              {
+                "correct": true,
+                "text": "hfghfghf"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 1",
+            "type": "single"
+          },
+          {
+            "content": "nvbnvbnvbn",
+            "fakeAnswer": false,
+            "id": "1776664152810_czp7qd",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnbvnbvn"
+              },
+              {
+                "correct": true,
+                "text": "vcbcvbcv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "bvnvbnvb",
+            "type": "single"
+          },
+          {
+            "content": "fdbc",
+            "fakeAnswer": false,
+            "id": "1776664177336_zfstrx",
+            "image": "",
+            "mode": "團體賽",
+            "options": [
+              {
+                "correct": true,
+                "text": "是"
+              },
+              {
+                "correct": false,
+                "text": "否"
+              }
+            ],
+            "score": "1000",
+            "time": "30 秒",
+            "title": "cvbvcbcvb",
+            "type": "tf"
+          },
+          {
+            "content": "bnvbn",
+            "fakeAnswer": false,
+            "id": "1776664186114_sjma24",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnvbnvbn"
+              },
+              {
+                "correct": true,
+                "text": "vbnvbnvb"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 2",
+            "type": "single"
+          },
+          {
+            "content": "cxvcxv",
+            "fakeAnswer": false,
+            "id": "1776664192719_3cp9vm",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "cxv"
+              },
+              {
+                "correct": true,
+                "text": "cxvvv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 3",
+            "type": "single"
+          }
+        ],
+        "title": "期末",
+        "updatedAt": 1776917501
+      }
+    ]
+  }
+}

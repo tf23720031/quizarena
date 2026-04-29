@@ -1,236 +1,273 @@
 {
-  "users": {
-    "mingjia": [
-      {
-        "id": "bank_1776913119024_in06n",
-        "questions": [],
-        "title": "211211",
-        "updatedAt": 1776913122
-      },
-      {
-        "id": "bank_1776913091_3298",
-        "questions": [
-          {
-            "content": "fdhdghg",
-            "fakeAnswer": false,
-            "id": "1776664142863_u4ho53",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "gfhdghfg"
-              },
-              {
-                "correct": true,
-                "text": "hfghfghf"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "未命名題目 1",
-            "type": "single"
-          },
-          {
-            "content": "nvbnvbnvbn",
-            "fakeAnswer": false,
-            "id": "1776664152810_czp7qd",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "vbnbvnbvn"
-              },
-              {
-                "correct": true,
-                "text": "vcbcvbcv"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "bvnvbnvb",
-            "type": "single"
-          },
-          {
-            "content": "fdbc",
-            "fakeAnswer": false,
-            "id": "1776664177336_zfstrx",
-            "image": "",
-            "mode": "團體賽",
-            "options": [
-              {
-                "correct": true,
-                "text": "是"
-              },
-              {
-                "correct": false,
-                "text": "否"
-              }
-            ],
-            "score": "1000",
-            "time": "30 秒",
-            "title": "cvbvcbcvb",
-            "type": "tf"
-          },
-          {
-            "content": "bnvbn",
-            "fakeAnswer": false,
-            "id": "1776664186114_sjma24",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "vbnvbnvbn"
-              },
-              {
-                "correct": true,
-                "text": "vbnvbnvb"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "未命名題目 2",
-            "type": "single"
-          },
-          {
-            "content": "cxvcxv",
-            "fakeAnswer": false,
-            "id": "1776664192719_3cp9vm",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "cxv"
-              },
-              {
-                "correct": true,
-                "text": "cxvvv"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "未命名題目 3",
-            "type": "single"
-          }
-        ],
-        "title": "其中",
-        "updatedAt": 1776917440
-      },
-      {
-        "id": "1776664282932_5eb6g3",
-        "questions": [
-          {
-            "content": "fdhdghg",
-            "fakeAnswer": false,
-            "id": "1776664142863_u4ho53",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "gfhdghfg"
-              },
-              {
-                "correct": true,
-                "text": "hfghfghf"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "未命名題目 1",
-            "type": "single"
-          },
-          {
-            "content": "nvbnvbnvbn",
-            "fakeAnswer": false,
-            "id": "1776664152810_czp7qd",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "vbnbvnbvn"
-              },
-              {
-                "correct": true,
-                "text": "vcbcvbcv"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "bvnvbnvb",
-            "type": "single"
-          },
-          {
-            "content": "fdbc",
-            "fakeAnswer": false,
-            "id": "1776664177336_zfstrx",
-            "image": "",
-            "mode": "團體賽",
-            "options": [
-              {
-                "correct": true,
-                "text": "是"
-              },
-              {
-                "correct": false,
-                "text": "否"
-              }
-            ],
-            "score": "1000",
-            "time": "30 秒",
-            "title": "cvbvcbcvb",
-            "type": "tf"
-          },
-          {
-            "content": "bnvbn",
-            "fakeAnswer": false,
-            "id": "1776664186114_sjma24",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "vbnvbnvbn"
-              },
-              {
-                "correct": true,
-                "text": "vbnvbnvb"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "未命名題目 2",
-            "type": "single"
-          },
-          {
-            "content": "cxvcxv",
-            "fakeAnswer": false,
-            "id": "1776664192719_3cp9vm",
-            "image": "",
-            "mode": "個人賽",
-            "options": [
-              {
-                "correct": false,
-                "text": "cxv"
-              },
-              {
-                "correct": true,
-                "text": "cxvvv"
-              }
-            ],
-            "score": "1000",
-            "time": "20 秒",
-            "title": "未命名題目 3",
-            "type": "single"
-          }
-        ],
-        "title": "期末",
-        "updatedAt": 1776917501
-      }
-    ]
-  }
+  "banks": [
+    {
+      "id": "system_science_mix",
+      "title": "系統題庫：自然科學挑戰",
+      "gameMode": "individual",
+      "questions": [
+        {
+          "id": "science_easy_1",
+          "title": "植物的能量來源",
+          "content": "植物進行光合作用時，最主要是利用哪一種能量來源？",
+          "type": "single",
+          "category": "自然科學",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "光合作用主要利用太陽光提供能量，把二氧化碳和水轉成葡萄糖與氧氣。",
+          "options": [
+            { "text": "太陽光", "correct": true },
+            { "text": "風力", "correct": false },
+            { "text": "土壤中的鹽分", "correct": false },
+            { "text": "月光", "correct": false }
+          ]
+        },
+        {
+          "id": "science_medium_1",
+          "title": "水的三態",
+          "content": "下列哪些屬於水在自然界中常見的狀態？",
+          "type": "multiple",
+          "category": "自然科學",
+          "difficulty": "medium",
+          "time": "30 秒",
+          "score": 1000,
+          "explanation": "水可在自然界中以固態、液態、氣態存在，像冰、液態水、水蒸氣。",
+          "options": [
+            { "text": "冰", "correct": true },
+            { "text": "液態水", "correct": true },
+            { "text": "水蒸氣", "correct": true },
+            { "text": "等離子水", "correct": false }
+          ]
+        },
+        {
+          "id": "science_hard_1",
+          "title": "食物鏈判斷",
+          "content": "在草原生態系中，如果草大量減少，最先直接受到影響的通常是哪一類生物？",
+          "type": "single",
+          "category": "自然科學",
+          "difficulty": "hard",
+          "time": "30 秒",
+          "score": 1000,
+          "explanation": "初級消費者直接吃草，因此草減少時，最先直接受影響的是草食動物。",
+          "options": [
+            { "text": "草食動物", "correct": true },
+            { "text": "分解者", "correct": false },
+            { "text": "頂級掠食者", "correct": false },
+            { "text": "雲層", "correct": false }
+          ]
+        },
+        {
+          "id": "science_easy_2",
+          "title": "行星知識",
+          "content": "地球繞著哪一個天體公轉？",
+          "type": "single",
+          "category": "自然科學",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "地球會繞著太陽公轉，形成一年四季與年度循環。",
+          "options": [
+            { "text": "太陽", "correct": true },
+            { "text": "月亮", "correct": false },
+            { "text": "火星", "correct": false },
+            { "text": "木星", "correct": false }
+          ]
+        },
+        {
+          "id": "science_medium_2",
+          "title": "人體器官功能",
+          "content": "人體中負責將血液送往全身的器官是什麼？",
+          "type": "single",
+          "category": "自然科學",
+          "difficulty": "medium",
+          "time": "20 秒",
+          "score": 1000,
+          "explanation": "心臟會收縮與舒張，把血液循環送往全身。",
+          "options": [
+            { "text": "心臟", "correct": true },
+            { "text": "肺臟", "correct": false },
+            { "text": "肝臟", "correct": false },
+            { "text": "腎臟", "correct": false }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "system_history_mix",
+      "title": "系統題庫：世界歷史冒險",
+      "gameMode": "individual",
+      "questions": [
+        {
+          "id": "history_easy_1",
+          "title": "金字塔文明",
+          "content": "金字塔最著名地代表哪一個古代文明？",
+          "type": "single",
+          "category": "歷史",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "金字塔是古埃及文明最具代表性的建築之一。",
+          "options": [
+            { "text": "古埃及", "correct": true },
+            { "text": "古希臘", "correct": false },
+            { "text": "古印度", "correct": false },
+            { "text": "古羅馬", "correct": false }
+          ]
+        },
+        {
+          "id": "history_medium_1",
+          "title": "工業革命影響",
+          "content": "工業革命帶來了哪些明顯改變？",
+          "type": "multiple",
+          "category": "歷史",
+          "difficulty": "medium",
+          "time": "30 秒",
+          "score": 1000,
+          "explanation": "工業革命帶來機器生產、城市化加速，也改變了勞動方式與交通效率。",
+          "options": [
+            { "text": "機器大量取代手工", "correct": true },
+            { "text": "城市人口增加", "correct": true },
+            { "text": "交通運輸效率提升", "correct": true },
+            { "text": "人類停止使用金屬", "correct": false }
+          ]
+        },
+        {
+          "id": "history_hard_1",
+          "title": "文藝復興判斷",
+          "content": "文藝復興強調重新重視人的價值與古典文化，這個說法正確嗎？",
+          "type": "tf",
+          "category": "歷史",
+          "difficulty": "hard",
+          "time": "20 秒",
+          "score": 1000,
+          "explanation": "文藝復興重視人文精神，提倡重新理解希臘羅馬古典文化，因此此敘述正確。",
+          "options": [
+            { "text": "是", "correct": true },
+            { "text": "否", "correct": false }
+          ]
+        },
+        {
+          "id": "history_easy_2",
+          "title": "長城所在",
+          "content": "萬里長城最著名地位於哪一個國家？",
+          "type": "single",
+          "category": "歷史",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "萬里長城是中國歷史上著名的大型防禦工程。",
+          "options": [
+            { "text": "中國", "correct": true },
+            { "text": "日本", "correct": false },
+            { "text": "韓國", "correct": false },
+            { "text": "印度", "correct": false }
+          ]
+        },
+        {
+          "id": "history_medium_2",
+          "title": "大航海時代",
+          "content": "大航海時代帶來了哪些影響？",
+          "type": "multiple",
+          "category": "歷史",
+          "difficulty": "medium",
+          "time": "30 秒",
+          "score": 1000,
+          "explanation": "大航海時代促進洲際交流、貿易擴張，也改變了世界政治與經濟結構。",
+          "options": [
+            { "text": "促進洲際交流", "correct": true },
+            { "text": "帶動海外貿易", "correct": true },
+            { "text": "完全停止殖民行為", "correct": false },
+            { "text": "改變世界地理認知", "correct": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "system_english_mix",
+      "title": "系統題庫：英文單字與文法",
+      "gameMode": "individual",
+      "questions": [
+        {
+          "id": "english_easy_1",
+          "title": "基本單字",
+          "content": "單字 \"apple\" 的中文意思最接近哪一個？",
+          "type": "single",
+          "category": "英文",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "apple 是蘋果，屬於常見基礎英文單字。",
+          "options": [
+            { "text": "蘋果", "correct": true },
+            { "text": "香蕉", "correct": false },
+            { "text": "汽車", "correct": false },
+            { "text": "學校", "correct": false }
+          ]
+        },
+        {
+          "id": "english_medium_1",
+          "title": "動詞時態",
+          "content": "下列哪些句子使用了過去式？",
+          "type": "multiple",
+          "category": "英文",
+          "difficulty": "medium",
+          "time": "30 秒",
+          "score": 1000,
+          "explanation": "含有 went、played 這類過去式動詞的句子，表示動作發生在過去。",
+          "options": [
+            { "text": "She went home early.", "correct": true },
+            { "text": "They played soccer yesterday.", "correct": true },
+            { "text": "I am reading now.", "correct": false },
+            { "text": "He will call me tomorrow.", "correct": false }
+          ]
+        },
+        {
+          "id": "english_hard_1",
+          "title": "文法概念",
+          "content": "\"If I were you\" 使用的是假設語氣，這個說法正確嗎？",
+          "type": "tf",
+          "category": "英文",
+          "difficulty": "hard",
+          "time": "20 秒",
+          "score": 1000,
+          "explanation": "If I were you 是英文常見的假設語氣，用來表示與事實不同的假設。",
+          "options": [
+            { "text": "是", "correct": true },
+            { "text": "否", "correct": false }
+          ]
+        },
+        {
+          "id": "english_easy_2",
+          "title": "日常單字",
+          "content": "單字 \"teacher\" 的意思是哪一個？",
+          "type": "single",
+          "category": "英文",
+          "difficulty": "easy",
+          "time": "20 秒",
+          "score": 500,
+          "explanation": "teacher 指的是老師，是常見的職業英文單字。",
+          "options": [
+            { "text": "老師", "correct": true },
+            { "text": "醫生", "correct": false },
+            { "text": "警察", "correct": false },
+            { "text": "工程師", "correct": false }
+          ]
+        },
+        {
+          "id": "english_medium_2",
+          "title": "填空挑戰",
+          "content": "I ___ to school every day. 請填入最適合的一個英文單字。",
+          "type": "fill",
+          "category": "英文",
+          "difficulty": "medium",
+          "time": "20 秒",
+          "score": 1000,
+          "explanation": "主詞是 I，表示日常習慣時，常用原形動詞 go。",
+          "options": [
+            { "text": "go", "correct": true }
+          ]
+        }
+      ]
+    }
+  ]
 }

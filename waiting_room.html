@@ -3,96 +3,194 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>waiting-room</title>
+  <title>QuizArena Game</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
-  <link rel="stylesheet" href="css/waiting_room.css">
+  <link rel="stylesheet" href="css/quiz_game.css">
 </head>
 <body>
-  <div class="cloud-layer"></div>
-  <main class="page-wrap">
-    <header class="top-header">
-      <div class="logo-wrap">
-        <img src="images/LOGO.png" alt="QuizArena Logo" class="site-logo">
+  <main class="game-shell">
+    <header class="game-topbar">
+      <img src="images/LOGO.png" alt="logo" class="game-logo">
+      <div class="game-badges">
+        <span class="badge-pill">PIN <strong id="roomPinText">------</strong></span>
+        <span class="badge-pill">玩家 <strong id="playerNameText">-</strong></span>
+        <span class="badge-pill">身份 <strong id="roleText">-</strong></span>
+        <span class="badge-pill">倒數 <strong id="countdownText">-</strong></span>
+        <span class="badge-pill" id="scoreBadgePill">總分 <strong id="totalScoreText">0</strong></span>
+      </div>
+      <div class="topbar-actions">
+        <select class="lang-select" id="langSelect" title="語言 / Language">
+          <option value="zh">繁體中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="es">Español</option>
+        </select>
+        <button class="icon-btn" id="muteBtn" title="靜音">
+          <i class="fa-solid fa-volume-high" id="muteIcon"></i>
+        </button>
+        <button class="icon-btn" id="darkModeBtn" title="深色模式">
+          <i class="fa-solid fa-moon" id="darkModeIcon"></i>
+        </button>
+        <button class="leave-game-btn" id="leaveGameBtn">
+          <i class="fa-solid fa-right-from-bracket"></i> 離開
+        </button>
       </div>
     </header>
 
-    <section class="waiting-room">
-      <aside class="left-panel">
-        <div class="pin-card glass-card">
-          <div class="card-title">✦ ROOM PIN ✦</div>
-          <div class="pin-box"><div class="pin-number" id="roomPin">------</div></div>
-          <div class="pin-tip" id="roomName">Share this PIN with friends</div>
-          <div class="room-mini-grid">
-            <div><span>題庫</span><strong id="bankTitle">-</strong></div>
-            <div><span>狀態</span><strong id="roomStatus">waiting</strong></div>
+    <section class="game-layout">
+      <aside class="side-board glass-card">
+        <div class="progress-copy" id="progressText">題目載入中...</div>
+        <div class="leaderboard-title">排行榜</div>
+        <div id="leaderboardList" class="leaderboard-list"></div>
+      </aside>
+
+      <section class="main-board glass-card">
+        <div id="hostView" style="display:none;">
+          <div class="host-question-header">
+            <span class="question-kicker" id="hostQuestionKicker">Question</span>
+            <h2 class="question-title" id="hostQuestionTitle">題目載入中...</h2>
+            <p class="question-content" id="hostQuestionContent"></p>
+            <img id="hostQuestionImage" class="question-image" alt="" style="display:none;">
+            <div id="hostOptionsList" class="options-list host-options-list"></div>
+          </div>
+          <div class="host-monitor-box">
+            <div class="host-monitor-title">
+              <i class="fa-solid fa-chalkboard-teacher"></i> 玩家答題狀況
+            </div>
+            <div id="hostAnswerStatus" class="host-answer-status"></div>
+            <button id="hostAllDoneSkipBtn" class="submit-btn host-skip-early-btn" style="display:none;">
+              <i class="fa-solid fa-forward-step"></i> 所有人已作答，結束本題
+            </button>
+            <div class="host-breakdown-title">本題各選項統計</div>
+            <div id="hostAnswerBreakdown" class="host-answer-breakdown"></div>
           </div>
         </div>
 
-        <div class="chat-card glass-card">
-          <div class="chat-header">✦ Player chat ✦</div>
-          <div class="chat-list" id="chatList">
-            <div class="chat-empty">No messages yet...</div>
+        <div id="playerView" style="display:none;">
+          <div id="questionWrap">
+            <div id="teamQuestionSelectWrap" style="display:none; margin-bottom:10px;">
+              <select id="teamQuestionSelect" class="form-select"></select>
+            </div>
+            <div class="question-kicker" id="questionKicker">Question</div>
+            <h1 class="question-title" id="questionTitle">題目載入中...</h1>
+            <p class="question-content" id="questionContent"></p>
+            <img id="questionImage" class="question-image" alt="" style="display:none;">
+            <div id="optionsList" class="options-list"></div>
+            <div id="fillAnswerWrap" style="display:none;">
+              <input id="fillAnswerInput" class="form-control" type="text" placeholder="請輸入答案">
+            </div>
+            <button id="submitAnswerBtn" class="submit-btn">送出答案</button>
           </div>
-          <form class="chat-input-wrap" id="chatForm">
-            <input type="text" id="chatInput" placeholder="Type a message">
-            <button class="send-btn" id="sendBtn" type="submit">➤</button>
+        </div>
+
+        <div id="spectatorView" style="display:none;">
+          <div class="spectator-banner">
+            <div class="spectator-icon">👀</div>
+            <h2>你目前是觀戰模式</h2>
+            <p>你仍然可以看到題目、解析與排行榜，但不能再繼續作答。</p>
+            <p class="spectator-hint">你可以先觀察其他玩家的表現，等待本局結束。</p>
+          </div>
+          <div class="spectator-question-box" id="spectatorQuestionBox" style="display:none;">
+            <div class="question-kicker" id="spectatorKicker">Question</div>
+            <h2 class="question-title" id="spectatorTitle"></h2>
+            <p class="question-content" id="spectatorContent"></p>
+            <img id="spectatorImage" class="question-image" alt="" style="display:none;">
+            <div id="spectatorOptionsList" class="options-list spectator-options"></div>
+          </div>
+        </div>
+
+        <div id="finishWrap" class="finish-wrap" style="display:none;">
+          <h2>遊戲結束</h2>
+          <p>本局作答已完成，正在整理你的最終排名與得分。</p>
+          <div class="finish-score">你的總分：<strong id="finishScoreText">0</strong></div>
+        </div>
+      </section>
+
+      <aside class="player-side-panel glass-card">
+        <div class="psp-title"><i class="fa-solid fa-users"></i> 玩家</div>
+        <div id="playerSideList" class="player-side-list"></div>
+        <div id="teamChatBox" class="team-chat-box" style="display:none;">
+          <div class="team-chat-title"><i class="fa-solid fa-comments"></i> 隊伍聊天</div>
+          <div id="teamChatList" class="team-chat-list"></div>
+          <form id="teamChatForm" class="team-chat-form">
+            <input id="teamChatInput" type="text" maxlength="120" placeholder="輸入隊伍訊息..." />
+            <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
           </form>
         </div>
       </aside>
-
-      <section class="right-panel">
-        <div class="girl-wrap">
-          <img src="images/waiting_girl.png" alt="Anime Girl" class="girl-img">
-        </div>
-
-        <div class="player-card glass-card">
-          <div class="player-title">✦ Player Joined ✦</div>
-          <div class="status-topline">
-            <span id="currentPlayerName">PLAYER</span>
-            <button class="leave-soft" id="inviteRoomBtn" style="display:none;">複製邀請</button>
-            <button class="leave-soft" id="leaveRoomBtn">離開房間</button>
-          <span class="lang-switcher-slot" style="margin-left:auto;"></span>
-          </div>
-
-          <!-- 團體模式：玩家選隊（只在 team_mode 時顯示） -->
-          <div id="teamJoinBox" class="team-setup-box" style="display:none;">
-            <div class="team-setup-title">
-              <i class="fa-solid fa-flag"></i>
-              選擇你的隊伍
-            </div>
-            <div id="teamJoinButtons" class="team-join-buttons"></div>
-            <div id="myTeamLabel" class="my-team-label"></div>
-          </div>
-
-          <div class="player-list" id="playerList"></div>
-          <div class="waiting-text" id="waitingHint">Waiting for host to start the game...</div>
-        </div>
-      </section>
     </section>
-
-    <footer class="footer-text">© 2026 Quiz Arena ・ Made with love ・ All rights reserved.</footer>
   </main>
 
+  <div class="result-overlay" id="resultOverlay">
+    <div class="result-card">
+      <div class="result-badge" id="resultBadge">答題結果</div>
+      <div class="result-score">本題得分：<strong id="earnedScoreText">0</strong></div>
+      <div class="result-answer">正確答案：<span id="correctAnswerText">A</span></div>
+      <div class="result-my-score">目前總分：<strong id="myLiveScoreText">0</strong></div>
+      <div class="result-rank-box" id="myRankBox" style="display:none;">
+        <strong id="myRankText">目前排名第 1 名</strong>
+      </div>
+      <div class="eliminated-notice" id="eliminatedNotice" style="display:none;">
+        <i class="fa-solid fa-skull"></i>
+        你已被淘汰，但仍可觀看題目、解析與排行榜。
+      </div>
+      <div class="result-top5-title">目前前五名</div>
+      <div id="resultTop5List" class="result-top5-list"></div>
+      <div class="result-explanation" id="resultExplanation"></div>
+      <div class="result-actions">
+        <button class="submit-btn" id="nextQuestionBtn" style="display:none;">繼續觀看下一題</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-overlay" id="hostExplanationOverlay">
+    <div class="result-card">
+      <div class="result-badge host-badge-label">本題解析</div>
+      <div class="result-answer">投影模式：<span id="hostCorrectAnswerText">已隱藏答案</span></div>
+      <div class="result-explanation" id="hostExplanationText">-</div>
+      <div class="result-top5-title">目前前五名</div>
+      <div id="hostResultTop5List" class="result-top5-list"></div>
+      <div id="hostEliminatedList" class="host-eliminated-list" style="display:none;">
+        <div class="host-eliminated-title">本題淘汰玩家</div>
+        <div id="hostEliminatedNames"></div>
+      </div>
+      <div class="result-actions">
+        <button class="submit-btn" id="hostSkipExplanationBtn">
+          <i class="fa-solid fa-forward"></i> 進入下一題
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="podium-overlay" id="podiumOverlay" style="display:none;">
+    <div class="podium-card">
+      <div class="podium-title">遊戲結束，最終前三名</div>
+      <div id="podiumInner" class="podium-inner"></div>
+      <button class="submit-btn podium-continue-btn" id="podiumContinueBtn">
+        查看完整排名 <i class="fa-solid fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="scoreboard-overlay" id="scoreboardOverlay" style="display:none;">
+    <div class="scoreboard-card">
+      <div class="podium-title">完整排行榜</div>
+      <div id="scoreboardWrap"></div>
+      <div id="hostDetailSection" style="display:none; margin-top:24px;">
+        <div class="host-detail-title">所有玩家作答紀錄</div>
+        <div id="hostDetailWrap" class="host-detail-wrap"></div>
+      </div>
+      <button class="submit-btn" id="backHomeBtn" style="margin-top:24px;">
+        <i class="fa-solid fa-house"></i> 回到首頁
+      </button>
+    </div>
+  </div>
+
   <div class="toast-qa" id="toast"></div>
-  <script src="js/i18n.js"></script>
-  <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/Audio_manager.js"></script>
-  <script src="js/waiting_room.js"></script>
-  <script src="js/quizarena_fix.js"></script>
-  <script>
-    // Dark mode persistence
-    (function(){
-      var darkBtn = document.getElementById('darkModeBtn');
-      var darkIcon = document.getElementById('darkModeIcon');
-      function applyDark(on) {
-        document.body.classList.toggle('dark-mode', on);
-        if (darkIcon) darkIcon.className = on ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-        localStorage.setItem('quizDarkMode', on ? '1' : '0');
-      }
-      if (darkBtn) darkBtn.addEventListener('click', function(){ applyDark(!document.body.classList.contains('dark-mode')); });
-      applyDark(localStorage.getItem('quizDarkMode') === '1');
-    })();
-  </script>
+  <script src="js/quiz_game.js"></script>
+  <script src="js/i18n.js"></script>
 </body>
 </html>

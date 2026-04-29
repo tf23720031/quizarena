@@ -1,0 +1,772 @@
+:root{
+  --bg-main: #f4dce4;
+  --pink-1: #fff3f8;
+  --pink-2: #ffe2ec;
+  --pink-3: #ffc5db;
+  --pink-4: #ff9fc4;
+  --pink-5: #f57bad;
+
+  --text-main: #8e6c84;
+  --text-dark: #7c5a73;
+  --text-soft: #c7899c;
+
+  --white-glass: rgba(255,255,255,0.34);
+  --white-strong: rgba(255,255,255,0.52);
+  --border: rgba(255,255,255,0.65);
+
+  --shadow: 0 10px 30px rgba(216, 149, 181, 0.24);
+
+  --radius-xl: 30px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+}
+
+*{
+  box-sizing: border-box;
+}
+
+html,
+body{
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+    font-family: "Comic Sans MS", "Arial","GenSenRounded", sans-serif;
+    
+    background-image: url(../images/waiting.jpg);
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
+body{
+  position: relative;
+}
+
+/* 背景亮點 */
+body::before{
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 8% 14%, rgba(255,255,255,0.85) 0 2px, transparent 3px),
+    radial-gradient(circle at 18% 28%, rgba(255,255,255,0.7) 0 2px, transparent 3px),
+    radial-gradient(circle at 36% 12%, rgba(255,255,255,0.8) 0 2px, transparent 3px),
+    radial-gradient(circle at 62% 18%, rgba(255,255,255,0.6) 0 2px, transparent 3px),
+    radial-gradient(circle at 76% 10%, rgba(255,255,255,0.75) 0 2px, transparent 3px),
+    radial-gradient(circle at 88% 22%, rgba(255,255,255,0.7) 0 2px, transparent 3px),
+    radial-gradient(circle at 72% 72%, rgba(255,255,255,0.5) 0 2px, transparent 3px),
+    radial-gradient(circle at 28% 68%, rgba(255,255,255,0.55) 0 2px, transparent 3px);
+}
+
+
+.page-wrap{
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 18px 20px 80px;
+}
+
+/* LOGO */
+.top-header{
+  width: min(1400px, 95%);
+  margin: 0 auto 20px;
+  padding: 0;
+}
+
+.logo-wrap{
+  width: 100%;
+  overflow: hidden;
+}
+
+.site-logo{
+  display: block;
+  width: min(380px, 80vw);
+  max-width: 100%;
+  height: auto;
+  margin: 0;
+}
+
+/* 主版面 */
+.waiting-room{
+  width: min(1400px, 95%);
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+/* 共用玻璃感 */
+.glass-card{
+  background: linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.28));
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+}
+
+/* 左欄 */
+.left-panel{
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Room PIN */
+.pin-card{
+  padding: 18px 18px 14px;
+}
+
+.card-title{
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #cf8ca2;
+  margin-bottom: 12px;
+}
+
+.pin-box{
+  background: rgba(255,255,255,0.58);
+  border: 2px solid rgba(255,255,255,0.74);
+  border-radius: 22px;
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.pin-number{
+  font-size: 4rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 10px;
+  color: #ff73ac;
+}
+
+.pin-tip{
+  margin-top: 10px;
+  text-align: center;
+  color: var(--text-soft);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* Chat */
+.chat-card{
+  flex: 1;
+  min-height: 500px;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-header{
+  background: linear-gradient(180deg, #ffd3e3, #ffc4d9);
+  color: #fff;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  padding: 14px 16px;
+  border-radius: 28px 28px 0 0;
+}
+
+.chat-list{
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+}
+
+.chat-list::-webkit-scrollbar,
+.player-list::-webkit-scrollbar{
+  width: 10px;
+}
+
+.chat-list::-webkit-scrollbar-thumb,
+.player-list::-webkit-scrollbar-thumb{
+  background: rgba(216, 142, 182, 0.8);
+  border-radius: 999px;
+}
+
+.chat-item{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.46);
+  border: 2px solid rgba(255,255,255,0.65);
+  border-radius: 20px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.chat-avatar{
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  border: 3px solid rgba(255,255,255,0.9);
+}
+
+.avatar-yellow{ background: linear-gradient(135deg, #ffe39f, #ffc872); }
+.avatar-purple{ background: linear-gradient(135deg, #e0b3ff, #c38eff); }
+.avatar-blue{ background: linear-gradient(135deg, #bad0ff, #95b0ff); }
+.avatar-pink{ background: linear-gradient(135deg, #ffc5dc, #ff9fc3); }
+
+.chat-content{
+  min-width: 0;
+}
+
+.chat-name{
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.1;
+}
+
+.chat-msg{
+  font-size: 1rem;
+  color: #8d7585;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.chat-input-wrap{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border-top: 2px solid rgba(255,255,255,0.42);
+  background: rgba(255,255,255,0.1);
+}
+
+.chat-input-wrap input{
+  flex: 1;
+  border: none;
+  outline: none;
+  background: linear-gradient(180deg, #f8a4c5, #ef94bc);
+  color: #fff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.chat-input-wrap input::placeholder{
+  color: rgba(255,255,255,0.96);
+}
+
+.chat-empty{
+  width: 100%;
+  text-align: center;
+  color: #b997a7;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 30px 10px;
+  opacity: 0.9;
+}
+
+.chat-list{
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-item{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.46);
+  border: 2px solid rgba(255,255,255,0.65);
+  border-radius: 20px;
+  padding: 12px;
+  margin-bottom: 0;
+}
+.send-btn{
+  border: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffc6dc, #ffb0cf);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* 右欄 */
+.right-panel{
+  flex: 1;
+  min-width: 0;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.girl-wrap{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  position: relative;
+  z-index: 3;
+  margin-bottom: -40px;   /* 原本 -95px，改更大 */
+  pointer-events: none;
+}
+.girl-img{
+  display: block;
+  width: min(560px, 100%);
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 16px rgba(173, 110, 145, 0.18));
+  user-select: none;
+}
+
+/* 玩家卡片 */
+.player-card{
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 20px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.player-title{
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #ca8091;
+  margin-bottom: 16px;
+}
+.player-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  box-sizing: border-box;
+}
+
+.player-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.player-list::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+
+.player-list::-webkit-scrollbar-thumb {
+  background: rgba(193, 146, 180, 0.8);
+  border-radius: 999px;
+}
+
+.player-item {
+  min-height: 100px;
+  border-radius: 24px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.player-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.player-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  border: 2px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.player-info {
+  min-width: 0;
+}
+
+.player-name {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-sub {
+  margin-top: 4px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+}
+
+.player-score {
+  min-width: 88px;
+  height: 54px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.host-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #ffb85c;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+/* 玩家卡顏色 */
+.player-item.gold {
+  background: linear-gradient(135deg, #f7d68e, #f2bc61);
+}
+
+.player-item.purple {
+  background: linear-gradient(135deg, #caacf8, #af85eb);
+}
+
+.player-item.blue {
+  background: linear-gradient(135deg, #abc0ff, #8fa8f3);
+}
+
+.player-item.green {
+  background: linear-gradient(135deg, #bbdfb5, #9bd09f);
+}
+
+.player-item.pink {
+  background: linear-gradient(135deg, #d5b1ff, #b284f0);
+}
+
+/* 手機板一欄 */
+@media (max-width: 768px) {
+  .player-list {
+    grid-template-columns: 1fr;
+    max-height: 420px;
+  }
+}
+.host-badge{
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  background: #ffba69;
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 2px solid rgba(255,255,255,0.7);
+}
+
+.waiting-text{
+  text-align: center;
+  margin-top: 16px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #8c7184;
+}
+
+.footer-text{
+  width: min(1400px, 95%);
+  margin: 18px auto 0;
+  text-align: center;
+  color: #9b8090;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* 中型螢幕 */
+@media (max-width: 1199.98px){
+  .left-panel{
+    width: 340px;
+  }
+
+  .pin-number{
+    font-size: 3.3rem;
+    letter-spacing: 8px;
+  }
+
+  .girl-img{
+    width: min(620px, 100%);
+  }
+
+  .girl-wrap{
+    margin-bottom: -60px;
+  }
+
+  .player-card{
+    padding: 86px 18px 18px;
+  }
+
+  .player-name{
+    font-size: 1.6rem;
+  }
+
+  .player-score{
+    min-width: 86px;
+    font-size: 1.35rem;
+  }
+}
+
+/* 平板以下：女生消失，避免跑版 */
+@media (max-width: 991.98px){
+  .waiting-room{
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .left-panel{
+    width: 100%;
+  }
+
+  .girl-wrap{
+    display: none;
+  }
+
+  .chat-card,
+  .player-card{
+    min-height: auto;
+  }
+
+  .chat-card{
+    height: 520px;
+  }
+
+  .player-card{
+    padding-top: 24px;
+  }
+
+  .player-list{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 手機 */
+@media (max-width: 575.98px){
+  .page-wrap{
+    padding: 14px 12px 70px;
+  }
+
+  .top-header{
+    margin-bottom: 14px;
+  }
+
+  .site-logo{
+    width: min(82%, 320px);
+  }
+
+  .card-title{
+    font-size: 1rem;
+  }
+
+  .pin-number{
+    font-size: 2.6rem;
+    letter-spacing: 6px;
+  }
+
+  .pin-tip{
+    font-size: 0.9rem;
+  }
+
+  .chat-header{
+    font-size: 1.05rem;
+  }
+
+  .chat-avatar{
+    width: 46px;
+    height: 46px;
+    font-size: 1.2rem;
+  }
+
+  .chat-name{
+    font-size: 1rem;
+  }
+
+  .chat-msg{
+    font-size: 0.92rem;
+  }
+
+  .chat-input-wrap{
+    padding: 10px 12px 12px;
+  }
+
+  .chat-input-wrap input{
+    padding: 12px 14px;
+    font-size: 0.95rem;
+  }
+
+  .send-btn{
+    width: 46px;
+    height: 46px;
+  }
+
+  .player-card{
+    padding: 16px;
+  }
+
+  .player-title{
+    font-size: 1.4rem;
+  }
+
+  .player-item{
+    min-height: 92px;
+    padding: 12px;
+  }
+
+  .player-avatar{
+    width: 56px;
+    height: 56px;
+    font-size: 1.5rem;
+    border-radius: 16px;
+  }
+
+  .player-name{
+    font-size: 1.3rem;
+  }
+
+  .player-sub{
+    font-size: 1rem;
+  }
+
+  .player-score{
+    min-width: 70px;
+    font-size: 1.1rem;
+    padding: 8px 10px;
+  }
+
+  .host-badge{
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+
+  .waiting-text{
+    font-size: 1rem;
+  }
+
+  .footer-text{
+    font-size: 0.85rem;
+  }
+}
+
+.room-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.room-mini-grid div{background:rgba(255,255,255,.42);border:2px solid rgba(255,255,255,.55);border-radius:18px;padding:10px 12px;text-align:center}.room-mini-grid span{display:block;font-size:.8rem;color:#c7899c}.room-mini-grid strong{display:block;color:#8d6078;margin-top:4px}
+.status-topline{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:10px 0 14px;color:#c85f81;font-weight:800}.leave-soft{border:none;border-radius:999px;padding:10px 14px;background:linear-gradient(45deg,#ff4b8d,#ffc4d9);;color:#fff;font-weight:800}
+.player-entry{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.46);border:2px solid rgba(255,255,255,.65);border-radius:20px;padding:12px;margin-bottom:12px}.player-meta{min-width:0}.player-name-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;color:var(--text-dark)}.host-badge{background:#ffd06b;color:#fff;padding:4px 10px;border-radius:999px;font-size:.76rem}.avatar-combo{position:relative;width:56px;height:56px;flex-shrink:0;background:rgba(255,255,255,.7);border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.9)}.avatar-combo img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.avatar-combo.avatar-photo img{object-fit:cover}.chat-item .avatar-combo{width:54px;height:54px}.chat-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.chat-time{font-size:.78rem;color:#c7899c}.chat-empty{text-align:center;color:#c7899c;padding:24px 12px}.toast-qa{position:fixed;right:18px;bottom:18px;background:rgba(54,37,48,.92);color:#fff;padding:12px 16px;border-radius:14px;opacity:0;pointer-events:none;transform:translateY(10px);transition:.2s;z-index:9999}.toast-qa.show{opacity:1;transform:translateY(0)}.start-wide-btn{width:100%;border:none;border-radius:18px;padding:16px 18px;font-size:1.08rem;font-weight:900;color:#fff;background:linear-gradient(180deg,#ffc96b,#ffaf42);box-shadow:0 12px 22px rgba(255,173,60,.24)}
+.audio-toggle{position:fixed;right:18px;top:18px;z-index:9999;border:none;border-radius:999px;padding:10px 14px;background:rgba(255,255,255,.9);color:#d35f93;font-weight:800;box-shadow:0 8px 24px rgba(116,35,70,.2)}
+
+/* ═══════════════════════════════════════
+   團體賽選隊區（玩家等待室）
+   ═══════════════════════════════════════ */
+
+.team-setup-box {
+  background: rgba(255,255,255,0.52);
+  border: 2px solid rgba(255,255,255,0.72);
+  border-radius: 22px;
+  padding: 14px 16px 16px;
+  margin-bottom: 16px;
+}
+
+.team-setup-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-weight: 900;
+  color: #d65d94;
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+
+.team-join-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.team-join-btn {
+  border: 2px solid #ddd;
+  border-radius: 16px;
+  padding: 10px 18px;
+  background: rgba(255,255,255,0.82);
+  cursor: pointer;
+  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 88px;
+  transition: transform .15s, box-shadow .15s;
+}
+.team-join-btn:hover:not([disabled]) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+.team-join-btn.selected {
+  box-shadow: 0 0 0 3px currentColor;
+}
+.team-join-btn.full {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.team-btn-name { font-size: 0.9rem; color: #6c4f6b; }
+.team-btn-count { font-size: 0.78rem; font-weight: 900; }
+
+.my-team-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin-top: 2px;
+  min-height: 1.4em;
+}
+
+@media (max-width: 575.98px) {
+  .team-join-buttons { gap: 8px; }
+  .team-join-btn { min-width: 76px; padding: 9px 12px; }
+  .team-btn-name { font-size: 0.82rem; }
+}
