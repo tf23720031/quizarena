@@ -957,28 +957,60 @@
   async function handleProfileAvatarInput(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      showToast("頭像檔案需小於 2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("頭像檔案請小於 5MB");
       event.target.value = "";
       return;
     }
-    state.profileAvatarDraft = await new Promise((resolve, reject) => {
+
+    // Compress image to JPEG ≤ 300KB using Canvas
+    const compressedDataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
       reader.onerror = () => reject(new Error("讀取頭像失敗"));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("圖片載入失敗"));
+        img.onload = () => {
+          const MAX_SIZE = 320; // max width/height in pixels
+          let w = img.width, h = img.height;
+          if (w > MAX_SIZE || h > MAX_SIZE) {
+            if (w > h) { h = Math.round(h * MAX_SIZE / w); w = MAX_SIZE; }
+            else       { w = Math.round(w * MAX_SIZE / h); h = MAX_SIZE; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          // Try quality 0.85 first, lower if still too big
+          let quality = 0.85;
+          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+          while (dataUrl.length > 2_000_000 && quality > 0.3) {
+            quality -= 0.1;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+          resolve(dataUrl);
+        };
+        img.src = String(e.target.result);
+      };
       reader.readAsDataURL(file);
     });
+
+    state.profileAvatarDraft = compressedDataUrl;
+
     if (state.profileAppearanceDraft) {
-      state.profileAppearanceDraft.avatarUrl = state.profileAvatarDraft;
+      state.profileAppearanceDraft.avatarUrl = compressedDataUrl;
     }
-    // Directly update photo previews to show uploaded image immediately
+
+    // Show photo in head preview immediately (photo overlays avatar layers)
     const photoPreview = document.getElementById('profilePhotoPreview');
     if (photoPreview) {
-      photoPreview.src = state.profileAvatarDraft;
+      photoPreview.src = compressedDataUrl;
       photoPreview.style.display = 'block';
+      photoPreview.style.zIndex = '10';
     }
     const avatarFilename = document.getElementById('profileAvatarFilename');
     if (avatarFilename && file.name) avatarFilename.textContent = file.name;
+    if (window._qa_onAvatarLoaded) window._qa_onAvatarLoaded(compressedDataUrl);
     renderProfileAppearanceDraft();
   }
 

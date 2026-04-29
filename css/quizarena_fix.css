@@ -924,16 +924,7 @@ input[type="range"]:active { cursor: grabbing !important; }
   margin-top: 4px !important;
 }
 
-/* ── FRIENDS DRAWER: light = pink-purple, dark = navy ── */
-.friends-drawer {
-  background: linear-gradient(140deg, #ffb3cc 0%, #d89af8 50%, #9880ff 100%) !important;
-  color: #fff !important;
-}
-body.dark-mode .friends-drawer {
-  background:
-    radial-gradient(circle at 75% 10%, rgba(78,149,255,0.22) 0 11%, transparent 35%),
-    linear-gradient(45deg, #1c1f3a 0%, #2c2f66 100%) !important;
-}
+
 
 /* ── Side panel: mobile only (desktop uses nav) ── */
 @media (min-width: 821px) {

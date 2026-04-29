@@ -786,7 +786,7 @@ def sanitize_profile_avatar(value):
     avatar = str(value or '').strip()
     if not avatar:
         return ''
-    if avatar.startswith('data:image/') and len(avatar) <= 1_500_000:
+    if avatar.startswith('data:image/') and len(avatar) <= 3_000_000:
         return avatar
     if avatar.startswith('images/'):
         return avatar
@@ -1452,7 +1452,7 @@ def build_teacher_report_from_conn(conn, pin):
     if not room:
         return None
     questions = conn.execute(
-        'SELECT question_id,seq,title,content FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
+        'SELECT question_id,seq,title,content,options_json FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
         (pin,)
     ).fetchall()
     players = conn.execute('''
@@ -1487,8 +1487,10 @@ def build_teacher_report_from_conn(conn, pin):
             'seq': int(q['seq'] or 0),
             'title': q['title'] or '',
             'content': q['content'] or '',
+            'options_json': q['options_json'] if q.get('options_json') else '[]',
             'answered': 0,
             'correct': 0,
+            '_wrong_selections': {},  # track wrong answer selections
         }
         for q in questions
     }
@@ -1512,6 +1514,14 @@ def build_teacher_report_from_conn(conn, pin):
         if row['question_id'] in per_question:
             per_question[row['question_id']]['answered'] += 1
             per_question[row['question_id']]['correct'] += 1 if is_correct else 0
+            if not is_correct:
+                try:
+                    sel = json.loads(row.get('selected_json') or '[]')
+                    for idx in sel:
+                        key = str(idx)
+                        per_question[row['question_id']]['_wrong_selections'][key] =                             per_question[row['question_id']]['_wrong_selections'].get(key, 0) + 1
+                except Exception:
+                    pass
         enriched.append({
             'playerName': player_name,
             'teamId': int(row.get('team_id') or 0),
@@ -1529,6 +1539,23 @@ def build_teacher_report_from_conn(conn, pin):
     question_stats = sorted(per_question.values(), key=lambda item: item['seq'])
     for item in question_stats:
         item['accuracy'] = round((item['correct'] / item['answered']) * 100, 1) if item['answered'] else 0
+        # Compute most commonly chosen wrong answer text
+        wrong_sels = item.pop('_wrong_selections', {})
+        opts = []
+        try:
+            opts = json.loads(item.pop('options_json', '[]') or '[]')
+        except Exception:
+            pass
+        if wrong_sels and opts:
+            top_idx = max(wrong_sels, key=lambda k: wrong_sels[k])
+            try:
+                opt = opts[int(top_idx)]
+                item['mostWrongAnswer'] = opt.get('text') or str(opt) if isinstance(opt, dict) else str(opt)
+            except Exception:
+                item['mostWrongAnswer'] = ''
+        else:
+            item['mostWrongAnswer'] = ''
+            item.pop('options_json', None)
 
     return {
         'room': {
@@ -1713,10 +1740,11 @@ def list_teacher_report_history_full(username=''):
             if wrong_count > 0:
                 wrong_questions.append({
                     'question': q.get('content') or q.get('title') or '',
-                    'content': q.get('content') or '',  # actual question text
-                    'title': q.get('title') or '',      # usually "第N題"
+                    'content': q.get('content') or '',
+                    'title': q.get('title') or '',
                     'count': wrong_count,
                     'total_attempts': answered,
+                    'most_wrong_answer': q.get('mostWrongAnswer') or '',
                 })
 
         result.append({
