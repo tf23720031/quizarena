@@ -736,7 +736,7 @@ body::before {
   padding: 14px;
   border: 1px solid rgba(255,255,255,.75);
   cursor: pointer;
-  color: #c96891;
+  color: #fff;
 }
 
 .question-card.active {
@@ -745,13 +745,13 @@ body::before {
 
 .question-card .meta {
   font-size: .86rem;
-  color: #9b7e8a;
+  color: #e8d5df;
   margin-top: 6px;
 }
 
 .question-card .desc {
   font-size: .92rem;
-  color: #6d5c64;
+  color: #f0e6ec;
   margin-top: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;

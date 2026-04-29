@@ -378,6 +378,7 @@ body.nav-drawer-open .nav-drawer-overlay {
   width: 100%;
   min-height: 52px;
   justify-content: flex-start;
+  color: #1e2a5e !important;
 }
 
 .nav-drawer-overlay {
@@ -1946,6 +1947,7 @@ body.dark-mode .lang-switcher:hover {
     min-height: 50px;
     padding-inline: 16px;
     justify-content: flex-start;
+    color: #1e2a5e !important;
   }
 
   .nav-actions-drawer #darkModeBtn {
@@ -2251,24 +2253,4 @@ body:not(.dark-mode) .friends-request-trigger {
 }
 body:not(.dark-mode) .friends-request-icon-wrap {
   background: linear-gradient(135deg, #ff8cc8, #a78cff) !important;
-}
-
-.title-item,
-.title-card,
-.nickname-item,
-.profile-title-item{
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    box-shadow: none !important;
-}
-
-/* 右側狀態 */
-
-.title-item .status,
-.title-card .status,
-.title-badge{
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: #ffffffcc !important;
 }

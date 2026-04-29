@@ -1118,11 +1118,12 @@ body.dark-mode .tool-btn.primary {
 
 .profile-achievement-card strong {
   font-weight: 900;
+  color: #1e2a5e;
 }
 
 .profile-achievement-card span {
   margin-top: 3px;
-  color: #66709b;
+  color: #3d4a7a;
   font-size: 0.84rem;
   font-weight: 800;
 }
