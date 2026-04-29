@@ -7,10 +7,12 @@ body {
   margin: 0;
   color: #293150;
   font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
-  background:
-    radial-gradient(circle at 12% 10%, rgba(255, 142, 190, 0.32), transparent 30%),
-    radial-gradient(circle at 86% 4%, rgba(112, 178, 255, 0.28), transparent 28%),
-    linear-gradient(135deg, #fff6fb 0%, #eef6ff 100%);
+  background-image:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.08)),
+    url("../images/bannerbg3.gif");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 body.dark-mode {
