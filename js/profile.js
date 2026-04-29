@@ -104,8 +104,9 @@ function renderProfile(profile) {
   $("profileDisplayTitle").textContent = profile.displayTitle || "新手挑戰者";
   $("profileWins").textContent = String(profile.wins || 0);
   $("profileLanguageSelect").value = profile.language || "zh";
+  $("profileCountySelect").value = profile.county || "";
   $("profileLanguageText").textContent = languageText(profile.language || "zh");
-  $("profileLocationChip").textContent = "新竹縣";
+  $("profileLocationChip").textContent = profile.county || "尚未設定所在地";
   $("profileCategoryChip").textContent = profile.displayTitle || "尚未設定常玩分類";
 
   const summary = profile.achievements || {};
@@ -197,6 +198,7 @@ async function saveProfile() {
         avatar: nextAvatar || styleToAvatar(avatarStyle),
         displayTitle: activeTitle,
         language: $("profileLanguageSelect").value,
+        county: $("profileCountySelect").value,
       }),
     });
     localStorage.setItem("currentUserProfile", JSON.stringify(data.profile));
@@ -242,6 +244,9 @@ $("profileLanguageSelect")?.addEventListener("change", () => {
   const lang = $("profileLanguageSelect").value;
   $("profileLanguageText").textContent = languageText(lang);
   if (window.I18N?.applyLang) window.I18N.applyLang(lang);
+});
+$("profileCountySelect")?.addEventListener("change", () => {
+  $("profileLocationChip").textContent = $("profileCountySelect").value || "尚未設定所在地";
 });
 $("saveProfileBtn")?.addEventListener("click", saveProfile);
 loadProfile();

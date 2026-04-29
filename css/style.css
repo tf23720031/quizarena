@@ -314,7 +314,7 @@ body.dark-mode .btn-close {
 }
 
 .nav-menu-btn {
-  display: none;
+  display: inline-flex;
   min-width: 52px !important;
   width: 52px;
   height: 52px;
@@ -323,11 +323,40 @@ body.dark-mode .btn-close {
 }
 
 .nav-actions-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1040;
+  width: min(340px, calc(100vw - 38px));
+  height: 100dvh;
+  padding: 28px 20px;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 12px;
-  flex-wrap: wrap;
+  overflow-y: auto;
+  transform: translateX(112%);
+  transition: transform 0.24s ease;
+  border-left: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 240, 248, 0.92)),
+    radial-gradient(circle at 90% 8%, rgba(255, 142, 189, 0.28), transparent 34%);
+  box-shadow: -18px 0 44px rgba(66, 52, 118, 0.26);
+}
+
+body.nav-drawer-open .nav-actions-drawer {
+  transform: translateX(0);
+}
+
+body.nav-drawer-open .nav-drawer-overlay {
+  display: block;
+}
+
+.nav-actions-drawer .custom-btn {
+  width: 100%;
+  min-height: 52px;
+  justify-content: flex-start;
 }
 
 .nav-drawer-overlay {
@@ -337,6 +366,13 @@ body.dark-mode .btn-close {
   display: none;
   background: rgba(22, 18, 48, 0.34);
   backdrop-filter: blur(6px);
+}
+
+body.dark-mode .nav-actions-drawer {
+  background:
+    linear-gradient(135deg, rgba(13, 24, 56, 0.98), rgba(24, 34, 78, 0.96)),
+    radial-gradient(circle at 90% 8%, rgba(89, 140, 255, 0.24), transparent 34%);
+  border-left-color: rgba(255, 255, 255, 0.14);
 }
 
 /* ════════════════════════════════════════

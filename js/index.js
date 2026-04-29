@@ -129,6 +129,7 @@
     const loginBtn = $("loginBtn");
     const logoutBtn = $("logoutBtn");
     const profileBtn = $("profileBtn");
+    const navMenuBtn = $("navMenuBtn");
     const friendsShell = $("friendsShell");
     const friendsDockBtn = $("friendsDockBtn");
     const openAddFriendBtn = $("openAddFriendBtn");
@@ -140,6 +141,11 @@
     loginBtn?.classList.toggle("d-none", !!user);
     logoutBtn?.classList.toggle("d-none", !user);
     profileBtn?.classList.toggle("d-none", !user);
+    navMenuBtn?.classList.toggle("d-none", !user);
+    $("createQuizBtn")?.classList.toggle("d-none", !user);
+    $("wrongBookBtn")?.classList.toggle("d-none", !user);
+    $("teacherReportBtn")?.classList.toggle("d-none", !user);
+    if (!user) document.body.classList.remove("nav-drawer-open");
 
     if (friendsShell) {
       friendsShell.style.display = user ? "block" : "none";
@@ -840,11 +846,9 @@
 
     $("navMenuBtn")?.addEventListener("click", () => document.body.classList.add("nav-drawer-open"));
     $("navDrawerOverlay")?.addEventListener("click", () => document.body.classList.remove("nav-drawer-open"));
-    $("navActionsDrawer")?.querySelectorAll("button, a, select").forEach((el) => {
+    $("navActionsDrawer")?.querySelectorAll("button, a").forEach((el) => {
       el.addEventListener("click", () => {
-        if (window.matchMedia("(max-width: 1280px)").matches && el.tagName !== "SELECT") {
-          document.body.classList.remove("nav-drawer-open");
-        }
+        document.body.classList.remove("nav-drawer-open");
       });
     });
   }

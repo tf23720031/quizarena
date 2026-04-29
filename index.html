@@ -27,45 +27,45 @@
           </div>
         </div>
 
-        <button class="custom-btn btn-auth nav-menu-btn" id="navMenuBtn" type="button" aria-label="開啟選單">
+        <button class="custom-btn btn-auth nav-menu-btn d-none" id="navMenuBtn" type="button" aria-label="開啟選單">
           <i class="fa-solid fa-bars"></i>
         </button>
 
+        <button class="custom-btn btn-auth" id="loginBtn">
+          <i class="fa fa-user"></i> 登入 / 註冊
+        </button>
+
+        <button class="custom-btn btn-logout d-none" id="logoutBtn">
+          <i class="fa-solid fa-right-from-bracket"></i> 登出
+        </button>
+
         <div class="nav-actions-drawer" id="navActionsDrawer">
-          <button class="custom-btn btn-auth" id="loginBtn">
-            <i class="fa fa-user"></i> 登入 / 註冊
-          </button>
-
-          <button class="custom-btn btn-logout d-none" id="logoutBtn">
-            <i class="fa-solid fa-right-from-bracket"></i> 登出
-          </button>
-
           <button class="custom-btn btn-auth d-none" id="profileBtn">
             <i class="fa-solid fa-id-card"></i> 個人資料
           </button>
 
-          <button class="custom-btn btn-create" id="createQuizBtn">
+          <button class="custom-btn btn-create d-none" id="createQuizBtn">
             <i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫
           </button>
 
-          <button class="custom-btn btn-join" id="wrongBookBtn">
+          <button class="custom-btn btn-join d-none" id="wrongBookBtn">
             <i class="fa-solid fa-book-open-reader"></i> 錯題本
           </button>
 
-          <button class="custom-btn btn-auth" id="teacherReportBtn">
+          <button class="custom-btn btn-auth d-none" id="teacherReportBtn">
             <i class="fa-solid fa-chart-line"></i> 老師模式
           </button>
-
-          <span class="lang-switcher-slot"></span>
-
-          <button class="custom-btn btn-join" id="refreshLobbyBtn">
-            <i class="fa-solid fa-rotate"></i> 重新整理大廳
-          </button>
-
-          <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
-            <i class="fa-solid fa-moon" id="darkModeIcon"></i>
-          </button>
         </div>
+
+        <span class="lang-switcher-slot"></span>
+
+        <button class="custom-btn btn-join" id="refreshLobbyBtn">
+          <i class="fa-solid fa-rotate"></i> 重新整理大廳
+        </button>
+
+        <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
+          <i class="fa-solid fa-moon" id="darkModeIcon"></i>
+        </button>
       </div>
     </header>
     <div class="nav-drawer-overlay" id="navDrawerOverlay"></div>

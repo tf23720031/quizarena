@@ -802,6 +802,18 @@ def normalize_profile_language(value):
     return lang if lang in {'zh', 'en', 'ja', 'ko', 'es'} else 'zh'
 
 
+VALID_COUNTIES = {
+    '基隆市', '臺北市', '新北市', '桃園市', '新竹市', '新竹縣', '苗栗縣',
+    '臺中市', '彰化縣', '南投縣', '雲林縣', '嘉義市', '嘉義縣', '臺南市',
+    '高雄市', '屏東縣', '宜蘭縣', '花蓮縣', '臺東縣', '澎湖縣', '金門縣', '連江縣',
+}
+
+
+def normalize_profile_county(value):
+    county = str(value or '').strip()
+    return county if county in VALID_COUNTIES else ''
+
+
 def clean_avatar_data(value):
     avatar = str(value or '').strip()
     if not avatar:
@@ -831,14 +843,14 @@ def get_user_profile_map(usernames):
     if not names:
         return {}
     default = {
-        name: {'username': name, 'avatar': '', 'displayTitle': '新手挑戰者', 'language': 'zh'}
+        name: {'username': name, 'avatar': '', 'displayTitle': '新手挑戰者', 'language': 'zh', 'county': ''}
         for name in names
     }
     if use_postgres_user_store():
         with closing(get_pg_conn()) as conn:
             with conn.cursor() as cur:
                 cur.execute('''
-                    SELECT username, avatar, display_title, preferred_language
+                    SELECT username, avatar, display_title, preferred_language, county
                     FROM users
                     WHERE username = ANY(%s)
                 ''', (names,))
@@ -847,7 +859,7 @@ def get_user_profile_map(usernames):
         placeholders = ','.join(['?'] * len(names))
         with closing(get_conn(USERS_DB_PATH)) as conn:
             rows = conn.execute(f'''
-                SELECT username, avatar, display_title, preferred_language
+                SELECT username, avatar, display_title, preferred_language, county
                 FROM users
                 WHERE username IN ({placeholders})
             ''', names).fetchall()
@@ -858,6 +870,7 @@ def get_user_profile_map(usernames):
                 'avatar': row.get('avatar') or '',
                 'displayTitle': row.get('display_title') or '新手挑戰者',
                 'language': normalize_profile_language(row.get('preferred_language')),
+                'county': normalize_profile_county(row.get('county')),
             })
     return default
 
@@ -867,6 +880,8 @@ def build_title_options(achievement_summary):
     for item in achievement_summary.get('achievements', []):
         if item.get('unlocked'):
             title = str(item.get('title') or '').strip()
+            if title == '好友同行':
+                continue
             if title and not any(opt['id'] == title for opt in options):
                 options.append({'id': title, 'label': title})
     if not any(opt['id'] == '常勝玩家' for opt in options):
@@ -897,13 +912,14 @@ def build_user_profile(username):
         'avatar': profile.get('avatar') or '',
         'displayTitle': selected,
         'language': normalize_profile_language(profile.get('language')),
+        'county': normalize_profile_county(profile.get('county')),
         'wins': int(wins or 0),
         'achievements': achievements,
         'titleOptions': title_options,
     }
 
 
-def update_user_profile(username, avatar=None, display_title=None, preferred_language=None):
+def update_user_profile(username, avatar=None, display_title=None, preferred_language=None, county=None):
     username = str(username or '').strip()
     if not username or not get_user_exists(username):
         raise ValueError('找不到使用者')
@@ -911,6 +927,7 @@ def update_user_profile(username, avatar=None, display_title=None, preferred_lan
     current_title = profile.get('displayTitle') if profile else '新手挑戰者'
     current_language = profile.get('language') if profile else 'zh'
     current_avatar = profile.get('avatar') if profile else ''
+    current_county = profile.get('county') if profile else ''
 
     next_avatar = current_avatar if avatar is None else clean_avatar_data(avatar)
     title_options = build_title_options(build_achievement_summary(username))
@@ -919,23 +936,24 @@ def update_user_profile(username, avatar=None, display_title=None, preferred_lan
     if next_title not in allowed_titles:
         next_title = '新手挑戰者'
     next_language = normalize_profile_language(preferred_language if preferred_language is not None else current_language)
+    next_county = normalize_profile_county(county if county is not None else current_county)
 
     if use_postgres_user_store():
         with closing(get_pg_conn()) as conn:
             with conn.cursor() as cur:
                 cur.execute('''
                     UPDATE users
-                    SET avatar=%s, display_title=%s, preferred_language=%s
+                    SET avatar=%s, display_title=%s, preferred_language=%s, county=%s
                     WHERE username=%s
-                ''', (next_avatar, next_title, next_language, username))
+                ''', (next_avatar, next_title, next_language, next_county, username))
             conn.commit()
     else:
         with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.execute('''
                 UPDATE users
-                SET avatar=?, display_title=?, preferred_language=?
+                SET avatar=?, display_title=?, preferred_language=?, county=?
                 WHERE username=?
-            ''', (next_avatar, next_title, next_language, username))
+            ''', (next_avatar, next_title, next_language, next_county, username))
             conn.commit()
     return build_user_profile(username)
 
@@ -1708,6 +1726,7 @@ def init_postgres_users_db():
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT ''")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_title TEXT DEFAULT '新手挑戰者'")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'zh'")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS county TEXT DEFAULT ''")
             c.execute('''
                 CREATE TABLE IF NOT EXISTS user_friendships (
                     id SERIAL PRIMARY KEY,
@@ -1808,6 +1827,7 @@ def init_users_db():
             ('avatar', "TEXT DEFAULT ''"),
             ('display_title', "TEXT DEFAULT '新手挑戰者'"),
             ('preferred_language', "TEXT DEFAULT 'zh'"),
+            ('county', "TEXT DEFAULT ''"),
         ]:
             if col not in existing:
                 c.execute(f'ALTER TABLE users ADD COLUMN {col} {typ}')
@@ -2094,7 +2114,7 @@ def login():
             with closing(get_pg_conn()) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        'SELECT username, email, avatar, display_title, preferred_language FROM users WHERE username = %s AND password = %s',
+                        'SELECT username, email, avatar, display_title, preferred_language, county FROM users WHERE username = %s AND password = %s',
                         (username, hash_text(password))
                     )
                     user = cur.fetchone()
@@ -2104,10 +2124,11 @@ def login():
                            avatar=user.get('avatar') or '',
                            displayTitle=user.get('display_title') or '新手挑戰者',
                            language=normalize_profile_language(user.get('preferred_language')),
+                           county=normalize_profile_county(user.get('county')),
                            message='登入成功')
         with closing(get_conn(USERS_DB_PATH)) as conn:
             user = conn.execute(
-                'SELECT username, email, avatar, display_title, preferred_language FROM users WHERE username = ? AND password = ?',
+                'SELECT username, email, avatar, display_title, preferred_language, county FROM users WHERE username = ? AND password = ?',
                 (username, hash_text(password))
             ).fetchone()
         if not user:
@@ -2116,6 +2137,7 @@ def login():
                        avatar=user.get('avatar') or '',
                        displayTitle=user.get('display_title') or '新手挑戰者',
                        language=normalize_profile_language(user.get('preferred_language')),
+                       county=normalize_profile_county(user.get('county')),
                        message='登入成功')
     except Exception as e:
         return jsonify(success=False, message=f'登入失敗：{e}'), 500
@@ -2142,6 +2164,7 @@ def update_user_profile_api():
             avatar=data.get('avatar') if 'avatar' in data else None,
             display_title=data.get('displayTitle') if 'displayTitle' in data else None,
             preferred_language=data.get('language') if 'language' in data else None,
+            county=data.get('county') if 'county' in data else None,
         )
         return jsonify(success=True, profile=profile, message='個人資料已更新')
     except ValueError as e:
