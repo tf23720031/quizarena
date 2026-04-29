@@ -5,8 +5,26 @@ const roomSettingsModal = new bootstrap.Modal(document.getElementById('roomSetti
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 let copiedQuestion = null;
 
+function getStoredUser() {
+  const direct = String(localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || '').trim();
+  if (direct) return direct;
+
+  try {
+    const profile = JSON.parse(localStorage.getItem('currentUserProfile') || 'null');
+    const username = String(profile?.username || '').trim();
+    if (username) {
+      localStorage.setItem('currentUser', username);
+      return username;
+    }
+  } catch {
+    // Ignore broken local profile data and fall through to guest state.
+  }
+
+  return '';
+}
+
 const state = {
-  currentUser: localStorage.getItem('currentUser') || '',
+  currentUser: getStoredUser(),
   quizBanks: [],
   currentBankIndex: null,
   editingQuestionId: null,
@@ -61,6 +79,7 @@ async function api(url, options = {}) {
 }
 
 function ensureUser() {
+  state.currentUser = getStoredUser();
   if (!state.currentUser) {
     showToast('請先登入後再使用題庫中心。');
     setTimeout(() => (window.location.href = 'index.html'), 1200);

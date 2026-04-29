@@ -314,12 +314,17 @@ body.dark-mode .btn-close {
 }
 
 .nav-menu-btn {
+  order: 99;
   display: inline-flex;
   min-width: 52px !important;
   width: 52px;
   height: 52px;
   padding: 0 !important;
   border-radius: 18px !important;
+}
+
+#darkModeBtn {
+  order: 98;
 }
 
 .nav-actions-drawer {

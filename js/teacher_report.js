@@ -48,11 +48,69 @@ function fileSafeName(value) {
   return String(value || "room").replace(/[\\/:*?"<>|]+/g, "-").trim() || "room";
 }
 
+function questionKey(question = {}) {
+  return String(question.questionId ?? question.question_id ?? question.id ?? "");
+}
+
+function resultQuestionKey(row = {}) {
+  return String(row.questionId ?? row.question_id ?? row.id ?? "");
+}
+
+function parseSelectedIndexes(row = {}) {
+  const source = row.selectedIndexes ?? row.selected_indexes ?? row.selectedJson ?? row.selected_json ?? [];
+  if (Array.isArray(source)) return source.map((item) => Number(item)).filter(Number.isInteger);
+  if (typeof source === "string") {
+    try {
+      const parsed = JSON.parse(source);
+      return Array.isArray(parsed) ? parsed.map((item) => Number(item)).filter(Number.isInteger) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function selectedTextForRow(row = {}, report = latestReport) {
+  const existing = String(row.selectedAnswerText || "").trim();
+  if (existing && existing !== "未選擇") return existing;
+
+  const indexes = parseSelectedIndexes(row);
+  if (!indexes.length) return "未選擇";
+
+  const questions = report?.questions || [];
+  const question = questions.find((item) => questionKey(item) === resultQuestionKey(row));
+  const options = question?.options || [];
+  const parts = indexes.map((idx) => {
+    const option = options[idx] || {};
+    const label = option.label || String.fromCharCode(65 + idx);
+    const text = String(option.text || "").trim();
+    return text ? `${label}. ${text}` : label;
+  });
+  return parts.length ? parts.join("、") : "未選擇";
+}
+
+function normalizeResultRow(row = {}) {
+  const rawCorrect = row.isCorrect ?? row.is_correct ?? false;
+  return {
+    ...row,
+    playerName: row.playerName ?? row.player_name ?? "",
+    teamId: row.teamId ?? row.team_id ?? 0,
+    questionId: row.questionId ?? row.question_id ?? "",
+    seq: row.seq ?? row.questionSeq ?? 0,
+    title: row.title ?? row.questionTitle ?? "",
+    isCorrect: rawCorrect === true || rawCorrect === 1 || rawCorrect === "1",
+    pointsEarned: row.pointsEarned ?? row.points_earned ?? 0,
+    answerOrder: row.answerOrder ?? row.answer_order ?? "",
+  };
+}
+
 function sanitizeReport(report = {}) {
   const teacher = String(report.room?.createdBy || "").trim().toLowerCase();
   const isTeacher = (name) => teacher && String(name || "").trim().toLowerCase() === teacher;
-  const basePlayers = (report.players || []).filter((player) => !isTeacher(player.playerName));
-  const results = (report.results || []).filter((row) => !isTeacher(row.playerName));
+  const basePlayers = (report.players || [])
+    .map((player) => ({ ...player, playerName: player.playerName ?? player.player_name ?? "" }))
+    .filter((player) => !isTeacher(player.playerName));
+  const results = (report.results || []).map(normalizeResultRow).filter((row) => !isTeacher(row.playerName));
   const playerMap = new Map(basePlayers.map((player) => [
     player.playerName,
     { ...player, answered: 0, correct: 0, totalScore: 0 },
@@ -82,11 +140,11 @@ function sanitizeReport(report = {}) {
     .sort((a, b) => toNumber(b.totalScore) - toNumber(a.totalScore) || String(a.playerName).localeCompare(String(b.playerName)));
 
   const questionMap = new Map((report.questions || []).map((question) => [
-    question.questionId,
-    { ...question, answered: 0, correct: 0 },
+    questionKey(question),
+    { ...question, questionId: question.questionId ?? question.question_id ?? question.id, answered: 0, correct: 0 },
   ]));
   results.forEach((row) => {
-    const question = questionMap.get(row.questionId);
+    const question = questionMap.get(resultQuestionKey(row));
     if (!question) return;
     question.answered += 1;
     question.correct += row.isCorrect ? 1 : 0;
@@ -459,7 +517,7 @@ function downloadCsv() {
       row.teamId || "",
       row.seq,
       row.title,
-      row.selectedAnswerText || "未選擇",
+      selectedTextForRow(row, latestReport),
       row.isCorrect ? "是" : "否",
       row.pointsEarned,
       row.answerOrder || "",
@@ -614,7 +672,7 @@ function buildExcelReport(report) {
       (row) => row.teamId || "",
       (row) => row.seq,
       (row) => row.title,
-      (row) => row.selectedAnswerText || "未選擇",
+      (row) => selectedTextForRow(row, report),
       (row) => row.isCorrect ? "是" : "否",
       (row) => row.pointsEarned,
       (row) => row.answerOrder || "",
@@ -740,7 +798,7 @@ function buildHtmlReport(report) {
       <table>
         <thead><tr><th>學生</th><th>題號</th><th>題目</th><th>學生選擇</th><th>結果</th><th>得分</th></tr></thead>
         <tbody>
-          ${(report.results || []).map((row) => `<tr><td>${escapeHtml(row.playerName)}</td><td>Q${toNumber(row.seq)}</td><td>${escapeHtml(row.title || "")}</td><td>${escapeHtml(row.selectedAnswerText || "未選擇")}</td><td><span class="tag">${row.isCorrect ? "答對" : "答錯"}</span></td><td>${toNumber(row.pointsEarned)}</td></tr>`).join("")}
+          ${(report.results || []).map((row) => `<tr><td>${escapeHtml(row.playerName)}</td><td>Q${toNumber(row.seq)}</td><td>${escapeHtml(row.title || "")}</td><td>${escapeHtml(selectedTextForRow(row, report))}</td><td><span class="tag">${row.isCorrect ? "答對" : "答錯"}</span></td><td>${toNumber(row.pointsEarned)}</td></tr>`).join("")}
         </tbody>
       </table>
     </section>

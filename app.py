@@ -1504,6 +1504,18 @@ def build_teacher_report_from_conn(conn, pin):
             answer_indexes = sorted(json.loads(q.get('answer_json') or '[]'))
         except Exception:
             answer_indexes = []
+        normalized_answer_indexes = []
+        for idx in answer_indexes:
+            try:
+                normalized_answer_indexes.append(int(idx))
+            except Exception:
+                continue
+        answer_indexes = sorted(set(normalized_answer_indexes))
+        if not answer_indexes:
+            answer_indexes = [
+                idx for idx, option in enumerate(options)
+                if isinstance(option, dict) and bool(option.get('correct'))
+            ]
         correct_parts = []
         for idx in answer_indexes:
             label = chr(65 + idx) if isinstance(idx, int) and idx >= 0 else str(idx)
@@ -1517,6 +1529,14 @@ def build_teacher_report_from_conn(conn, pin):
             'title': q['title'] or '',
             'content': q['content'] or '',
             'correctAnswerText': '、'.join(correct_parts) or '無',
+            'correctIndexes': answer_indexes,
+            'options': [
+                {
+                    'label': chr(65 + idx),
+                    'text': str((option or {}).get('text') or '').strip() if isinstance(option, dict) else str(option or '').strip(),
+                }
+                for idx, option in enumerate(options)
+            ],
             'explanation': q.get('explanation') or '',
             'answered': 0,
             'correct': 0,
