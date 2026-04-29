@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>營運後台 - QuizArena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/learning_tools.css">
+</head>
+<body>
+  <main class="tool-shell">
+    <header class="tool-topbar">
+      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <div>
+        <p class="tool-kicker">Business</p>
+        <h1>營運後台</h1>
+      </div>
+    </header>
+
+    <section class="summary-grid business-grid">
+      <article><span>註冊帳號</span><strong id="userCount">0</strong></article>
+      <article><span>歷史報表</span><strong id="reportCount">0</strong></article>
+      <article><span>學生參與</span><strong id="studentParticipations">0</strong></article>
+      <article><span>平均正確率</span><strong id="averageAccuracy">0%</strong></article>
+      <article><span>累積勝場</span><strong id="totalWins">0</strong></article>
+      <article><span>有戰績玩家</span><strong id="trackedPlayers">0</strong></article>
+    </section>
+
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2>最近建房紀錄</h2>
+        <button id="refreshDashboardBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> 重新整理</button>
+      </div>
+      <div id="recentReportsList" class="history-list"></div>
+    </section>
+  </main>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/business_dashboard.js"></script>
+</body>
+</html>

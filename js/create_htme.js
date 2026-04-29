@@ -31,6 +31,12 @@ function getStoredUser() {
     // Ignore temporary room profile data.
   }
 
+  const urlUser = String(new URLSearchParams(window.location.search).get('username') || '').trim();
+  if (urlUser) {
+    localStorage.setItem('currentUser', urlUser);
+    return urlUser;
+  }
+
   return '';
 }
 
@@ -97,6 +103,8 @@ function ensureUser() {
     return false;
   }
 
+  delete $('currentUserText').dataset.i18n;
+  $('currentUserText').dataset.i18nSkip = '1';
   $('currentUserText').textContent = state.currentUser;
   return true;
 }
@@ -602,6 +610,8 @@ async function saveAllBanks() {
 
 async function loadBanks() {
   state.currentUser = getStoredUser();
+  delete $('currentUserText').dataset.i18n;
+  $('currentUserText').dataset.i18nSkip = '1';
   $('currentUserText').textContent = state.currentUser || '未登入';
   const data = await api(`/load_quiz_banks?username=${encodeURIComponent(state.currentUser)}`);
   const localDraftBanks = loadLocalDraft();

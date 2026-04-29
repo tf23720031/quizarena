@@ -189,13 +189,24 @@ const I18N = (() => {
     'friendsRecords','friendsList','friendRequestsContent','friendProfileContent',
     'achievementsList','profileAchievementsList','profileTitleList','profileAvatarPreview',
     'profileHeroAvatar','studentTableBody','scoreRankingList','questionReviewList','teamPerformanceList',
+    'loginStatus','currentUserText','wrongUserName','storyUserName','profileUsername',
   ]);
 
   let lang = localStorage.getItem('quizLang') || 'zh';
+  const aiCache = new Map();
+  let aiTimer = null;
 
   function tr(key) {
     if (!key || lang === 'zh') return key;
     return (D[key] && D[key][lang]) || key;
+  }
+
+  function shouldAiTranslate(txt) {
+    if (!txt || D[txt]) return false;
+    if (/^[\d\s\-_:/.#%]+$/.test(txt)) return false;
+    if (txt.length > 120) return false;
+    if (/^[A-Za-z0-9_]{2,24}$/.test(txt)) return false;
+    return /[\u4e00-\u9fff]/.test(txt);
   }
 
   /* 判斷元素是否在跳過區域內 */
@@ -214,6 +225,8 @@ const I18N = (() => {
     const key = el.dataset.i18n;
     if (!key) return;
     const translated = targetLang === 'zh' ? key : (tr(key) || key);
+    const aiKey = `${targetLang}:${key}`;
+    const finalText = targetLang === 'zh' ? key : (D[key]?.[targetLang] || aiCache.get(aiKey) || translated);
     // 找並替換直接子 TextNode
     let found = false;
     for (const node of el.childNodes) {
@@ -222,14 +235,14 @@ const I18N = (() => {
         // 保留前後空白結構
         const leading  = orig.match(/^\s*/)[0];
         const trailing = orig.match(/\s*$/)[0];
-        node.textContent = leading + translated + trailing;
+        node.textContent = leading + finalText + trailing;
         found = true;
         break;
       }
     }
     // fallback：整個 textContent 是 key（純文字元素）
     if (!found && el.textContent.trim() === key) {
-      el.textContent = translated;
+      el.textContent = finalText;
     }
   }
 
@@ -237,7 +250,42 @@ const I18N = (() => {
   function translatePh(el, targetLang) {
     const key = el.dataset.i18nPh;
     if (!key) return;
-    el.placeholder = targetLang === 'zh' ? key : (tr(key) || key);
+    const aiKey = `${targetLang}:${key}`;
+    el.placeholder = targetLang === 'zh' ? key : (D[key]?.[targetLang] || aiCache.get(aiKey) || tr(key) || key);
+  }
+
+  async function translateMissing(targetLang) {
+    if (targetLang === 'zh') return;
+    const keys = [
+      ...new Set([
+        ...[...document.querySelectorAll('[data-i18n]')].map(el => el.dataset.i18n),
+        ...[...document.querySelectorAll('[data-i18n-ph]')].map(el => el.dataset.i18nPh),
+      ].filter(shouldAiTranslate))
+    ].filter(key => !aiCache.has(`${targetLang}:${key}`)).slice(0, 80);
+    if (!keys.length) return;
+    try {
+      const res = await fetch('/translate_texts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetLang, texts: keys })
+      });
+      const data = await res.json();
+      const translations = data.translations || {};
+      Object.entries(translations).forEach(([key, value]) => {
+        if (value) aiCache.set(`${targetLang}:${key}`, String(value));
+      });
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        if (!inSkipZone(el)) translateEl(el, targetLang);
+      });
+      document.querySelectorAll('[data-i18n-ph]').forEach(el => translatePh(el, targetLang));
+    } catch (_) {
+      // Keep dictionary/original text if online translation is unavailable.
+    }
+  }
+
+  function scheduleAiTranslate(targetLang) {
+    clearTimeout(aiTimer);
+    aiTimer = setTimeout(() => translateMissing(targetLang), 180);
   }
 
   /* 首次掃描：標記所有匹配的元素 */
@@ -250,7 +298,7 @@ const I18N = (() => {
     // placeholder
     if ((tag === 'INPUT' || tag === 'TEXTAREA') && root.placeholder && !root.dataset.i18nPh) {
       const ph = root.placeholder.trim();
-      if (D[ph]) {
+      if (D[ph] || shouldAiTranslate(ph)) {
         root.dataset.i18nPh = ph;
         if (lang !== 'zh') root.placeholder = tr(ph) || ph;
       }
@@ -260,7 +308,7 @@ const I18N = (() => {
     for (const node of root.childNodes) {
       if (node.nodeType === 3) {
         const txt = node.textContent.trim();
-        if (txt && D[txt] && !root.dataset.i18n) {
+        if (txt && (D[txt] || shouldAiTranslate(txt)) && !root.dataset.i18n) {
           root.dataset.i18n = txt;
           if (lang !== 'zh') {
             const leading  = node.textContent.match(/^\s*/)[0];
@@ -289,6 +337,7 @@ const I18N = (() => {
 
     // 同步所有選單
     document.querySelectorAll('.lang-switcher').forEach(s => { s.value = newLang; });
+    scheduleAiTranslate(newLang);
   }
 
   /* 建立選單 */
@@ -326,6 +375,16 @@ const I18N = (() => {
     scanDOM(document.body);
     // 如果當前語言不是中文，補翻一次（scanDOM 已順便翻了，這裡是保險）
     if (lang !== 'zh') applyLang(lang);
+
+    const mo = new MutationObserver((records) => {
+      records.forEach(record => {
+        record.addedNodes.forEach(node => {
+          if (node.nodeType === 1) scanDOM(node);
+        });
+      });
+      if (lang !== 'zh') applyLang(lang);
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
   }
 
   if (document.readyState === 'loading') {

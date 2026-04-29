@@ -327,6 +327,16 @@ body.dark-mode .btn-close {
   order: 98;
 }
 
+.btn-story {
+  background: linear-gradient(135deg, #5bb8ff, #33d0b8) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 28px rgba(34, 168, 190, 0.28) !important;
+}
+
+.btn-story:hover {
+  filter: brightness(1.04);
+}
+
 .nav-actions-drawer {
   position: fixed;
   top: 0;

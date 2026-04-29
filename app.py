@@ -668,7 +668,7 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', 
     difficulty = normalize_difficulty(difficulty)
     language = normalize_language(language)
     output_language = language_name(language)
-    count = max(1, min(int(count or 5), 7))
+    count = max(1, min(int(count or 5), 20))
 
     prompt = (
         f'你是 QuizArena 的出題助手。\n'
@@ -694,7 +694,7 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', 
             json={
                 'model': HF_MODEL,
                 'messages': [{'role': 'user', 'content': prompt}],
-                'max_tokens': 1800,
+                'max_tokens': 4200,
                 'temperature': 0.7,
             },
             timeout=60
@@ -724,6 +724,61 @@ def generate_ai_quiz_bank(topic, category, difficulty, count, source_mode='ai', 
         if ALLOW_AI_FALLBACK:
             return build_local_fallback_quiz_bank(topic, category, difficulty, count, language)
         raise RuntimeError(str(e))
+
+
+def translate_texts_with_ai(texts, target_lang):
+    target_lang = normalize_language(target_lang)
+    texts = [str(text or '').strip() for text in (texts or [])]
+    texts = [text for text in texts if text][:80]
+    if target_lang == 'zh' or not texts:
+        return {text: text for text in texts}
+
+    hf_api_key = os.environ.get('HF_API_KEY', '').strip()
+    if not hf_api_key or requests is None:
+        return {}
+
+    output_language = language_name(target_lang)
+    prompt = (
+        f'請把下列 QuizArena 網站介面文字翻譯成 {output_language}。\n'
+        '規則：只翻譯介面文字，不要翻譯人名、玩家名稱、帳號、PIN、數字代碼；保留符號與 HTML 無關文字；'
+        '請只回傳 JSON 物件，key 是原文，value 是譯文，不要 markdown。\n'
+        f'文字陣列：{json.dumps(texts, ensure_ascii=False)}'
+    )
+    try:
+        response = requests.post(
+            HF_API_URL,
+            headers={
+                'Authorization': f'Bearer {hf_api_key}',
+                'Content-Type': 'application/json',
+            },
+            json={
+                'model': HF_MODEL,
+                'messages': [{'role': 'user', 'content': prompt}],
+                'max_tokens': 2400,
+                'temperature': 0.2,
+            },
+            timeout=45
+        )
+        if response.status_code != 200:
+            return {}
+        response_json = response.json()
+        content = response_json.get('choices', [{}])[0].get('message', {}).get('content', '')
+        fenced = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+        if fenced:
+            content = fenced.group(1).strip()
+        match = re.search(r'\{[\s\S]*\}', content)
+        if not match:
+            return {}
+        raw = json.loads(match.group(0))
+        if not isinstance(raw, dict):
+            return {}
+        return {
+            key: str(raw.get(key) or '').strip()
+            for key in texts
+            if str(raw.get(key) or '').strip()
+        }
+    except Exception:
+        return {}
 
 def get_user_exists(username):
     if not username:
@@ -2355,13 +2410,24 @@ def generate_quiz_bank_api():
         difficulty = normalize_difficulty(data.get('difficulty'))
         language = normalize_language(data.get('language'))
         requested_count = int(data.get('count', 5) or 5)
-        count = requested_count if requested_count in {1, 3, 5, 7} else 5
+        count = max(1, min(requested_count, 20))
         source_mode = str(data.get('sourceMode', 'ai')).strip()
         api_key = str(data.get('apiKey', '')).strip()
         bank = generate_ai_quiz_bank(topic, category, difficulty, count, source_mode=source_mode, api_key_override=api_key, language=language)
         return jsonify(success=True, quizBank=bank)
     except Exception as e:
         return jsonify(success=False, message=f'AI 題庫生成失敗：{e}'), 500
+
+
+@app.route('/translate_texts', methods=['POST'])
+def translate_texts_api():
+    data = request.get_json() or {}
+    target_lang = normalize_language(data.get('targetLang'))
+    texts = data.get('texts', [])
+    if not isinstance(texts, list):
+        return jsonify(success=False, message='翻譯文字格式錯誤'), 400
+    translations = translate_texts_with_ai(texts, target_lang)
+    return jsonify(success=True, translations=translations)
 
 
 @app.route('/friends_overview')

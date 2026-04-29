@@ -44,7 +44,25 @@
   }
 
   function getCurrentUser() {
-    return localStorage.getItem("currentUser") || "";
+    const direct = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+    if (direct) return direct;
+    try {
+      const profile = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
+      const username = String(profile?.username || "").trim();
+      if (username) {
+        localStorage.setItem("currentUser", username);
+        return username;
+      }
+    } catch {}
+    try {
+      const roomProfile = JSON.parse(localStorage.getItem("roomPlayerProfile") || "null");
+      const username = String(roomProfile?.username || roomProfile?.account || roomProfile?.name || "").trim();
+      if (username) {
+        localStorage.setItem("currentUser", username);
+        return username;
+      }
+    } catch {}
+    return "";
   }
 
   function setCurrentUser(username) {
@@ -135,7 +153,11 @@
     const openAddFriendBtn = $("openAddFriendBtn");
 
     const profile = getCachedProfile();
-    if (loginStatus) loginStatus.textContent = user || "尚未登入";
+    if (loginStatus) {
+      delete loginStatus.dataset.i18n;
+      loginStatus.dataset.i18nSkip = "1";
+      loginStatus.textContent = user || "尚未登入";
+    }
     const avatarWrap = $("loginStatusAvatar");
     if (avatarWrap) avatarWrap.innerHTML = user ? avatarHtml(profile) : `<i class="fa-solid fa-circle-user"></i>`;
     loginBtn?.classList.toggle("d-none", !!user);
@@ -775,7 +797,7 @@
       openLoginModal();
       return;
     }
-    window.location.href = "create_home.html";
+    window.location.href = `create_home.html?username=${encodeURIComponent(getCurrentUser())}`;
   }
 
   function handleWrongBookClick() {

@@ -105,6 +105,37 @@ const SUBJECTS = [
   },
 ];
 
+const EXTRA_SCENES = [
+  "AI旁白把你的答案寫進冒險日誌，遠處出現新的光點。",
+  "一段資料流在空中展開，角色收到下一個任務座標。",
+  "你解開封印後，支線角色交給你一枚記憶碎片。",
+  "系統生成新的分岔道路，難度也悄悄提升。",
+  "故事核心偵測到你的學習軌跡，派出更精準的挑戰。",
+];
+
+function expandStorySubjects() {
+  SUBJECTS.forEach((subject) => {
+    subject.branches.forEach((branch) => {
+      const seed = [...branch.stages];
+      for (let i = branch.stages.length; i < 20; i += 1) {
+        const base = seed[i % seed.length];
+        const level = i + 1;
+        const difficulty = level <= 7 ? "easy" : level <= 14 ? "medium" : "hard";
+        branch.stages.push({
+          level,
+          difficulty,
+          scene: `${EXTRA_SCENES[i % EXTRA_SCENES.length]}這是「${subject.title}」第 ${level} 關，故事線開始要求你把知識用在更接近真實的情境。`,
+          q: `${subject.title}支線第 ${level} 關：${base.q}`,
+          options: [...base.options],
+          answer: base.answer,
+        });
+      }
+    });
+  });
+}
+
+expandStorySubjects();
+
 const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false };
 
 function escapeHtml(value) {
@@ -135,6 +166,10 @@ function progressKey() {
   return `quizarena_story_progress_${userKey()}`;
 }
 
+function storyAchievementKey() {
+  return `quizarena_story_achievements_${userKey()}`;
+}
+
 function loadProgress() {
   try { return JSON.parse(localStorage.getItem(progressKey()) || "{}"); } catch { return {}; }
 }
@@ -144,6 +179,35 @@ function saveProgress(subjectId, branchId, clearedLevel) {
   const key = `${subjectId}:${branchId}`;
   progress[key] = Math.max(Number(progress[key] || 0), clearedLevel);
   localStorage.setItem(progressKey(), JSON.stringify(progress));
+}
+
+function storyClearedTotal() {
+  const progress = loadProgress();
+  return Object.values(progress).reduce((sum, value) => sum + Number(value || 0), 0);
+}
+
+function showStoryModal(title, text, badge = "劇情推進") {
+  $("storyModalBadge").textContent = badge;
+  $("storyModalTitle").textContent = title;
+  $("storyModalText").textContent = text;
+  $("storyModalBackdrop").classList.add("show");
+}
+
+function checkStoryAchievements() {
+  let unlocked = [];
+  try { unlocked = JSON.parse(localStorage.getItem(storyAchievementKey()) || "[]"); } catch { unlocked = []; }
+  const total = storyClearedTotal();
+  const achievements = [
+    { id: "story_5", target: 5, title: "故事初探者", text: "你完成 5 個故事關卡，AI夥伴開始記住你的學習風格。" },
+    { id: "story_20", target: 20, title: "支線旅人", text: "你完成 20 個故事關卡，解鎖跨科目支線稱號。" },
+    { id: "story_60", target: 60, title: "知識冒險家", text: "你完成 60 個故事關卡，主線世界開啟更高階挑戰。" },
+  ];
+  const hit = achievements.find((item) => total >= item.target && !unlocked.includes(item.id));
+  if (!hit) return false;
+  unlocked.push(hit.id);
+  localStorage.setItem(storyAchievementKey(), JSON.stringify(unlocked));
+  showStoryModal(hit.title, hit.text, "成就解鎖");
+  return true;
 }
 
 function activeSubject() {
@@ -191,7 +255,7 @@ async function generateAiStoryQuestions() {
         category: subject.title,
         difficulty: "medium",
         language: "zh",
-        count: 5,
+        count: 20,
         sourceMode: "ai",
       }),
     });
@@ -307,7 +371,12 @@ function checkStoryAnswer() {
   state.checked = true;
   if (state.selected === stage.answer) {
     saveProgress(state.subjectId, state.branchId, stage.level);
-    showToast("通關成功");
+    if (!checkStoryAchievements()) {
+      showStoryModal(
+        "新的支線片段",
+        `${stage.scene} 你答對後，角色取得新的線索，下一關將更接近這個科目的核心能力。`
+      );
+    }
   } else {
     showToast("答錯了，可以再看一次正解");
   }
@@ -339,4 +408,5 @@ function renderAll() {
 
 $("resetStoryBtn")?.addEventListener("click", resetCurrentProgress);
 $("generateStoryBtn")?.addEventListener("click", generateAiStoryQuestions);
+$("storyModalCloseBtn")?.addEventListener("click", () => $("storyModalBackdrop").classList.remove("show"));
 renderAll();

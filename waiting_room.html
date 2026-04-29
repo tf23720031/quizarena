@@ -79,20 +79,5 @@
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/Audio_manager.js"></script>
   <script src="js/waiting_room.js"></script>
-  <script src="js/quizarena_fix.js"></script>
-  <script>
-    // Dark mode persistence
-    (function(){
-      var darkBtn = document.getElementById('darkModeBtn');
-      var darkIcon = document.getElementById('darkModeIcon');
-      function applyDark(on) {
-        document.body.classList.toggle('dark-mode', on);
-        if (darkIcon) darkIcon.className = on ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-        localStorage.setItem('quizDarkMode', on ? '1' : '0');
-      }
-      if (darkBtn) darkBtn.addEventListener('click', function(){ applyDark(!document.body.classList.contains('dark-mode')); });
-      applyDark(localStorage.getItem('quizDarkMode') === '1');
-    })();
-  </script>
 </body>
 </html>
