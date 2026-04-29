@@ -1002,3 +1002,78 @@ body::before {
     min-width: 0 !important;
   }
 }
+
+
+
+/* ===== FRIEND LEADERBOARD LIGHT THEME ONLY ===== */
+
+.friend-rank-section,
+.friend-board,
+.friend-leaderboard,
+.friends-ranking-panel,
+.friend-ranking-wrap{
+    background:
+    linear-gradient(
+        135deg,
+        #fff7fd 0%,
+        #ffe7fb 35%,
+        #f1e8ff 70%,
+        #eef3ff 100%
+    ) !important;
+
+    border: 1px solid rgba(255,255,255,.8) !important;
+
+    box-shadow:
+    0 10px 30px rgba(255,180,240,.18),
+    inset 0 1px 0 rgba(255,255,255,.85) !important;
+
+    color:#5e538b !important;
+}
+
+/* cards */
+.friend-rank-section .rank-card,
+.friend-rank-section .friend-card,
+.friend-board .rank-card{
+    background: rgba(255,255,255,.72) !important;
+    backdrop-filter: blur(14px);
+    border:1px solid rgba(255,255,255,.8);
+}
+
+/* titles */
+.friend-rank-section h1,
+.friend-rank-section .section-title,
+.friend-board h1{
+    color:#db62cb !important;
+    text-shadow: 0 4px 12px rgba(255,170,240,.22);
+}
+
+/* text */
+.friend-rank-section p,
+.friend-rank-section span,
+.friend-rank-section div,
+.friend-board p,
+.friend-board span,
+.friend-board div{
+    color:#6d6498 !important;
+}
+
+/* buttons */
+.friend-rank-section button,
+.friend-rank-section .glass-btn,
+.friend-board button{
+    background:
+    linear-gradient(
+        135deg,
+        #ffd7f1,
+        #f3e6ff
+    ) !important;
+
+    color:#7d5be0 !important;
+}
+
+/* remove extra tiny input */
+.practice-mini-input,
+.secondary-answer-input,
+.extra-answer-box{
+    display:none !important;
+}
