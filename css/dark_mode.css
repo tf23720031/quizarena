@@ -1,0 +1,419 @@
+/* =========================================================
+   QuizArena Unified Dark Mode
+   套用方式：body 加上 .dark-mode，或 localStorage quizDarkMode = 1
+   目標：讓所有頁面的深色模式維持同一套「深藍紫＋粉色霓虹＋玻璃卡片」風格
+   ========================================================= */
+
+body.dark-mode {
+  color-scheme: dark;
+  --qa-dark-bg-0: #070918;
+  --qa-dark-bg-1: #11152c;
+  --qa-dark-bg-2: #1b2140;
+  --qa-dark-card: rgba(18, 22, 43, .74);
+  --qa-dark-card-soft: rgba(255, 255, 255, .075);
+  --qa-dark-border: rgba(255, 255, 255, .16);
+  --qa-dark-border-strong: rgba(255, 255, 255, .26);
+  --qa-dark-text: #f6f1ff;
+  --qa-dark-muted: rgba(246, 241, 255, .72);
+  --qa-dark-soft: rgba(246, 241, 255, .55);
+  --qa-dark-pink: #ff8fc4;
+  --qa-dark-pink-2: #ff66ab;
+  --qa-dark-purple: #9d8cff;
+  --qa-dark-blue: #69d7ff;
+  --qa-dark-gold: #ffd27a;
+  --qa-dark-shadow: 0 24px 60px rgba(0, 0, 0, .46);
+  --qa-dark-glow: 0 0 28px rgba(255, 143, 196, .18), 0 0 42px rgba(105, 215, 255, .10);
+
+  background-image:
+    radial-gradient(circle at 12% 10%, rgba(255, 111, 180, .22), transparent 30%),
+    radial-gradient(circle at 88% 8%, rgba(105, 215, 255, .18), transparent 28%),
+    radial-gradient(circle at 55% 96%, rgba(157, 140, 255, .20), transparent 34%),
+    linear-gradient(135deg, var(--qa-dark-bg-0) 0%, var(--qa-dark-bg-1) 48%, var(--qa-dark-bg-2) 100%) !important;
+  background-attachment: fixed !important;
+  color: var(--qa-dark-text) !important;
+}
+
+body.dark-mode::before {
+  background:
+    radial-gradient(circle at 8% 16%, rgba(255,255,255,.18) 0 1px, transparent 2px),
+    radial-gradient(circle at 22% 30%, rgba(255,143,196,.22) 0 1px, transparent 2px),
+    radial-gradient(circle at 38% 12%, rgba(105,215,255,.2) 0 1px, transparent 2px),
+    radial-gradient(circle at 72% 22%, rgba(255,255,255,.16) 0 1px, transparent 2px),
+    linear-gradient(180deg, rgba(7,9,24,.18), rgba(7,9,24,.55)) !important;
+  opacity: 1 !important;
+}
+
+body.dark-mode::after {
+  background: radial-gradient(circle at center, transparent 45%, rgba(0,0,0,.42) 100%) !important;
+  opacity: .9 !important;
+}
+
+body.dark-mode a { color: #9ee8ff; }
+body.dark-mode a:hover { color: #ffd2e6; }
+body.dark-mode hr { border-color: rgba(255,255,255,.15) !important; }
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6,
+body.dark-mode .title-main,
+body.dark-mode .title-sub,
+body.dark-mode .tool-topbar h1,
+body.dark-mode .join-info-box h1,
+body.dark-mode .player-preview-card h3,
+body.dark-mode .card-title,
+body.dark-mode .room-title,
+body.dark-mode .section-title,
+body.dark-mode .question-title,
+body.dark-mode .panel-title,
+body.dark-mode .lobby-header h2,
+body.dark-mode .welcome-copy h1 {
+  color: var(--qa-dark-text) !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: 0 0 22px rgba(255,143,196,.18) !important;
+}
+
+body.dark-mode p,
+body.dark-mode span,
+body.dark-mode label,
+body.dark-mode small,
+body.dark-mode .muted,
+body.dark-mode .tool-kicker,
+body.dark-mode .title-sub,
+body.dark-mode .pin-tip,
+body.dark-mode .room-meta,
+body.dark-mode .status-label,
+body.dark-mode .history-card span,
+body.dark-mode .question-card p,
+body.dark-mode .profile-main p,
+body.dark-mode .join-info-box p,
+body.dark-mode .wrong-insight-grid span {
+  color: var(--qa-dark-muted) !important;
+}
+
+/* 玻璃卡片共用 */
+body.dark-mode .main-card,
+body.dark-mode .left-box,
+body.dark-mode .editor-box,
+body.dark-mode .left-panel,
+body.dark-mode .right-panel,
+body.dark-mode .player-preview-card,
+body.dark-mode .info-card,
+body.dark-mode .custom-stage-wrap,
+body.dark-mode .glass-card,
+body.dark-mode .pin-box,
+body.dark-mode .chat-item,
+body.dark-mode .player-entry,
+body.dark-mode .summary-grid article,
+body.dark-mode .tool-card,
+body.dark-mode .question-card,
+body.dark-mode .history-card,
+body.dark-mode .analysis-card,
+body.dark-mode .profile-achievement-card,
+body.dark-mode .profile-title-option,
+body.dark-mode .lobby-shell,
+body.dark-mode .room-card,
+body.dark-mode .stat-card,
+body.dark-mode .login-status-card,
+body.dark-mode .friends-drawer,
+body.dark-mode .friends-empty-card,
+body.dark-mode .friends-record-card,
+body.dark-mode .friend-request-card,
+body.dark-mode .modal-content,
+body.dark-mode .cute-modal,
+body.dark-mode .game-topbar,
+body.dark-mode .question-panel,
+body.dark-mode .leaderboard-panel,
+body.dark-mode .result-card,
+body.dark-mode .scoreboard-card,
+body.dark-mode .podium-card,
+body.dark-mode .host-panel,
+body.dark-mode .host-detail-panel {
+  background: linear-gradient(145deg, rgba(255,255,255,.11), rgba(255,255,255,.055)) !important;
+  border-color: var(--qa-dark-border) !important;
+  color: var(--qa-dark-text) !important;
+  box-shadow: var(--qa-dark-shadow), var(--qa-dark-glow) !important;
+  backdrop-filter: blur(18px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+body.dark-mode .main-card::before {
+  background: linear-gradient(135deg, rgba(255,255,255,.16), transparent 38%, rgba(255,143,196,.12)) !important;
+}
+
+/* 表單、輸入框、下拉 */
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode .form-control,
+body.dark-mode .member-input,
+body.dark-mode .pin-input,
+body.dark-mode .friends-modal-input,
+body.dark-mode .lang-select,
+body.dark-mode .field-block input,
+body.dark-mode .answer-input,
+body.dark-mode .question-input,
+body.dark-mode .option-input {
+  background: rgba(8, 12, 30, .62) !important;
+  border-color: rgba(255,255,255,.18) !important;
+  color: var(--qa-dark-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder,
+body.dark-mode .pin-input::placeholder,
+body.dark-mode .friends-modal-input::placeholder {
+  color: rgba(246,241,255,.42) !important;
+}
+
+body.dark-mode input:focus,
+body.dark-mode textarea:focus,
+body.dark-mode select:focus,
+body.dark-mode .form-control:focus {
+  border-color: rgba(255,143,196,.72) !important;
+  box-shadow: 0 0 0 4px rgba(255,143,196,.14), 0 0 26px rgba(105,215,255,.10) !important;
+}
+
+/* 按鈕 */
+body.dark-mode button,
+body.dark-mode .btn,
+body.dark-mode .custom-btn,
+body.dark-mode .top-action,
+body.dark-mode .tool-btn,
+body.dark-mode .mini-btn,
+body.dark-mode .switch-btn,
+body.dark-mode .circle-arrow,
+body.dark-mode .back-home-btn,
+body.dark-mode .audio-toggle,
+body.dark-mode .icon-btn,
+body.dark-mode .dark-mode-btn,
+body.dark-mode .lang-switcher,
+body.dark-mode .member-switch-btn,
+body.dark-mode .friends-dock-btn,
+body.dark-mode .friends-fab-mini {
+  border-color: rgba(255,255,255,.18) !important;
+  color: var(--qa-dark-text) !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.055)) !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,.34) !important;
+}
+
+body.dark-mode button:hover,
+body.dark-mode .btn:hover,
+body.dark-mode .custom-btn:hover,
+body.dark-mode .top-action:hover,
+body.dark-mode .tool-btn:hover,
+body.dark-mode .mini-btn:hover,
+body.dark-mode .switch-btn:hover,
+body.dark-mode .circle-arrow:hover,
+body.dark-mode .back-home-btn:hover,
+body.dark-mode .icon-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12) !important;
+  box-shadow: 0 16px 34px rgba(0,0,0,.44), 0 0 28px rgba(255,143,196,.16) !important;
+}
+
+body.dark-mode .btn-create,
+body.dark-mode .btn-join,
+body.dark-mode .btn-play,
+body.dark-mode .btn-auth,
+body.dark-mode .tool-btn.primary,
+body.dark-mode .confirm-btn,
+body.dark-mode .add-question-btn,
+body.dark-mode .start-btn,
+body.dark-mode .start-wide-btn,
+body.dark-mode .modal-ok-btn,
+body.dark-mode .switch-btn.active,
+body.dark-mode .member-switch-btn.active,
+body.dark-mode .submit-btn {
+  color: #fff !important;
+  border-color: rgba(255,255,255,.22) !important;
+  background: linear-gradient(135deg, #ff66ab 0%, #9d8cff 52%, #69d7ff 100%) !important;
+  box-shadow: 0 16px 34px rgba(157,140,255,.26), 0 0 28px rgba(255,102,171,.18) !important;
+}
+
+body.dark-mode .leave-game-btn,
+body.dark-mode .delete-btn,
+body.dark-mode .danger-btn {
+  background: rgba(255, 96, 132, .16) !important;
+  color: #ffb5ca !important;
+  border-color: rgba(255, 130, 160, .28) !important;
+}
+
+/* create_home 題庫頁 */
+body.dark-mode .question-chip,
+body.dark-mode .no-title,
+body.dark-mode .mini-list-box,
+body.dark-mode .bank-card,
+body.dark-mode .question-item,
+body.dark-mode .option-row,
+body.dark-mode .answer-option,
+body.dark-mode .setting-card {
+  background: rgba(255,255,255,.075) !important;
+  border-color: rgba(255,255,255,.15) !important;
+  color: var(--qa-dark-text) !important;
+  box-shadow: 0 10px 26px rgba(0,0,0,.28) !important;
+}
+
+body.dark-mode .question-chip.active,
+body.dark-mode .bank-card.active,
+body.dark-mode .answer-option.active,
+body.dark-mode .answer-option.selected {
+  background: linear-gradient(135deg, rgba(255,102,171,.28), rgba(157,140,255,.24)) !important;
+  border-color: rgba(255,143,196,.45) !important;
+}
+
+/* learning tools */
+body.dark-mode .summary-grid strong,
+body.dark-mode .history-card strong,
+body.dark-mode .question-card h3,
+body.dark-mode .profile-title-option strong,
+body.dark-mode .profile-achievement-card strong,
+body.dark-mode .pin-number,
+body.dark-mode .status-name,
+body.dark-mode .room-pin,
+body.dark-mode .badge-pill strong {
+  color: var(--qa-dark-pink) !important;
+}
+
+body.dark-mode .question-tags span,
+body.dark-mode .answer-pill,
+body.dark-mode .badge-qa,
+body.dark-mode .badge-public,
+body.dark-mode .badge-private,
+body.dark-mode .badge-team,
+body.dark-mode .host-badge,
+body.dark-mode .badge-pill {
+  color: #ffe9f4 !important;
+  background: rgba(255,143,196,.16) !important;
+  border: 1px solid rgba(255,143,196,.24) !important;
+}
+
+body.dark-mode .report-table,
+body.dark-mode table {
+  color: var(--qa-dark-text) !important;
+}
+
+body.dark-mode .report-table th,
+body.dark-mode .report-table td,
+body.dark-mode table th,
+body.dark-mode table td {
+  color: var(--qa-dark-muted) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  background: transparent !important;
+}
+
+body.dark-mode .report-table th,
+body.dark-mode table th {
+  color: var(--qa-dark-text) !important;
+  background: rgba(255,143,196,.10) !important;
+}
+
+/* waiting / house waiting */
+body.dark-mode .chat-header {
+  color: #fff !important;
+  background: linear-gradient(135deg, rgba(255,102,171,.72), rgba(157,140,255,.58)) !important;
+  border-bottom: 1px solid rgba(255,255,255,.14) !important;
+}
+
+body.dark-mode .chat-list::-webkit-scrollbar-thumb,
+body.dark-mode .player-list::-webkit-scrollbar-thumb,
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255,143,196,.78), rgba(105,215,255,.62)) !important;
+  border-radius: 999px;
+}
+
+body.dark-mode ::-webkit-scrollbar { width: 10px; height: 10px; }
+body.dark-mode ::-webkit-scrollbar-track { background: rgba(255,255,255,.05); }
+
+body.dark-mode .avatar-combo,
+body.dark-mode .chat-avatar,
+body.dark-mode .avatar-preview,
+body.dark-mode .preview-stage,
+body.dark-mode .custom-stage {
+  background: rgba(255,255,255,.10) !important;
+  border-color: rgba(255,255,255,.20) !important;
+}
+
+/* quiz game */
+body.dark-mode .option-btn,
+body.dark-mode .host-answer-item,
+body.dark-mode .hd-answer-item,
+body.dark-mode .result-top5-item {
+  background: rgba(255,255,255,.08) !important;
+  border-color: rgba(255,255,255,.15) !important;
+  color: var(--qa-dark-text) !important;
+}
+
+body.dark-mode .option-btn.selected,
+body.dark-mode .option-btn:hover {
+  background: linear-gradient(135deg, rgba(255,102,171,.24), rgba(105,215,255,.18)) !important;
+  border-color: rgba(255,143,196,.44) !important;
+}
+
+body.dark-mode .correct,
+body.dark-mode .host-correct-option,
+body.dark-mode .hd-answer-item.correct {
+  background: rgba(42, 214, 127, .16) !important;
+  color: #8dffbd !important;
+  border-color: rgba(42,214,127,.36) !important;
+}
+
+body.dark-mode .wrong,
+body.dark-mode .hd-answer-item.wrong {
+  background: rgba(255, 83, 120, .16) !important;
+  color: #ffb2c5 !important;
+  border-color: rgba(255,83,120,.34) !important;
+}
+
+body.dark-mode .result-explanation,
+body.dark-mode .spectator-hint,
+body.dark-mode .empty-lobby,
+body.dark-mode .chat-empty {
+  background: rgba(255,255,255,.06) !important;
+  color: var(--qa-dark-muted) !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+
+/* Bootstrap/modal 修正 */
+body.dark-mode .modal-backdrop.show { opacity: .72 !important; }
+body.dark-mode .btn-close { filter: invert(1) grayscale(1) brightness(1.7) !important; }
+body.dark-mode .dropdown-menu {
+  background: rgba(18,22,43,.95) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  box-shadow: var(--qa-dark-shadow) !important;
+}
+body.dark-mode .dropdown-item { color: var(--qa-dark-muted) !important; }
+body.dark-mode .dropdown-item:hover { background: rgba(255,143,196,.14) !important; color: #fff !important; }
+
+/* 圖片與 LOGO：暗色底下保留明亮但不要刺眼 */
+body.dark-mode img.site-logo,
+body.dark-mode .logo img,
+body.dark-mode .join-logo,
+body.dark-mode .game-logo {
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35)) drop-shadow(0 0 18px rgba(255,143,196,.14));
+}
+
+/* 讓固定背景頁不會白到像深色模式逃跑 */
+body.dark-mode .join-bg {
+  opacity: .22 !important;
+  filter: brightness(.48) saturate(.85) hue-rotate(8deg) !important;
+}
+
+body.dark-mode .cloud-layer,
+body.dark-mode .join-bg,
+body.dark-mode .bg-layer {
+  opacity: .26 !important;
+}
+
+@media (max-width: 768px) {
+  body.dark-mode .main-card,
+  body.dark-mode .left-panel,
+  body.dark-mode .right-panel,
+  body.dark-mode .tool-card,
+  body.dark-mode .glass-card {
+    box-shadow: 0 16px 36px rgba(0,0,0,.36) !important;
+  }
+}
