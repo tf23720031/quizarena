@@ -34,8 +34,12 @@ function getLastPlayerName() {
   }
 }
 
-function getAccountName() {
-  return String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+function getSavedUserProfile() {
+  try {
+    return JSON.parse(localStorage.getItem("quizUserProfile") || "null") || {};
+  } catch {
+    return {};
+  }
 }
 
 async function api(url, options = {}) {
@@ -81,7 +85,6 @@ const eyeSliderBox = document.getElementById("eyeSliderBox");
 const randomBtn = document.getElementById("randomBtn");
 const resetBtn = document.getElementById("resetBtn");
 const joinRoomBtn = document.getElementById("joinRoomBtn");
-const profileAvatarToggleBtn = document.getElementById("profileAvatarToggleBtn");
 
 /* ========= 資料 ========= */
 const HAIRS = [
@@ -117,38 +120,14 @@ const EYES = [
   "images/face/eyes12.png"
 ];
 
-const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-
 const state = {
   currentPart: "hair",
   hairIndex: 0,
   eyeIndex: 0,
   eyesOffsetY: 0,
-  uploadedAvatar: "",
-  profileAvatar: "",
-  useProfileAvatar: false,
-  context: getJoinContext()
+  context: getJoinContext(),
+  savedProfile: getSavedUserProfile()
 };
-
-function parseProfileImageAvatar(value) {
-  const avatar = String(value || "");
-  return avatar && !avatar.startsWith("style:") ? avatar : "";
-}
-
-async function loadProfileAvatar() {
-  const cached = (() => {
-    try { return JSON.parse(localStorage.getItem("currentUserProfile") || "null"); } catch { return null; }
-  })();
-  state.profileAvatar = parseProfileImageAvatar(cached?.avatar);
-  const account = getAccountName();
-  if (!state.profileAvatar && account) {
-    try {
-      const data = await api(`/user_profile?username=${encodeURIComponent(account)}`);
-      state.profileAvatar = parseProfileImageAvatar(data.profile?.avatar);
-      if (data.profile) localStorage.setItem("currentUserProfile", JSON.stringify(data.profile));
-    } catch (_) {}
-  }
-}
 
 function populateRoomInfo() {
   const room = state.context?.room;
@@ -168,9 +147,10 @@ function populateRoomInfo() {
 
   const lastPlayerName = getLastPlayerName();
   playerNameInput.value =
-    lastPlayerName || getAccountName() || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
+    lastPlayerName || state.savedProfile.username || `PLAYER_${Math.floor(Math.random() * 900 + 100)}`;
 
   updateNamePreview();
+  hydrateSavedAvatar();
 }
 
 function updateNamePreview() {
@@ -184,17 +164,9 @@ function applyEyesOffset() {
 }
 
 function syncAvatarImages() {
-  const imageAvatar = state.useProfileAvatar ? state.profileAvatar : "";
-  if (imageAvatar) {
-    [mainFace, previewFace].forEach((img) => { img.src = imageAvatar; img.classList.add("uploaded-face"); });
-    [mainHair, previewHair, mainEye, previewEye].forEach((img) => { img.src = TRANSPARENT_PIXEL; });
-    applyEyesOffset();
-    return;
-  }
   const hair = HAIRS[state.hairIndex];
   const eyes = EYES[state.eyeIndex];
 
-  [mainFace, previewFace].forEach((img) => { img.src = "images/face/face.png"; img.classList.remove("uploaded-face"); });
   mainHair.src = hair;
   previewHair.src = hair;
 
@@ -202,6 +174,17 @@ function syncAvatarImages() {
   previewEye.src = eyes;
 
   applyEyesOffset();
+}
+
+function hydrateSavedAvatar() {
+  const profile = state.savedProfile || {};
+  const hairIdx = HAIRS.indexOf(profile.hair);
+  const eyeIdx = EYES.indexOf(profile.eyes);
+  if (hairIdx >= 0) state.hairIndex = hairIdx;
+  if (eyeIdx >= 0) state.eyeIndex = eyeIdx;
+  state.eyesOffsetY = Number(profile.eyesOffsetY || 0);
+  if (eyeSlider) eyeSlider.value = String(state.eyesOffsetY);
+  syncAvatarImages();
 }
 
 function updatePartTabs() {
@@ -218,18 +201,9 @@ function updatePartTabs() {
   previewEye.classList.remove("hidden-layer");
 
   eyeSliderBox.classList.toggle("hidden-layer", !isEye);
-  document.querySelector(".custom-box")?.classList.toggle("is-profile-avatar", state.useProfileAvatar);
-  if (profileAvatarToggleBtn) {
-    profileAvatarToggleBtn.classList.toggle("active", state.useProfileAvatar);
-    profileAvatarToggleBtn.setAttribute("aria-pressed", state.useProfileAvatar ? "true" : "false");
-    profileAvatarToggleBtn.innerHTML = state.useProfileAvatar
-      ? '<i class="fa-solid fa-toggle-on"></i> 開啟，使用個人頭像'
-      : '<i class="fa-solid fa-toggle-off"></i> 關閉，使用捏人';
-  }
 }
 
 function movePart(direction) {
-  state.useProfileAvatar = false;
   if (state.currentPart === "hair") {
     state.hairIndex =
       (state.hairIndex + direction + HAIRS.length) % HAIRS.length;
@@ -239,11 +213,9 @@ function movePart(direction) {
   }
 
   syncAvatarImages();
-  updatePartTabs();
 }
 
 function randomizeAvatar() {
-  state.useProfileAvatar = false;
   state.hairIndex = Math.floor(Math.random() * HAIRS.length);
   state.eyeIndex = Math.floor(Math.random() * EYES.length);
   state.eyesOffsetY = Math.floor(Math.random() * 11) - 5;
@@ -254,7 +226,6 @@ function randomizeAvatar() {
 }
 
 function resetAvatar() {
-  state.useProfileAvatar = false;
   state.hairIndex = 0;
   state.eyeIndex = 0;
   state.eyesOffsetY = 0;
@@ -285,10 +256,10 @@ async function joinRoom() {
     roomKey: context.roomKey || "",
     player: {
       name: playerName,
-      face: state.useProfileAvatar && state.profileAvatar ? state.profileAvatar : "images/face/face.png",
-      hair: state.useProfileAvatar && state.profileAvatar ? TRANSPARENT_PIXEL : HAIRS[state.hairIndex],
-      eyes: state.useProfileAvatar && state.profileAvatar ? TRANSPARENT_PIXEL : EYES[state.eyeIndex],
-      eyesOffsetY: state.useProfileAvatar && state.profileAvatar ? 0 : state.eyesOffsetY,
+      face: "images/face/face.png",
+      hair: HAIRS[state.hairIndex],
+      eyes: EYES[state.eyeIndex],
+      eyesOffsetY: state.eyesOffsetY,
       isHost: isHost
     }
   };
@@ -337,24 +308,10 @@ eyeSlider?.addEventListener("input", () => {
   applyEyesOffset();
 });
 
-profileAvatarToggleBtn?.addEventListener("click", async () => {
-  if (!state.profileAvatar) await loadProfileAvatar();
-  if (!state.useProfileAvatar && !state.profileAvatar) {
-    showToast("個人資料目前沒有上傳頭像，請先到個人資料上傳照片");
-    return;
-  }
-  state.useProfileAvatar = !state.useProfileAvatar;
-  syncAvatarImages();
-  updatePartTabs();
-});
-
 joinRoomBtn?.addEventListener("click", joinRoom);
 
 populateRoomInfo();
-loadProfileAvatar().finally(() => {
-  syncAvatarImages();
-  updatePartTabs();
-});
+syncAvatarImages();
 
 // ── 房主在選頭像期間發 heartbeat，防止房間被系統刪除 ──────
 (function startHostHeartbeat() {
@@ -381,3 +338,4 @@ loadProfileAvatar().finally(() => {
   beat();
   setInterval(beat, 20000);
 })();
+updatePartTabs();

@@ -48,8 +48,6 @@ const optionsList     = document.getElementById('optionsList');
 const fillAnswerWrap  = document.getElementById('fillAnswerWrap');
 const fillAnswerInput = document.getElementById('fillAnswerInput');
 const submitAnswerBtn = document.getElementById('submitAnswerBtn');
-const teamQuestionSelectWrap = document.getElementById('teamQuestionSelectWrap');
-const teamQuestionSelect = document.getElementById('teamQuestionSelect');
 
 /* spectator */
 const spectatorView        = document.getElementById('spectatorView');
@@ -105,8 +103,6 @@ let hostFinishedQuestion = false;
 let isTeamMode           = false;
 let myTeamId             = 0;
 let latestTeamMsgCount   = 0;
-let teamPlayMode         = 'classic';
-let appliedRoomTheme     = '';
 
 const getPlayerName = () => (playerProfile?.name || '').trim();
 
@@ -116,16 +112,6 @@ function showToast(msg, delay = 2600) {
   toastEl.classList.add('show');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => toastEl.classList.remove('show'), delay);
-}
-
-function applyRoomTheme(room = {}) {
-  const theme = room.room_theme || room.roomTheme || 'classic';
-  const music = room.music_theme || room.musicTheme || 'spark';
-  if (appliedRoomTheme === `${theme}:${music}`) return;
-  appliedRoomTheme = `${theme}:${music}`;
-  document.body.dataset.roomTheme = theme;
-  localStorage.setItem('quizMusicTheme', music);
-  window.AudioManager?.setTheme?.(music);
 }
 
 async function api(url, opts = {}) {
@@ -367,20 +353,16 @@ const stopTimer = () => { clearInterval(timerInterval); timerInterval = null; };
 function startTimer(seconds, onEnd) {
   stopTimer();
   remainSeconds = Number(seconds) || 20;
-  if (countdownText) countdownText.textContent = remainSeconds;
+  countdownText.textContent = remainSeconds;
   timerInterval = setInterval(() => {
     remainSeconds = Math.max(0, remainSeconds - 1);
-    if (countdownText) countdownText.textContent = remainSeconds;
+    countdownText.textContent = remainSeconds;
     if (remainSeconds > 0 && remainSeconds <= 5 && !isHost && !isEliminated) {
       if (remainSeconds === 3) AudioManager?.countdown3();
       else AudioManager?.tick(remainSeconds <= 2);
     }
     if (remainSeconds <= 0) { stopTimer(); onEnd?.(); }
   }, 1000);
-}
-
-function getQuestionSeconds(q) {
-  return parseInt(String(q?.time || q?.time_label || '20').replace(/[^0-9]/g, ''), 10) || 20;
 }
 
 /* ── 排行榜 ── */
@@ -440,7 +422,6 @@ function updateHostAllDoneButton(answerStatus = []) {
 function setupTeamChatUI(data) {
   isTeamMode = !!data.isTeamMode;
   myTeamId   = Number(data.myTeamId || 0);
-  teamPlayMode = String(data.teamPlayMode || 'classic');
   const canUseTeamChat = isTeamMode && !isHost && myTeamId > 0;
   if (teamChatBox) teamChatBox.style.display = canUseTeamChat ? 'block' : 'none';
   if (!canUseTeamChat && teamChatList) {
@@ -448,25 +429,6 @@ function setupTeamChatUI(data) {
     latestTeamMsgCount = 0;
   }
 }
-function setupTeamQuestionPicker(data) {
-  const isFreeAssign = isTeamMode && teamPlayMode === 'free_assign' && !isHost;
-  if (!teamQuestionSelectWrap || !teamQuestionSelect) return null;
-  teamQuestionSelectWrap.style.display = isFreeAssign ? 'block' : 'none';
-  if (!isFreeAssign) return null;
-
-  const statusList = data.teamQuestionStatus || [];
-  const questionMap = Object.fromEntries((data.allQuestions || []).map((q) => [q.question_id, q]));
-  const unanswered = statusList.find((s) => !s.submitted);
-  const candidateId = teamQuestionSelect.value || unanswered?.question_id || statusList[0]?.question_id;
-
-  teamQuestionSelect.innerHTML = statusList.map((s) => {
-    const doneTag = s.submitted ? `✅ ${s.submitter || '已作答'}` : '🕒 未作答';
-    return `<option value="${s.question_id}">第 ${Number(s.seq || 0) + 1} 題｜${s.title || ''}｜${doneTag}</option>`;
-  }).join('');
-  if (candidateId) teamQuestionSelect.value = candidateId;
-  return questionMap[teamQuestionSelect.value] || null;
-}
-
 
 function renderTeamMessages(messages = []) {
   if (!teamChatList) return;
@@ -515,15 +477,6 @@ function renderHostQuestion(q, answeredCount, totalQuestions) {
 
   if (hostOptionsList) {
     const correctIndexes = q.correct_indexes || [];
-    if (q.type === 'matching') {
-      hostOptionsList.innerHTML = (q.options || []).map((opt, idx) => `
-        <div class="option-btn host-option host-correct-option">
-          <span class="option-letter">${idx + 1}</span>
-          <span>${opt.left || opt.text || ''} → ${opt.right || ''}</span>
-          <span class="correct-tag">配對</span>
-        </div>`).join('');
-      return;
-    }
     hostOptionsList.innerHTML = (q.options || []).map((opt, idx) => {
       const ok = correctIndexes.includes(idx);
       return `<div class="option-btn host-option ${ok ? 'host-correct-option' : ''}">
@@ -616,29 +569,7 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
   if (q.image) { questionImage.src = q.image; questionImage.style.display = 'block'; }
   else { questionImage.style.display = 'none'; }
 
-  if (q.type === 'matching') {
-    if (fillAnswerWrap) fillAnswerWrap.style.display = 'none';
-    const rights = buildShuffleMap(q.options || [], `${q.question_id}:matching`).map((origIdx) => ({
-      origIdx,
-      text: (q.options || [])[origIdx]?.right || (q.options || [])[origIdx]?.text || ''
-    }));
-    optionsList.innerHTML = `<div class="matching-play-grid">
-      ${(q.options || []).map((opt, leftIdx) => `
-        <label class="matching-play-row">
-          <span>${leftIdx + 1}. ${opt.left || opt.text || ''}</span>
-          <select class="form-select matching-select" data-left="${leftIdx}">
-            <option value="">選擇右側答案</option>
-            ${rights.map((right) => `<option value="${right.origIdx}">${right.text}</option>`).join('')}
-          </select>
-        </label>
-      `).join('')}
-    </div>`;
-    document.querySelectorAll('.matching-select').forEach((select) => {
-      select.addEventListener('change', () => {
-        selected = [...document.querySelectorAll('.matching-select')].map((item) => Number(item.value));
-      });
-    });
-  } else if (q.type === 'fill') {
+  if (q.type === 'fill') {
     optionsList.innerHTML = '';
     if (fillAnswerWrap) fillAnswerWrap.style.display = 'block';
     if (fillAnswerInput) {
@@ -736,12 +667,6 @@ async function submitAnswer(isTimeout = false) {
   const textAnswer = (fillAnswerInput?.value || '').trim();
   if (currentQuestion.type === 'fill') {
     if (!textAnswer && !isTimeout) { showToast('請先輸入答案'); return; }
-  } else if (currentQuestion.type === 'matching') {
-    selected = [...document.querySelectorAll('.matching-select')].map((item) => Number(item.value));
-    if ((!selected.length || selected.some((value) => Number.isNaN(value))) && !isTimeout) {
-      showToast('請完成所有左右配對');
-      return;
-    }
   } else if (!selected.length && !isTimeout) { showToast('請先選擇答案'); return; }
 
   hasSubmitted = true;
@@ -782,7 +707,7 @@ async function submitAnswer(isTimeout = false) {
       badge:        data.isCorrect ? '🎉 答對了！' : (isTimeout ? '⏰ 時間到！' : (data.eliminated ? '💀 淘汰！' : '😢 答錯了')),
       points:       data.eliminated ? '積分歸零' : `+${data.pointsEarned || 0}`,
       answerText:   data.answerText || '-',
-      explanation:  data.explanation || '等待房主進入下一題。',
+      explanation:  '等待房主進入下一題。',
       top5:         data.top5 || [],
       myRank:       data.myRank,
       showExactRank: data.showExactRank,
@@ -826,26 +751,8 @@ function showView(view) {
   if (spectatorView) spectatorView.style.display = (view === 'spectator') ? 'block' : 'none';
 }
 
-function legacyHandleStateDisabled(data) {
+function handleState(data) {
   try {
-      if (isTeamMode && teamPlayMode === 'free_assign' && !isHost) {
-    stopTimer();
-    countdownText.textContent = '-';
-    const pickedQ = setupTeamQuestionPicker(data);
-    renderPlayerSideList(data.answerStatus || []);
-    updateHostAllDoneButton(data.answerStatus || []);
-    if (pickedQ) {
-      const answeredCount = (data.teamQuestionStatus || []).filter((x) => x.submitted).length;
-      renderPlayerQuestion(pickedQ, answeredCount, data.totalQuestions || 0);
-      const myStatus = (data.teamQuestionStatus || []).find((x) => x.question_id === pickedQ.question_id);
-      const locked = !!myStatus?.submitted;
-      if (submitAnswerBtn) submitAnswerBtn.style.display = locked ? 'none' : 'inline-block';
-      if (fillAnswerInput) fillAnswerInput.disabled = locked;
-      document.querySelectorAll('#optionsList .option-btn').forEach((b) => { b.style.pointerEvents = locked ? 'none' : ''; });
-      progressText.textContent = `團隊完成 ${answeredCount} / ${data.totalQuestions || 0} 題`;
-    }
-    return;
-  }
   const q     = data.nextQuestion;
   const qId   = q?.question_id || null;
   const phase = data.phase || 'question';
@@ -885,8 +792,8 @@ function legacyHandleStateDisabled(data) {
       } else {
         renderPlayerQuestion(q, data.answeredCount, data.totalQuestions);
         AudioManager?.questionStart();
-        if (phase === 'question' && !(isTeamMode && teamPlayMode === 'free_assign')) {
-           startTimer((parseInt(String(q.time||'').replace(/[^0-9]/g,'')) || 20), () => submitAnswer(true));
+        if (phase === 'question') {
+          startTimer((parseInt(String(q.time||'').replace(/[^0-9]/g,'')) || 20), () => submitAnswer(true));
         }
       }
     }
@@ -967,160 +874,6 @@ function legacyHandleStateDisabled(data) {
   }
 }
 
-function handleState(data) {
-  try {
-    const q = data.nextQuestion;
-    const qId = q?.question_id || null;
-    const phase = data.phase || 'question';
-    currentPhase = phase;
-    if (data.isEliminated !== undefined) isEliminated = !!data.isEliminated;
-
-    if (isTeamMode && teamPlayMode === 'free_assign' && !isHost) {
-      showView(isEliminated ? 'spectator' : 'player');
-      const pickedQ = setupTeamQuestionPicker(data);
-      renderPlayerSideList(data.answerStatus || []);
-      updateHostAllDoneButton(data.answerStatus || []);
-      if (!pickedQ) {
-        stopTimer();
-        if (countdownText) countdownText.textContent = '-';
-        return;
-      }
-
-      const pickedId = pickedQ.question_id || null;
-      const pickedChanged = pickedId !== currentQuestionId;
-      if (pickedChanged) {
-        currentQuestionId = pickedId;
-        lastHandledPhaseQid = null;
-        closePlayerResult();
-        closeHostExplanation();
-        stopTimer();
-      }
-
-      const answeredCount = (data.teamQuestionStatus || []).filter((x) => x.submitted).length;
-      if (pickedChanged || !currentQuestion) renderPlayerQuestion(pickedQ, answeredCount, data.totalQuestions || 0);
-      const myStatus = (data.teamQuestionStatus || []).find((x) => x.question_id === pickedQ.question_id);
-      const locked = !!myStatus?.submitted;
-      if (submitAnswerBtn) submitAnswerBtn.style.display = locked ? 'none' : 'inline-block';
-      if (fillAnswerInput) fillAnswerInput.disabled = locked;
-      document.querySelectorAll('#optionsList .option-btn').forEach((b) => {
-        b.style.pointerEvents = locked ? 'none' : '';
-      });
-      if (progressText) progressText.textContent = `團隊進度 ${answeredCount} / ${data.totalQuestions || 0} 題`;
-      if (locked) {
-        stopTimer();
-        if (countdownText) countdownText.textContent = 0;
-      } else if (!timerInterval) {
-        startTimer(getQuestionSeconds(pickedQ), () => submitAnswer(true));
-      }
-      return;
-    }
-
-    if (!q && !data.finished) {
-      console.warn('[handleState] nextQuestion is empty', data);
-      return;
-    }
-
-    if (isHost) showView('host');
-    else if (isEliminated) showView('spectator');
-    else showView('player');
-
-    const qChanged = qId !== currentQuestionId;
-    if (qChanged) {
-      currentQuestionId = qId;
-      lastHandledPhaseQid = null;
-      hostFinishedQuestion = false;
-      closePlayerResult();
-      closeHostExplanation();
-      stopTimer();
-      hasSubmitted = false;
-    }
-
-    if (q && (qChanged || !currentQuestion)) {
-      if (isHost) renderHostQuestion(q, data.answeredCount, data.totalQuestions);
-      else if (isEliminated) renderSpectatorQuestion(q, data.answeredCount, data.totalQuestions);
-      else {
-        renderPlayerQuestion(q, data.answeredCount, data.totalQuestions);
-        AudioManager?.questionStart();
-      }
-    }
-
-    renderPlayerSideList(data.answerStatus || []);
-    updateHostAllDoneButton(data.answerStatus || []);
-
-    if (phase === 'question') {
-      if (isHost) {
-        renderHostAnswerStatus(data.answerStatus || []);
-        renderHostBreakdown([]);
-        if (!timerInterval && q) {
-          startTimer(getQuestionSeconds(q), () => {
-            showToast('時間到，正在進入統計...');
-            hostFinishQuestion();
-          });
-        }
-      } else if (!isEliminated) {
-        if (data.myAnswered) {
-          if (submitAnswerBtn) submitAnswerBtn.style.display = 'none';
-          stopTimer();
-          if (countdownText) countdownText.textContent = 0;
-        } else if (!timerInterval && q) {
-          closePlayerResult();
-          startTimer(getQuestionSeconds(q), () => submitAnswer(true));
-        }
-      }
-      return;
-    }
-
-    stopTimer();
-    if (countdownText) countdownText.textContent = 0;
-    const phaseKey = `${qId}:${phase}`;
-    if (lastHandledPhaseQid === phaseKey) return;
-    lastHandledPhaseQid = phaseKey;
-
-    const eliminatedNames = (data.answerStatus || [])
-      .filter((p) => !p.is_host && p.is_eliminated && p.answered)
-      .map((p) => p.player_name);
-
-    if (isHost) {
-      renderHostAnswerStatus(data.answerStatus || [], eliminatedNames);
-      renderHostBreakdown(data.answerBreakdown || []);
-      openHostExplanation({
-        correctText: data.correctAnswerText,
-        explanation: data.explanation,
-        top5: data.leaderboard?.slice(0, 5) || [],
-        eliminatedNames,
-      });
-    } else {
-      if (!isEliminated && currentQuestion && data.correctAnswerText) {
-        const correctIndexes = (data.correctAnswerText || '')
-          .split('、')
-          .map((label) => label.trim().charCodeAt(0) - 65)
-          .filter((idx) => idx >= 0);
-        const mySelected = (() => {
-          try { return JSON.parse(data.myResult?.selected_json || '[]'); } catch { return []; }
-        })();
-        revealOptions(correctIndexes, mySelected);
-      }
-      openPlayerResult({
-        badge: data.myAnswered
-          ? (data.myResult?.is_correct ? '✅ 答對了' : (isEliminated ? '💀 已淘汰' : '❌ 答錯了'))
-          : '⏰ 時間到',
-        points: isEliminated ? '積分歸零' : `+${data.myResult?.points_earned || 0}`,
-        answerText: data.correctAnswerText || '-',
-        explanation: data.explanation || '本題未提供解析。',
-        top5: data.leaderboard?.slice(0, 5) || [],
-        myRank: data.myRank,
-        showExactRank: data.showExactRank,
-        eliminated: isEliminated,
-      });
-      totalScoreText.textContent = data.totalScore ?? 0;
-      finishScoreText.textContent = data.totalScore ?? 0;
-    }
-  } catch (err) {
-    console.error('[handleState error]', err);
-    showToast('同步遊戲狀態失敗：' + err.message);
-  }
-}
-
 /* ── main poll ── */
 async function loadState(force = false) {
   if (!pin || !getPlayerName()) {
@@ -1132,7 +885,6 @@ async function loadState(force = false) {
     const data = await api(
       `/player_game_state?pin=${encodeURIComponent(pin)}&playerName=${encodeURIComponent(getPlayerName())}`
     );
-    applyRoomTheme(data.room || {});
 
     roomPinText.textContent    = pin;
     playerNameText.textContent = getPlayerName();
@@ -1160,7 +912,7 @@ async function loadState(force = false) {
     else showView('player');
 
     handleState(data);
-    if ((!data.answerStatus || !data.answerStatus.length) && data.players?.length) {
+if ((!data.answerStatus || !data.answerStatus.length) && data.players?.length) {
       renderPlayerSideList((data.players || []).map(p => ({
         ...p, answered: 0, is_correct: 0
       })));
@@ -1287,9 +1039,6 @@ function leaveRoomOnUnload() {
 
 /* ── 事件 ── */
 submitAnswerBtn?.addEventListener('click', () => submitAnswer(false));
-teamQuestionSelect?.addEventListener('change', () => {
-  loadState(true);
-});
 nextQuestionBtn?.addEventListener('click', closePlayerResult);
 teamChatForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
