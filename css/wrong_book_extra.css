@@ -78,3 +78,13 @@ body.dark-mode .wrong-note-input { background: rgba(50,45,20,.7); color: #f5e8c0
 .match-right-item { background: rgba(255,255,255,.6); color: #293150; cursor: pointer; }
 .match-right-item.correct { background: rgba(81,207,102,.25); border-color: #51cf66; }
 .match-right-item.wrong   { background: rgba(255,107,107,.2); border-color: #ff6b6b; }
+
+/* 分享連結與儲存筆記按鈕補充 */
+.wrong-share-link,
+.save-note-btn {
+  font-size: .84rem;
+  padding: 8px 14px;
+  min-height: auto;
+}
+.wrong-share-link { color: #5a4fcf; }
+.save-note-btn { color: #1a6630; }

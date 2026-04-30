@@ -1661,3 +1661,309 @@ body.dark-mode .tool-btn.primary {
 }
 .duel-final-scores span { font-size: .86rem; color: #66709b; }
 .duel-final-scores strong { font-size: 2rem; font-weight: 900; color: #7c7bff; }
+
+/* ══════════════════════════════════════════════════════════
+   每日任務 – Daily Mission
+══════════════════════════════════════════════════════════ */
+.daily-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+.daily-streak-card {
+  background: #fff;
+  border-radius: var(--border-radius-lg, 16px);
+  padding: 1rem 1.25rem;
+  border: 0.5px solid rgba(124,123,255,.14);
+}
+.daily-streak-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.daily-streak-row .tool-note { font-size:.82rem; color:#8b82df; font-weight:700; }
+.daily-streak-dots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.daily-streak-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(124,123,255,.15);
+  border: 2px solid rgba(124,123,255,.2);
+  transition: background .2s, border-color .2s, transform .15s;
+}
+.daily-streak-dot.active {
+  background: linear-gradient(135deg, #7c7bff, #ff8fbd);
+  border-color: transparent;
+}
+.daily-streak-dot.current {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 3px rgba(124,123,255,.25);
+}
+.daily-subtitle {
+  font-size: .84rem;
+  color: #66709b;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* 連續中斷 Modal */
+.daily-break-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22,18,48,.55);
+  backdrop-filter: blur(6px);
+}
+.daily-break-modal.show { display: flex; }
+.daily-break-dialog {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2rem 1.75rem;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 24px 56px rgba(66,52,118,.22);
+}
+.daily-break-dialog > i {
+  font-size: 2.5rem;
+  color: #ff6b6b;
+  margin-bottom: 14px;
+  display: block;
+}
+.daily-break-dialog h3 { font-size: 1.15rem; font-weight: 900; color: #293150; margin-bottom: 8px; }
+.daily-break-dialog p  { font-size: .88rem; color: #66709b; margin-bottom: 20px; line-height: 1.6; }
+
+body.dark-mode .daily-streak-card { background: #fff; }
+body.dark-mode .daily-break-dialog { background: #1e2440; color: #e8eaf6; }
+body.dark-mode .daily-break-dialog h3 { color: #e8eaf6; }
+
+/* ══════════════════════════════════════════════════════════
+   Profile – Achievement Showcase 展示牆
+══════════════════════════════════════════════════════════ */
+.achievement-showcase-title {
+  font-size: .82rem;
+  font-weight: 700;
+  color: #8b82df;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.achievement-showcase-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 52px;
+  padding: 6px 0;
+}
+.showcase-empty {
+  font-size: .84rem;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.showcase-badge {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px 8px;
+  border-radius: 14px;
+  min-width: 72px;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(0,0,0,.15);
+}
+.showcase-badge-icon { font-size: 1.4rem; }
+.showcase-badge-label { line-height: 1.2; word-break: break-all; }
+.showcase-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: .65rem;
+  display: grid;
+  place-items: center;
+  transition: background .15s;
+}
+.showcase-remove:hover { background: rgba(255,60,60,.8); }
+.showcase-toggle-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(124,123,255,.25);
+  background: transparent;
+  color: #8b82df;
+  cursor: pointer;
+  font-size: .82rem;
+  display: grid;
+  place-items: center;
+  transition: background .15s, border-color .15s, color .15s;
+  flex-shrink: 0;
+}
+.showcase-toggle-btn.active,
+.showcase-toggle-btn:hover {
+  background: rgba(124,123,255,.12);
+  border-color: #7c7bff;
+  color: #7c7bff;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Profile – Hero Progress Bar
+══════════════════════════════════════════════════════════ */
+.profile-hero-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: .82rem;
+  color: #8b82df;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+.profile-hero-progress {
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(124,123,255,.14);
+  overflow: hidden;
+}
+.profile-hero-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #7c7bff, #ff8fbd);
+  transition: width .6s ease;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Quiz Game – Spectator Question Box
+══════════════════════════════════════════════════════════ */
+.spectator-question-box {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(124,123,255,.06);
+  border: 1px solid rgba(124,123,255,.16);
+  border-radius: 16px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   House Waiting Room – Host Card
+══════════════════════════════════════════════════════════ */
+.host-card {
+  border: 2px solid rgba(255,142,189,.5) !important;
+  background: linear-gradient(135deg, rgba(255,240,248,.9), rgba(237,233,255,.9)) !important;
+}
+body.dark-mode .host-card {
+  border-color: rgba(255,142,189,.4) !important;
+  background: rgba(255,142,189,.08) !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Index – Home Page / Login Status / Member Modal
+══════════════════════════════════════════════════════════ */
+.home-page { min-height: 100vh; }
+.login-status-text {
+  font-size: .82rem;
+  color: #8b82df;
+  font-weight: 600;
+}
+.pin-modal .modal-content { border-radius: 20px; overflow: hidden; }
+.member-modal-box .modal-content { border-radius: 20px; overflow: hidden; }
+.member-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 18px;
+  border-radius: 99px;
+  font-size: .86rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid rgba(124,123,255,.2);
+  background: transparent;
+  color: #66709b;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.member-tab.active, .member-tab:hover {
+  background: rgba(124,123,255,.1);
+  border-color: #7c7bff;
+  color: #5a4fcf;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Teacher Report – Compact / Search / Excel bar
+══════════════════════════════════════════════════════════ */
+.report-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.report-search input {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(124,123,255,.25);
+  font-size: .9rem;
+  background: rgba(124,123,255,.04);
+  color: inherit;
+  outline: none;
+}
+.report-search input:focus { border-color: #7c7bff; }
+.report-table.compact th,
+.report-table.compact td { padding: 6px 10px; font-size: .82rem; }
+.excel-bar {
+  height: 10px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #7c7bff, #ff8fbd);
+  min-width: 4px;
+  transition: width .4s ease;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Player Join – Join Info Box
+══════════════════════════════════════════════════════════ */
+.join-info-box {
+  padding: 12px 16px;
+  background: rgba(124,123,255,.07);
+  border: 1px solid rgba(124,123,255,.18);
+  border-radius: 12px;
+  font-size: .88rem;
+  color: #5a4fcf;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+body.dark-mode .join-info-box { background: rgba(124,123,255,.12); color: #c5beff; }
+
+/* ══════════════════════════════════════════════════════════
+   Story Mode – Story Play Area (補強)
+══════════════════════════════════════════════════════════ */
+.story-play-area {
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
