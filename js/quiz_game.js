@@ -106,6 +106,7 @@ let isTeamMode           = false;
 let myTeamId             = 0;
 let latestTeamMsgCount   = 0;
 let teamPlayMode         = 'classic';
+let appliedRoomTheme     = '';
 
 const getPlayerName = () => (playerProfile?.name || '').trim();
 
@@ -115,6 +116,16 @@ function showToast(msg, delay = 2600) {
   toastEl.classList.add('show');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => toastEl.classList.remove('show'), delay);
+}
+
+function applyRoomTheme(room = {}) {
+  const theme = room.room_theme || room.roomTheme || 'classic';
+  const music = room.music_theme || room.musicTheme || 'spark';
+  if (appliedRoomTheme === `${theme}:${music}`) return;
+  appliedRoomTheme = `${theme}:${music}`;
+  document.body.dataset.roomTheme = theme;
+  localStorage.setItem('quizMusicTheme', music);
+  window.AudioManager?.setTheme?.(music);
 }
 
 async function api(url, opts = {}) {
@@ -504,6 +515,15 @@ function renderHostQuestion(q, answeredCount, totalQuestions) {
 
   if (hostOptionsList) {
     const correctIndexes = q.correct_indexes || [];
+    if (q.type === 'matching') {
+      hostOptionsList.innerHTML = (q.options || []).map((opt, idx) => `
+        <div class="option-btn host-option host-correct-option">
+          <span class="option-letter">${idx + 1}</span>
+          <span>${opt.left || opt.text || ''} → ${opt.right || ''}</span>
+          <span class="correct-tag">配對</span>
+        </div>`).join('');
+      return;
+    }
     hostOptionsList.innerHTML = (q.options || []).map((opt, idx) => {
       const ok = correctIndexes.includes(idx);
       return `<div class="option-btn host-option ${ok ? 'host-correct-option' : ''}">
@@ -596,7 +616,29 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
   if (q.image) { questionImage.src = q.image; questionImage.style.display = 'block'; }
   else { questionImage.style.display = 'none'; }
 
-  if (q.type === 'fill') {
+  if (q.type === 'matching') {
+    if (fillAnswerWrap) fillAnswerWrap.style.display = 'none';
+    const rights = buildShuffleMap(q.options || [], `${q.question_id}:matching`).map((origIdx) => ({
+      origIdx,
+      text: (q.options || [])[origIdx]?.right || (q.options || [])[origIdx]?.text || ''
+    }));
+    optionsList.innerHTML = `<div class="matching-play-grid">
+      ${(q.options || []).map((opt, leftIdx) => `
+        <label class="matching-play-row">
+          <span>${leftIdx + 1}. ${opt.left || opt.text || ''}</span>
+          <select class="form-select matching-select" data-left="${leftIdx}">
+            <option value="">選擇右側答案</option>
+            ${rights.map((right) => `<option value="${right.origIdx}">${right.text}</option>`).join('')}
+          </select>
+        </label>
+      `).join('')}
+    </div>`;
+    document.querySelectorAll('.matching-select').forEach((select) => {
+      select.addEventListener('change', () => {
+        selected = [...document.querySelectorAll('.matching-select')].map((item) => Number(item.value));
+      });
+    });
+  } else if (q.type === 'fill') {
     optionsList.innerHTML = '';
     if (fillAnswerWrap) fillAnswerWrap.style.display = 'block';
     if (fillAnswerInput) {
@@ -694,6 +736,12 @@ async function submitAnswer(isTimeout = false) {
   const textAnswer = (fillAnswerInput?.value || '').trim();
   if (currentQuestion.type === 'fill') {
     if (!textAnswer && !isTimeout) { showToast('請先輸入答案'); return; }
+  } else if (currentQuestion.type === 'matching') {
+    selected = [...document.querySelectorAll('.matching-select')].map((item) => Number(item.value));
+    if ((!selected.length || selected.some((value) => Number.isNaN(value))) && !isTimeout) {
+      showToast('請完成所有左右配對');
+      return;
+    }
   } else if (!selected.length && !isTimeout) { showToast('請先選擇答案'); return; }
 
   hasSubmitted = true;
@@ -1084,6 +1132,7 @@ async function loadState(force = false) {
     const data = await api(
       `/player_game_state?pin=${encodeURIComponent(pin)}&playerName=${encodeURIComponent(getPlayerName())}`
     );
+    applyRoomTheme(data.room || {});
 
     roomPinText.textContent    = pin;
     playerNameText.textContent = getPlayerName();

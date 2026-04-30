@@ -75,6 +75,14 @@
         <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
           <i class="fa-solid fa-moon" id="darkModeIcon"></i>
         </button>
+        <select class="music-theme-select" id="homeMusicThemeSelect" title="首頁音樂">
+          <option value="spark">Spark Pop</option>
+          <option value="lofi">Lo-fi Study</option>
+          <option value="arcade">Arcade Rush</option>
+          <option value="focus">Focus Piano</option>
+          <option value="adventure">Adventure Brass</option>
+          <option value="dream">Dream Synth</option>
+        </select>
       </div>
     </header>
     <div class="nav-drawer-overlay" id="navDrawerOverlay"></div>
@@ -319,6 +327,14 @@
     }
     _darkBtn?.addEventListener('click', () => _applyDark(!document.body.classList.contains('dark-mode')));
     _applyDark(localStorage.getItem('quizDarkMode') === '1');
+    const _musicSelect = document.getElementById('homeMusicThemeSelect');
+    if (_musicSelect) {
+      _musicSelect.value = localStorage.getItem('quizMusicTheme') || 'spark';
+      _musicSelect.addEventListener('change', () => {
+        window.AudioManager?.setTheme?.(_musicSelect.value);
+        window.AudioManager?.startBgMusic?.();
+      });
+    }
   </script>
 </body>
 </html>

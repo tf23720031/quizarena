@@ -244,6 +244,7 @@ function expandStorySubjects() {
 expandStorySubjects();
 
 const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false, lastCorrect: false, lives: 3 };
+let storyFriends = [];
 
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -279,6 +280,59 @@ function livesKey(subjectId = state.subjectId, branchId = state.branchId) {
 
 function storyAchievementKey() {
   return `quizarena_story_achievements_${userKey()}`;
+}
+
+function buildStoryChallengeLink(friend = '') {
+  const params = new URLSearchParams({
+    challenge: 'story',
+    from: userKey(),
+    subject: state.subjectId,
+    branch: state.branchId,
+    stage: String(state.stageIndex + 1),
+  });
+  if (friend) params.set('to', friend);
+  return `${location.origin}${location.pathname}?${params.toString()}`;
+}
+
+async function copyStoryChallenge(friend = '') {
+  const link = buildStoryChallengeLink(friend);
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast(friend ? `已複製給 ${friend} 的挑戰連結` : '已複製故事挑戰連結');
+  } catch {
+    prompt('複製挑戰連結', link);
+  }
+}
+
+async function loadStoryFriends() {
+  const username = userKey();
+  if (!username || username === 'guest') return;
+  try {
+    const data = await api(`/friends_overview?username=${encodeURIComponent(username)}`);
+    storyFriends = Array.isArray(data.friends) ? data.friends : [];
+    renderStoryFriends();
+  } catch {
+    storyFriends = [];
+    renderStoryFriends();
+  }
+}
+
+function renderStoryFriends() {
+  const wrap = $("storyFriendChallengeList");
+  if (!wrap) return;
+  if (!storyFriends.length) {
+    wrap.innerHTML = `<article class="story-branch-card"><strong>還沒有好友</strong><span>可以先複製挑戰連結分享給同學。</span></article>`;
+    return;
+  }
+  wrap.innerHTML = storyFriends.map((friend) => `
+    <button class="story-branch-card story-challenge-friend" type="button" data-friend="${escapeHtml(friend)}">
+      <strong>${escapeHtml(friend)}</strong>
+      <span>邀請一起挑戰目前故事關卡</span>
+    </button>
+  `).join("");
+  wrap.querySelectorAll(".story-challenge-friend").forEach((button) => {
+    button.addEventListener("click", () => copyStoryChallenge(button.dataset.friend || ""));
+  });
 }
 
 function loadProgress() {
@@ -577,10 +631,13 @@ function renderAll() {
   $("storyUserName").textContent = userKey() === "guest" ? "訪客" : userKey();
   renderSubjects();
   renderBranches();
+  renderStoryFriends();
   renderPlayArea();
 }
 
 $("resetStoryBtn")?.addEventListener("click", resetCurrentProgress);
 $("generateStoryBtn")?.addEventListener("click", generateAiStoryQuestions);
+$("copyStoryChallengeBtn")?.addEventListener("click", () => copyStoryChallenge());
 $("storyModalCloseBtn")?.addEventListener("click", () => $("storyModalBackdrop").classList.remove("show"));
+loadStoryFriends();
 renderAll();

@@ -2226,3 +2226,13 @@ body:not(.dark-mode) .room-top h3,
 body:not(.dark-mode) .room-pin {
   color: #f0629a !important;
 }
+.music-theme-select {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #4f4b8f;
+  font-weight: 900;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(83, 92, 143, 0.14);
+}

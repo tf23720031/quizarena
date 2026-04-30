@@ -244,6 +244,16 @@ function insertEditableBank(bank) {
 }
 
 function createOptionRow(index, type, value = '', checked = false) {
+  if (type === 'matching') {
+    const left = typeof value === 'object' ? (value.left || value.text || '') : '';
+    const right = typeof value === 'object' ? (value.right || value.match || '') : '';
+    return `<div class="option-row matching-row">
+      <span class="option-label">${index + 1}</span>
+      <input type="text" class="form-control cute-input option-left" placeholder="左側項目" value="${escapeHtml(left)}">
+      <i class="fa-solid fa-right-left"></i>
+      <input type="text" class="form-control cute-input option-right" placeholder="右側答案" value="${escapeHtml(right)}">
+    </div>`;
+  }
   const isFill = type === 'fill';
   const label = type === 'tf'
     ? (index === 0 ? '是' : '否')
@@ -267,6 +277,16 @@ function createOptionRow(index, type, value = '', checked = false) {
 
 function renderOptions(type, options = []) {
   const area = $('optionsArea');
+  if (type === 'matching') {
+    const rows = options.length ? options : [
+      { left: '', right: '' },
+      { left: '', right: '' },
+      { left: '', right: '' },
+      { left: '', right: '' },
+    ];
+    area.innerHTML = rows.map((opt, i) => createOptionRow(i, type, opt)).join('');
+    return;
+  }
   const defaultCount = type === 'tf' ? 2 : (type === 'fill' ? 1 : 4);
 
   if (!options.length) {
@@ -472,17 +492,32 @@ function collectQuestionForm() {
   }
 
   const type = $('questionType').value;
-  const optionInputs = [...document.querySelectorAll('.option-input')];
-  const checks = [...document.querySelectorAll('.correct-check')];
+  let options = [];
+  if (type === 'matching') {
+    options = [...document.querySelectorAll('.matching-row')]
+      .map((row) => ({
+        left: row.querySelector('.option-left')?.value.trim() || '',
+        right: row.querySelector('.option-right')?.value.trim() || '',
+        correct: true,
+      }))
+      .filter((item) => item.left && item.right);
+  } else {
+    const optionInputs = [...document.querySelectorAll('.option-input')];
+    const checks = [...document.querySelectorAll('.correct-check')];
+    options = optionInputs
+      .map((input, index) => ({
+        text: input.value.trim(),
+        correct: !!checks[index]?.checked
+      }))
+      .filter((item) => item.text !== '');
+  }
 
-  const options = optionInputs
-    .map((input, index) => ({
-      text: input.value.trim(),
-      correct: !!checks[index]?.checked
-    }))
-    .filter((item) => item.text !== '');
-
-  if (type === 'fill') {
+  if (type === 'matching') {
+    if (options.length < 2) {
+      showToast('配對題至少需要兩組左右配對');
+      return null;
+    }
+  } else if (type === 'fill') {
     if (!options.length || !options[0].text) {
       showToast('填充題需要設定正確答案');
       return null;
@@ -965,6 +1000,8 @@ async function createRoom() {
         teamSize,
         teamPlayMode,
         teamNames,
+        roomTheme: $('roomThemeSelect')?.value || 'classic',
+        musicTheme: $('roomMusicThemeSelect')?.value || 'spark',
         roomQuestions
       })
     });

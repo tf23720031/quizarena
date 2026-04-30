@@ -140,6 +140,125 @@ h2 {
   opacity: 0.48;
 }
 
+.daily-summary-grid {
+  grid-template-columns: 1fr 1.35fr 1fr;
+}
+
+.daily-streak-card {
+  min-width: 0;
+}
+
+.daily-streak-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.daily-streak-row strong {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.daily-streak-dots {
+  display: grid;
+  grid-template-columns: repeat(7, 14px);
+  gap: 7px;
+  align-items: center;
+}
+
+.daily-streak-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(124, 123, 255, 0.25);
+  background: #edf0ff;
+}
+
+.daily-streak-dot.active {
+  border-color: rgba(93, 99, 216, 0.86);
+  background: linear-gradient(135deg, #7c7bff, #48c0d8);
+  box-shadow: 0 0 0 4px rgba(124, 123, 255, 0.12);
+}
+
+.daily-streak-dot.current {
+  outline: 3px solid rgba(255, 126, 179, 0.26);
+}
+
+.daily-subtitle {
+  margin: 6px 0 0;
+  color: #7880a5;
+  font-weight: 800;
+}
+
+.daily-break-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: rgba(18, 24, 45, 0.56);
+}
+
+.daily-break-modal.show {
+  display: flex;
+}
+
+.daily-break-dialog {
+  width: min(430px, 100%);
+  padding: 26px;
+  text-align: center;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(18, 24, 45, 0.28);
+}
+
+.daily-break-dialog > i {
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  color: #fff;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff7eb3, #7c7bff);
+}
+
+.daily-break-dialog h2 {
+  margin-bottom: 10px;
+}
+
+.daily-break-dialog p {
+  margin: 0 0 18px;
+  color: #626b91;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.ai-personal-explanation {
+  border-left: 4px solid #7c7bff;
+  background: linear-gradient(135deg, rgba(124, 123, 255, 0.1), rgba(72, 192, 216, 0.1));
+}
+
+body.dark-mode .daily-streak-dot {
+  border-color: rgba(232, 240, 254, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode .daily-subtitle,
+body.dark-mode .daily-break-dialog p {
+  color: #b8c3e6;
+}
+
+body.dark-mode .daily-break-dialog {
+  color: #e8f0fe;
+  background: #222844;
+}
+
 .lang-switcher {
   min-height: 46px;
   padding: 8px 16px;

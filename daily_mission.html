@@ -13,20 +13,44 @@
   <script>document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');</script>
   <main class="tool-shell">
     <header class="tool-topbar">
-      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <a class="tool-back" href="index.html" aria-label="返回首頁"><i class="fa-solid fa-chevron-left"></i></a>
       <div><p class="tool-kicker">Daily Quest</p><h1>每日任務</h1></div>
       <span class="lang-switcher-slot"></span>
     </header>
-    <section class="summary-grid">
+
+    <section class="summary-grid daily-summary-grid">
       <article><span>今日進度</span><strong id="dailyProgress">0/3</strong></article>
-      <article><span>連續登入</span><strong id="dailyStreak">0 天</strong></article>
-      <article><span>今日獎勵</span><strong id="dailyReward">稱號進度</strong></article>
+      <article class="daily-streak-card">
+        <span>連續完成</span>
+        <div class="daily-streak-row">
+          <strong id="dailyStreak">0 天</strong>
+          <div id="dailyStreakDots" class="daily-streak-dots" aria-label="七日連續進度"></div>
+        </div>
+      </article>
+      <article><span>累積完成</span><strong id="dailyCompletedDays">0 天</strong></article>
     </section>
+
     <section class="tool-card">
-      <div class="tool-card-head"><h2>今日三題</h2><button id="resetDailyBtn" class="tool-btn secondary"><i class="fa-solid fa-rotate"></i> 重抽今日題</button></div>
+      <div class="tool-card-head">
+        <div>
+          <h2>今日題目</h2>
+          <p class="daily-subtitle" id="dailyReward">完成 3 題可獲得每日獎勵</p>
+        </div>
+        <button id="refreshDailyBtn" class="tool-btn secondary" type="button"><i class="fa-solid fa-rotate"></i> 重新整理</button>
+      </div>
       <div id="dailyMissionList" class="question-list"></div>
     </section>
   </main>
+
+  <div class="daily-break-modal" id="streakBreakModal" aria-hidden="true">
+    <div class="daily-break-dialog" role="dialog" aria-modal="true" aria-labelledby="streakBreakTitle">
+      <i class="fa-solid fa-link-slash"></i>
+      <h2 id="streakBreakTitle">連續被中斷</h2>
+      <p id="streakBreakMessage">你之前的連續完成紀錄已中斷，今天重新開始也沒問題。</p>
+      <button id="streakBreakOkBtn" class="tool-btn primary" type="button">我知道了</button>
+    </div>
+  </div>
+
   <div class="toast-qa" id="toast"></div>
   <script src="js/i18n.js"></script>
   <script src="js/daily_mission.js"></script>

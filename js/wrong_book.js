@@ -50,6 +50,73 @@ function correctAnswerText(item) {
   return indexes.map((index) => `${String.fromCharCode(65 + index)}. ${optionText(options[index], index)}`).join("、");
 }
 
+function sharePayload(item) {
+  return btoa(unescape(encodeURIComponent(JSON.stringify({
+    title: item.title,
+    content: item.content,
+    answer: correctAnswerText(item),
+    ai: item.aiExplanation || item.explanation || '',
+  })))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+}
+
+async function copyWrongShareLink(itemIndex) {
+  const item = practiceState.items[itemIndex];
+  if (!item) return;
+  const url = `${location.origin}${location.pathname}#share=${sharePayload(item)}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('已複製錯題分享連結');
+  } catch {
+    prompt('複製這個分享連結', url);
+  }
+}
+
+function exportWrongImage(itemIndex) {
+  const item = practiceState.items[itemIndex];
+  if (!item) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1080;
+  canvas.height = 760;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f7f8ff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#5d63d8';
+  ctx.font = '800 44px Microsoft JhengHei, sans-serif';
+  ctx.fillText('QuizArena 錯題分享', 56, 80);
+  ctx.fillStyle = '#293150';
+  ctx.font = '800 34px Microsoft JhengHei, sans-serif';
+  wrapCanvasText(ctx, item.title || '錯題', 56, 150, 960, 42);
+  ctx.font = '500 30px Microsoft JhengHei, sans-serif';
+  wrapCanvasText(ctx, item.content || '', 56, 240, 960, 38);
+  ctx.fillStyle = '#1e7a47';
+  ctx.font = '800 30px Microsoft JhengHei, sans-serif';
+  wrapCanvasText(ctx, `正解：${correctAnswerText(item)}`, 56, 430, 960, 38);
+  ctx.fillStyle = '#626b91';
+  ctx.font = '500 26px Microsoft JhengHei, sans-serif';
+  wrapCanvasText(ctx, `AI解析：${item.aiExplanation || item.explanation || '尚未產生解析'}`, 56, 510, 960, 34);
+  const link = document.createElement('a');
+  link.download = `quizarena-wrong-${item.questionId || Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text || '').split('');
+  let line = '';
+  let currentY = y;
+  words.forEach((word) => {
+    const testLine = line + word;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      ctx.fillText(line, x, currentY);
+      line = word;
+      currentY += lineHeight;
+    } else {
+      line = testLine;
+    }
+  });
+  if (line) ctx.fillText(line, x, currentY);
+}
+
 function topBy(items, key) {
   const counts = new Map();
   items.forEach((item) => {
@@ -335,7 +402,7 @@ function renderWrongBook(data) {
     return;
   }
 
-  list.innerHTML = items.map((item) => `
+  list.innerHTML = items.map((item, itemIndex) => `
     <article class="question-card">
       <div class="question-meta-row">
         <h3>${escapeHtml(item.title)}</h3>
@@ -350,6 +417,11 @@ function renderWrongBook(data) {
         }).join("")}
       </ul>
       ${item.explanation ? `<div class="explanation-box"><strong>解析</strong><br>${escapeHtml(item.explanation)}</div>` : ""}
+      ${item.aiExplanation ? `<div class="explanation-box ai-personal-explanation"><strong>AI 個人化解析</strong><br>${escapeHtml(item.aiExplanation).replaceAll("\n", "<br>")}</div>` : ""}
+      <div class="practice-actions">
+        <button class="tool-btn secondary wrong-share-link" type="button" data-share-index="${itemIndex}"><i class="fa-solid fa-link"></i> 分享連結</button>
+        <button class="tool-btn secondary wrong-export-image" type="button" data-image-index="${itemIndex}"><i class="fa-solid fa-image"></i> 匯出圖片</button>
+      </div>
       <div class="question-tags">
         <span>${escapeHtml(item.sourceBankTitle)}</span>
         <span>${escapeHtml(item.category)}</span>
@@ -358,6 +430,12 @@ function renderWrongBook(data) {
       </div>
     </article>
   `).join("");
+  document.querySelectorAll(".wrong-share-link").forEach((button) => {
+    button.addEventListener("click", () => copyWrongShareLink(Number(button.dataset.shareIndex)));
+  });
+  document.querySelectorAll(".wrong-export-image").forEach((button) => {
+    button.addEventListener("click", () => exportWrongImage(Number(button.dataset.imageIndex)));
+  });
 }
 
 async function loadWrongBook() {

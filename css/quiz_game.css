@@ -781,3 +781,48 @@ body.dark-mode .lang-select {
   color: #ffffff;
   border: 1px solid rgba(255,255,255,.15);
 }
+.matching-play-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.matching-play-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.8fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.matching-play-row span {
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .matching-play-row {
+    grid-template-columns: 1fr;
+  }
+}
+body[data-room-theme="ocean"] {
+  background: linear-gradient(135deg, #e8fbff 0%, #d8ebff 45%, #f3f8ff 100%);
+}
+
+body[data-room-theme="forest"] {
+  background: linear-gradient(135deg, #eefbea 0%, #dff5e9 45%, #fff9e8 100%);
+}
+
+body[data-room-theme="cyber"] {
+  background: linear-gradient(135deg, #120f2d 0%, #20225f 48%, #0c4651 100%);
+}
+
+body[data-room-theme="sunset"] {
+  background: linear-gradient(135deg, #fff0e7 0%, #ffe1ed 45%, #edf3ff 100%);
+}
+
+body[data-room-theme="cyber"] .glass-card {
+  border-color: rgba(88, 238, 255, 0.28);
+  background: rgba(15, 18, 50, 0.82);
+  color: #eef8ff;
+}
