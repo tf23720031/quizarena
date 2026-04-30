@@ -89,15 +89,6 @@ def get_conn(path=ROOMS_DB_PATH):
     return conn
 
 
-def get_user_conn():
-    """User DB connection with dict_factory (same as get_conn but for USERS_DB_PATH)."""
-    conn = sqlite3.connect(USERS_DB_PATH)
-    conn.row_factory = dict_factory
-    conn.execute('PRAGMA foreign_keys = ON')
-    conn.execute('PRAGMA journal_mode = WAL')
-    return conn
-
-
 def get_database_url():
     url = DATABASE_URL
     if url.startswith('postgres://'):
@@ -351,7 +342,7 @@ def build_wrong_book_for_user(username):
                 ''', (owner,))
                 rows = cur.fetchall()
     else:
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.row_factory = dict_factory
             rows = conn.execute('''
                 SELECT source_bank_id, source_bank_title, question_id, title, content, type,
@@ -410,7 +401,7 @@ def build_wrong_book_detail(username):
                 ''', (owner,))
                 rows = cur.fetchall()
     else:
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.row_factory = dict_factory
             rows = conn.execute('''
                 SELECT source_bank_id, source_bank_title, question_id, title, content, type,
@@ -453,7 +444,7 @@ def _legacy_build_wrong_book_for_user(username):
     owner = str(username or '').strip()
     if not owner:
         return None
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         rows = conn.execute('''
             SELECT source_bank_id, source_bank_title, question_id, title, content, type,
@@ -538,7 +529,7 @@ def save_wrong_question(owner, source_bank_id, source_bank_title, question_row):
                 ))
             conn.commit()
         return
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.execute('''
             INSERT INTO wrong_question_book
             (username, source_bank_id, source_bank_title, question_id, title, content, type,
@@ -850,7 +841,7 @@ def get_user_exists(username):
                 cur.execute('SELECT 1 FROM users WHERE username=%s LIMIT 1', (username,))
                 row = cur.fetchone()
         return row is not None
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         row = conn.execute('SELECT 1 FROM users WHERE username=?', (username,)).fetchone()
     return row is not None
 
@@ -872,7 +863,7 @@ def get_friend_usernames(username):
                 ''', (username, username, username))
                 rows = cur.fetchall()
         return [row['friend_name'] for row in rows]
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         rows = conn.execute('''
             SELECT CASE
@@ -900,7 +891,7 @@ def get_user_wins_map(usernames):
             result[row['username']] = int(row.get('wins') or 0)
         return result
     placeholders = ','.join('?' for _ in names)
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         rows = conn.execute(f'''
             SELECT username, wins
@@ -1102,7 +1093,7 @@ def update_user_profile(username, avatar=None, display_title=None, preferred_lan
                 ''', (next_avatar, next_title, next_language, next_county, username))
             conn.commit()
     else:
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.execute('''
                 UPDATE users
                 SET avatar=?, display_title=?, preferred_language=?, county=?
@@ -1221,7 +1212,7 @@ def get_co_played_usernames(username):
                 cur.execute('SELECT report_json FROM teacher_report_history ORDER BY saved_at DESC LIMIT 120')
                 history_rows = cur.fetchall()
     else:
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.row_factory = dict_factory
             history_rows = conn.execute('SELECT report_json FROM teacher_report_history ORDER BY saved_at DESC LIMIT 120').fetchall()
 
@@ -1325,7 +1316,7 @@ def get_pending_friend_requests(username):
                     ORDER BY created_at DESC, id DESC
                 ''', (username,))
                 return cur.fetchall()
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         rows = conn.execute('''
             SELECT id, requester, addressee, requester_device, created_at, status
@@ -1355,7 +1346,7 @@ def get_pending_friend_request_between(user_a, user_b):
                     LIMIT 1
                 ''', (user_a, user_b, user_b, user_a))
                 return cur.fetchone()
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         return conn.execute('''
             SELECT id, requester, addressee, requester_device, created_at, status
@@ -1427,7 +1418,7 @@ def record_user_win(room, winner_name, winner_score):
             user_conn.commit()
         return True
 
-    with closing(get_user_conn()) as user_conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as user_conn:
         already = user_conn.execute('SELECT 1 FROM user_match_history WHERE room_pin=? LIMIT 1', (room.get('pin'),)).fetchone()
         if already:
             return False
@@ -1837,7 +1828,7 @@ def save_teacher_report_snapshot(report):
                 ))
             conn.commit()
         return
-    with closing(get_user_conn()) as history_conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as history_conn:
         history_conn.execute('''
             INSERT INTO teacher_report_history
             (pin, room_name, bank_title, created_by, report_json, created_at, saved_at)
@@ -1883,7 +1874,7 @@ def load_teacher_report_snapshot(pin):
         report['fromHistory'] = True
         report['savedAt'] = int(row.get('saved_at') or 0)
         return report
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         conn.row_factory = dict_factory
         row = conn.execute('SELECT report_json, saved_at FROM teacher_report_history WHERE pin=? LIMIT 1', (pin,)).fetchone()
     if not row:
@@ -1916,7 +1907,7 @@ def list_teacher_report_history(username=''):
                     ''')
                 rows = cur.fetchall()
     else:
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.row_factory = dict_factory
             if username:
                 rows = conn.execute('''
@@ -1960,7 +1951,7 @@ def build_business_dashboard_summary():
                 ''')
                 report_rows = cur.fetchall()
     else:
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.row_factory = dict_factory
             user_count = int((conn.execute('SELECT COUNT(*) AS total FROM users').fetchone() or {}).get('total') or 0)
             stats_row = conn.execute('SELECT COUNT(*) AS total, COALESCE(SUM(wins), 0) AS wins FROM user_stats').fetchone() or {}
@@ -2139,7 +2130,7 @@ def init_postgres_users_db():
 def init_users_db():
     if use_postgres_user_store():
         init_postgres_users_db()
-    with closing(get_user_conn()) as conn:
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         c = conn.cursor()
         c.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -2423,7 +2414,7 @@ def register():
                     )
                 conn.commit()
             return jsonify(success=True, message='註冊成功')
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.execute('INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
                          (username, email, hash_text(password)))
             conn.commit()
@@ -2694,7 +2685,7 @@ def send_friend_request_api():
             summary = build_friend_request_summary(friend_name)
             return jsonify(success=True, message='好友申請已送出', **summary)
 
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             existing_friend = conn.execute('''
                 SELECT 1 FROM user_friendships
                 WHERE requester=? AND addressee=? AND status='accepted'
@@ -2781,7 +2772,7 @@ def respond_friend_request_api():
                 requestSummary=build_friend_request_summary(username)
             )
 
-        with closing(get_user_conn()) as conn:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.row_factory = dict_factory
             row = conn.execute('''
                 SELECT id, requester, addressee, status
@@ -3986,234 +3977,6 @@ def business_dashboard_summary_api():
         return jsonify(success=True, **build_business_dashboard_summary())
     except Exception as e:
         return jsonify(success=False, message=f'讀取營運後台失敗：{e}'), 500
-
-
-
-# ─────────────────────────────────────────────────────────────
-#  /profile_summary  – quizarena_fix.js 快速摘要
-# ─────────────────────────────────────────────────────────────
-@app.route('/profile_summary')
-def profile_summary_api():
-    try:
-        username = str(request.args.get('username', '')).strip()
-        if not username:
-            return jsonify(success=False, message='缺少使用者帳號'), 400
-        profile = build_user_profile(username)
-        if not profile:
-            return jsonify(success=False, message='找不到使用者'), 404
-        achievements = profile.get('achievements') or {}
-        friends_data = build_friends_overview(username)
-        wrong_book = build_wrong_book_detail(username)
-        return jsonify(
-            success=True,
-            username=username,
-            wins=int(profile.get('wins') or 0),
-            unlockedCount=int(achievements.get('unlockedCount') or 0),
-            totalAchievementCount=int(achievements.get('totalAchievementCount') or 0),
-            friendCount=int(len(friends_data.get('friends') or [])),
-            wrongBookCount=int(len(wrong_book.get('items') or [])),
-            title=profile.get('displayTitle') or '新手挑戰者',
-            displayName=username,
-        )
-    except Exception as e:
-        return jsonify(success=False, message=f'摘要讀取失敗：{e}'), 500
-
-
-# ─────────────────────────────────────────────────────────────
-#  每日任務系統
-# ─────────────────────────────────────────────────────────────
-DAILY_QUESTIONS_POOL = [
-    {'q': '在 Python 中，哪個關鍵字用來定義函式？', 'options': ['def', 'func', 'function', 'define'], 'answer': 0},
-    {'q': '下列哪個是正確的 Python 列表宣告方式？', 'options': ['list = (1,2,3)', 'list = {1,2,3}', 'list = [1,2,3]', 'list = <1,2,3>'], 'answer': 2},
-    {'q': '在 HTML 中，哪個標籤用來建立超連結？', 'options': ['<link>', '<a>', '<href>', '<url>'], 'answer': 1},
-    {'q': 'CSS 中，哪個屬性用來設定文字顏色？', 'options': ['text-color', 'font-color', 'color', 'foreground'], 'answer': 2},
-    {'q': 'JavaScript 中宣告常數的正確方式？', 'options': ['var x = 1', 'let x = 1', 'const x = 1', 'fix x = 1'], 'answer': 2},
-    {'q': '資料庫中 PRIMARY KEY 的主要作用是？', 'options': ['加密資料', '唯一識別每筆記錄', '排序資料', '壓縮資料'], 'answer': 1},
-    {'q': '哪個 HTTP 方法用來送出表單資料（不明碼顯示於 URL）？', 'options': ['GET', 'PUT', 'POST', 'DELETE'], 'answer': 2},
-    {'q': 'Git 中哪個指令將變更提交到本機儲存庫？', 'options': ['git push', 'git commit', 'git add', 'git save'], 'answer': 1},
-    {'q': '下列哪個不是 OOP 的核心概念？', 'options': ['繼承', '封裝', '多型', '遞迴'], 'answer': 3},
-    {'q': 'SQL 中哪個指令選取資料表所有欄位？', 'options': ['SELECT ALL', 'SELECT *', 'GET *', 'FETCH ALL'], 'answer': 1},
-]
-
-
-def _ensure_daily_table():
-    with closing(get_user_conn()) as conn:
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS daily_missions ("
-            "username TEXT PRIMARY KEY, date TEXT, questions_json TEXT, "
-            "answered_json TEXT, streak INTEGER DEFAULT 0, total_days INTEGER DEFAULT 0, "
-            "last_complete_date TEXT, show_streak_broken INTEGER DEFAULT 0, broken_streak INTEGER DEFAULT 0)"
-        )
-        conn.commit()
-
-
-def _pick_daily_questions(count=3):
-    pool = DAILY_QUESTIONS_POOL[:]
-    random.shuffle(pool)
-    return [{'q': q['q'], 'options': q['options'], 'answer': q['answer'], 'done': False} for q in pool[:count]]
-
-
-def _get_daily_state(username):
-    _ensure_daily_table()
-    today_str = time.strftime('%Y-%m-%d')
-    cols = ['username', 'date', 'questions_json', 'answered_json', 'streak',
-            'total_days', 'last_complete_date', 'show_streak_broken', 'broken_streak']
-    with closing(get_user_conn()) as conn:
-        row = conn.execute('SELECT * FROM daily_missions WHERE username=?', (username,)).fetchone()
-
-    if row:
-        data = dict(zip(cols, row))
-        if data['date'] == today_str:
-            questions = json.loads(data['questions_json'] or '[]')
-            answered = json.loads(data['answered_json'] or '{}')
-            progress = sum(1 for i in range(len(questions)) if answered.get(str(i), {}).get('done'))
-            required = 3
-            streak = int(data['streak'] or 0)
-            return {
-                'date': today_str, 'questions': questions, 'answered': answered,
-                'currentStreak': streak, 'totalCompletedDays': int(data['total_days'] or 0),
-                'progress': progress, 'required': required,
-                'completedToday': progress >= required, 'exp': 60,
-                'showStreakBroken': bool(data['show_streak_broken']),
-                'brokenStreak': int(data['broken_streak'] or 0),
-                'cycleDay': (streak % 7) or 7,
-            }
-        # 新的一天
-        yesterday = time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400))
-        last_date = data.get('last_complete_date') or ''
-        old_streak = int(data['streak'] or 0)
-        show_broken, broken, new_streak = 0, 0, old_streak
-        if last_date and last_date != yesterday and last_date != today_str and old_streak > 0:
-            show_broken, broken, new_streak = 1, old_streak, 0
-        questions = _pick_daily_questions()
-        with closing(get_user_conn()) as conn:
-            conn.execute(
-                'UPDATE daily_missions SET date=?, questions_json=?, answered_json=?, '
-                'streak=?, show_streak_broken=?, broken_streak=? WHERE username=?',
-                (today_str, json.dumps(questions), '{}', new_streak, show_broken, broken, username)
-            )
-            conn.commit()
-        return _get_daily_state(username)
-
-    # 首次建立
-    questions = _pick_daily_questions()
-    with closing(get_user_conn()) as conn:
-        conn.execute(
-            'INSERT OR REPLACE INTO daily_missions '
-            '(username, date, questions_json, answered_json, streak, total_days, last_complete_date, show_streak_broken, broken_streak) '
-            'VALUES (?,?,?,?,0,0,NULL,0,0)',
-            (username, today_str, json.dumps(questions), '{}')
-        )
-        conn.commit()
-    return _get_daily_state(username)
-
-
-def _safe_questions(questions, answered):
-    return [
-        {'q': q['q'], 'options': q['options'],
-         'done': bool(answered.get(str(i), {}).get('done')),
-         'answer': q['answer'] if answered.get(str(i), {}).get('done') else None}
-        for i, q in enumerate(questions)
-    ]
-
-
-@app.route('/daily_mission_status')
-def daily_mission_status_api():
-    try:
-        username = str(request.args.get('username', '')).strip()
-        if not username:
-            return jsonify(success=False, message='請先登入'), 400
-        s = _get_daily_state(username)
-        return jsonify(
-            success=True,
-            questions=_safe_questions(s['questions'], s['answered']),
-            progress=s['progress'], required=s['required'],
-            completedToday=s['completedToday'], currentStreak=s['currentStreak'],
-            totalCompletedDays=s['totalCompletedDays'], exp=s['exp'],
-            showStreakBroken=s['showStreakBroken'], brokenStreak=s['brokenStreak'],
-            cycleDay=s['cycleDay'],
-        )
-    except Exception as e:
-        return jsonify(success=False, message=f'每日任務讀取失敗：{e}'), 500
-
-
-@app.route('/daily_mission_answer', methods=['POST'])
-def daily_mission_answer_api():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        q_index = int(data.get('questionIndex', -1))
-        a_index = int(data.get('answerIndex', -1))
-        if not username:
-            return jsonify(success=False, message='請先登入'), 400
-        s = _get_daily_state(username)
-        questions = s['questions']
-        answered = s['answered']
-        if q_index < 0 or q_index >= len(questions):
-            return jsonify(success=False, message='題目索引錯誤'), 400
-        if answered.get(str(q_index), {}).get('done'):
-            return jsonify(success=False, message='此題已作答'), 400
-        is_correct = a_index == questions[q_index]['answer']
-        if not is_correct:
-            return jsonify(success=True, correct=False, rewarded=False,
-                           progress=s['progress'], completedToday=s['completedToday'],
-                           currentStreak=s['currentStreak'], totalCompletedDays=s['totalCompletedDays'],
-                           exp=s['exp'], showStreakBroken=False, brokenStreak=0,
-                           cycleDay=s['cycleDay'],
-                           questions=_safe_questions(questions, answered))
-        answered[str(q_index)] = {'done': True, 'answer': a_index}
-        progress = sum(1 for i in range(len(questions)) if answered.get(str(i), {}).get('done'))
-        required = s['required']
-        today_str = time.strftime('%Y-%m-%d')
-        rewarded = False
-        new_streak = s['currentStreak']
-        new_total = s['totalCompletedDays']
-        if progress >= required and not s['completedToday']:
-            rewarded = True
-            new_streak += 1
-            new_total += 1
-        with closing(get_user_conn()) as conn:
-            conn.execute(
-                'UPDATE daily_missions SET answered_json=?, streak=?, total_days=?, last_complete_date=? WHERE username=?',
-                (json.dumps(answered), new_streak, new_total, today_str if rewarded else '', username)
-            )
-            conn.commit()
-        return jsonify(
-            success=True, correct=True, rewarded=rewarded, exp=60,
-            progress=progress, required=required, completedToday=progress >= required,
-            currentStreak=new_streak, totalCompletedDays=new_total,
-            showStreakBroken=False, brokenStreak=0,
-            cycleDay=(new_streak % 7) or 7,
-            questions=_safe_questions(questions, answered),
-        )
-    except Exception as e:
-        return jsonify(success=False, message=f'作答失敗：{e}'), 500
-
-
-@app.route('/daily_mission_ack_break', methods=['POST'])
-def daily_mission_ack_break_api():
-    try:
-        data = request.get_json() or {}
-        username = str(data.get('username', '')).strip()
-        if not username:
-            return jsonify(success=False, message='請先登入'), 400
-        with closing(get_user_conn()) as conn:
-            conn.execute(
-                'UPDATE daily_missions SET show_streak_broken=0, broken_streak=0, streak=0 WHERE username=?',
-                (username,)
-            )
-            conn.commit()
-        s = _get_daily_state(username)
-        return jsonify(
-            success=True,
-            questions=_safe_questions(s['questions'], s.get('answered', {})),
-            progress=s['progress'], required=s['required'],
-            completedToday=s['completedToday'], currentStreak=0,
-            totalCompletedDays=s['totalCompletedDays'], exp=s['exp'],
-            showStreakBroken=False, brokenStreak=0, cycleDay=1,
-        )
-    except Exception as e:
-        return jsonify(success=False, message=f'確認失敗：{e}'), 500
 
 
 @app.route('/<path:filename>')
