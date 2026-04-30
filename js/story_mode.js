@@ -477,7 +477,7 @@ function renderPlayArea() {
       <div class="question-meta-row">
         <h3>${escapeHtml(branch.title)}：第 ${stage.level} 關</h3>
         <div class="story-status-row">
-          <span class="story-lives">${"♥".repeat(state.lives)}${"♡".repeat(3 - state.lives)}</span>
+          <span class="story-lives text-danger">${"♥".repeat(state.lives)}${"♡".repeat(3 - state.lives)}</span>
           <span class="answer-pill">${escapeHtml(stage.difficulty)}</span>
         </div>
       </div>
