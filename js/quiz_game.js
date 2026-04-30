@@ -386,8 +386,6 @@ function getQuestionSeconds(q) {
 /* ── 排行榜 ── */
 function renderLeaderboard(items = []) {
   const me = getPlayerName();
-  if (!leaderboardList) return;
-  if (!leaderboardList) return;
   leaderboardList.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="leader-item ${it.player_name === me ? 'mine' : ''}">
@@ -716,10 +714,10 @@ function revealOptions(correctIndexes, mySelected) {
 }
 
 function openPlayerResult({ badge, points, answerText, explanation, top5, myRank, showExactRank, eliminated }) {
-  if (resultBadge)         resultBadge.textContent       = badge;
-  if (earnedScoreText)     earnedScoreText.textContent   = points;
-  if (correctAnswerText)   correctAnswerText.textContent = answerText || '-';
-  if (resultExplanation)   resultExplanation.textContent = explanation || '本題未提供解析。';
+  resultBadge.textContent       = badge;
+  earnedScoreText.textContent   = points;
+  correctAnswerText.textContent = answerText || '-';
+  resultExplanation.textContent = explanation || '本題未提供解析。';
   if (myLiveScoreText) myLiveScoreText.textContent = totalScoreText.textContent;
   renderTop5(resultTop5List, top5 || []);
   if (myRankBox) myRankBox.style.display = (showExactRank && myRank) ? 'block' : 'none';
@@ -764,14 +762,14 @@ async function submitAnswer(isTimeout = false) {
       })
     });
 
-    if (totalScoreText) totalScoreText.textContent  = data.totalScore ?? 0;
-    if (finishScoreText) finishScoreText.textContent = data.totalScore ?? 0;
+    totalScoreText.textContent  = data.totalScore ?? 0;
+    finishScoreText.textContent = data.totalScore ?? 0;
 
     /* 若被淘汰 */
     if (data.eliminated) {
       isEliminated = true;
-      if (totalScoreText)  totalScoreText.textContent  = 0;
-      if (finishScoreText) finishScoreText.textContent = 0;
+      totalScoreText.textContent  = 0;
+      finishScoreText.textContent = 0;
     }
 
     /* 顯示正解顏色 */
