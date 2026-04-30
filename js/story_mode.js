@@ -152,64 +152,6 @@ const STORY_ARCS = {
   },
 };
 
-SUBJECTS.push(
-  {
-    id: "science",
-    title: "自然科學",
-    icon: "fa-atom",
-    summary: "從生物、物理到地球科學，完成實驗室探索。",
-    branches: [{ id: "lab", title: "星塵實驗室", stages: [] }],
-  },
-  {
-    id: "history",
-    title: "世界歷史",
-    icon: "fa-landmark",
-    summary: "穿越文明、革命與大航海，拼回時間線。",
-    branches: [{ id: "archive", title: "時光檔案館", stages: [] }],
-  },
-  {
-    id: "geography",
-    title: "地理環境",
-    icon: "fa-earth-asia",
-    summary: "判讀地圖、氣候與區域特色，完成探險委託。",
-    branches: [{ id: "atlas", title: "雲端地圖局", stages: [] }],
-  },
-  {
-    id: "ai_data",
-    title: "AI與巨量資料",
-    icon: "fa-database",
-    summary: "理解資料、模型與判讀倫理，修復智慧城市。",
-    branches: [{ id: "data-city", title: "資料星城", stages: [] }],
-  }
-);
-
-Object.assign(STORY_ARCS, {
-  science: {
-    place: "星塵實驗室",
-    goal: "完成跨領域實驗報告",
-    clues: ["光合作用葉片", "電路火花", "星圖碎片", "岩層樣本", "顯微鏡片", "酸鹼試紙", "力學彈簧", "氣候雲圖", "細胞徽章", "能量晶核"],
-    concepts: ["光合作用", "食物鏈", "細胞構造", "酸鹼判斷", "電路通路", "力與運動", "能量轉換", "聲音傳播", "光的反射", "水循環", "天氣判讀", "地震成因", "岩石分類", "星球運行", "人體循環", "消化系統", "生態平衡", "實驗變因", "資料紀錄", "科學推論"],
-  },
-  history: {
-    place: "時光檔案館",
-    goal: "把散落的世界時間線重新排序",
-    clues: ["文明陶片", "航海羅盤", "革命傳單", "古城印章", "王朝年表", "工廠齒輪", "思想手稿", "貿易銀幣", "條約副本", "博物館鑰匙"],
-    concepts: ["古埃及文明", "古希臘城邦", "羅馬共和", "絲路交流", "中古莊園", "文藝復興", "宗教改革", "大航海時代", "科學革命", "啟蒙運動", "工業革命", "法國大革命", "民族主義", "帝國主義", "世界大戰", "冷戰格局", "全球化", "文化交流", "史料判讀", "因果分析"],
-  },
-  geography: {
-    place: "雲端地圖局",
-    goal: "完成一張會自己更新的世界地圖",
-    clues: ["等高線羽筆", "季風指針", "河流藍圖", "都市座標", "人口晶片", "板塊碎片", "雨林種子", "沙漠沙漏", "港口徽章", "能源礦石"],
-    concepts: ["經緯度", "比例尺", "等高線", "氣候類型", "季風", "洋流", "河川地形", "板塊運動", "火山地震", "人口分布", "都市化", "農業區位", "工業區位", "交通節點", "能源資源", "環境保育", "災害防治", "區域特色", "地圖判讀", "空間分析"],
-  },
-  ai_data: {
-    place: "資料星城",
-    goal: "讓失控的推薦系統重新學會判斷",
-    clues: ["資料表碎片", "特徵徽章", "模型羅盤", "偏誤警示燈", "雲端鑰匙", "視覺化面板", "清理腳本", "隱私封條", "API票券", "決策紀錄"],
-    concepts: ["資料欄位", "資料清理", "缺失值", "資料視覺化", "平均數", "中位數", "離群值", "分類任務", "回歸任務", "訓練資料", "測試資料", "模型準確率", "過度擬合", "推薦系統", "資料偏誤", "隱私保護", "API資料", "儀表板", "決策解釋", "AI倫理"],
-  },
-});
-
 function buildUniqueStages(subject) {
   const arc = STORY_ARCS[subject.id];
   if (!arc) return subject.branches[0].stages;
@@ -243,8 +185,7 @@ function expandStorySubjects() {
 
 expandStorySubjects();
 
-const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false, lastCorrect: false, lives: 3 };
-let storyFriends = [];
+const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false };
 
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
@@ -274,65 +215,8 @@ function progressKey() {
   return `quizarena_story_progress_${userKey()}`;
 }
 
-function livesKey(subjectId = state.subjectId, branchId = state.branchId) {
-  return `quizarena_story_lives_${userKey()}_${subjectId}_${branchId}`;
-}
-
 function storyAchievementKey() {
   return `quizarena_story_achievements_${userKey()}`;
-}
-
-function buildStoryChallengeLink(friend = '') {
-  const params = new URLSearchParams({
-    challenge: 'story',
-    from: userKey(),
-    subject: state.subjectId,
-    branch: state.branchId,
-    stage: String(state.stageIndex + 1),
-  });
-  if (friend) params.set('to', friend);
-  return `${location.origin}${location.pathname}?${params.toString()}`;
-}
-
-async function copyStoryChallenge(friend = '') {
-  const link = buildStoryChallengeLink(friend);
-  try {
-    await navigator.clipboard.writeText(link);
-    showToast(friend ? `已複製給 ${friend} 的挑戰連結` : '已複製故事挑戰連結');
-  } catch {
-    prompt('複製挑戰連結', link);
-  }
-}
-
-async function loadStoryFriends() {
-  const username = userKey();
-  if (!username || username === 'guest') return;
-  try {
-    const data = await api(`/friends_overview?username=${encodeURIComponent(username)}`);
-    storyFriends = Array.isArray(data.friends) ? data.friends : [];
-    renderStoryFriends();
-  } catch {
-    storyFriends = [];
-    renderStoryFriends();
-  }
-}
-
-function renderStoryFriends() {
-  const wrap = $("storyFriendChallengeList");
-  if (!wrap) return;
-  if (!storyFriends.length) {
-    wrap.innerHTML = `<article class="story-branch-card"><strong>還沒有好友</strong><span>可以先複製挑戰連結分享給同學。</span></article>`;
-    return;
-  }
-  wrap.innerHTML = storyFriends.map((friend) => `
-    <button class="story-branch-card story-challenge-friend" type="button" data-friend="${escapeHtml(friend)}">
-      <strong>${escapeHtml(friend)}</strong>
-      <span>邀請一起挑戰目前故事關卡</span>
-    </button>
-  `).join("");
-  wrap.querySelectorAll(".story-challenge-friend").forEach((button) => {
-    button.addEventListener("click", () => copyStoryChallenge(button.dataset.friend || ""));
-  });
 }
 
 function loadProgress() {
@@ -344,27 +228,6 @@ function saveProgress(subjectId, branchId, clearedLevel) {
   const key = `${subjectId}:${branchId}`;
   progress[key] = Math.max(Number(progress[key] || 0), clearedLevel);
   localStorage.setItem(progressKey(), JSON.stringify(progress));
-}
-
-function loadLives() {
-  state.lives = Math.max(0, Math.min(3, Number(localStorage.getItem(livesKey()) || 3)));
-}
-
-function saveLives() {
-  localStorage.setItem(livesKey(), String(Math.max(0, Math.min(3, state.lives))));
-}
-
-function resetRun(message = "生命歸零，故事已重新開始") {
-  const progress = loadProgress();
-  delete progress[`${state.subjectId}:${state.branchId}`];
-  localStorage.setItem(progressKey(), JSON.stringify(progress));
-  state.stageIndex = 0;
-  state.selected = null;
-  state.checked = false;
-  state.lastCorrect = false;
-  state.lives = 3;
-  saveLives();
-  showStoryModal("重新開始故事", message, "挑戰重置");
 }
 
 function storyClearedTotal() {
@@ -480,8 +343,6 @@ function renderSubjects() {
       state.stageIndex = 0;
       state.selected = null;
       state.checked = false;
-      state.lastCorrect = false;
-      loadLives();
       renderAll();
     });
   });
@@ -505,8 +366,6 @@ function renderBranches() {
       state.stageIndex = 0;
       state.selected = null;
       state.checked = false;
-      state.lastCorrect = false;
-      loadLives();
       renderAll();
     });
   });
@@ -515,25 +374,14 @@ function renderBranches() {
 function renderPlayArea() {
   const subject = activeSubject();
   const branch = activeBranch();
+  const stage = branch.stages[state.stageIndex] || branch.stages[0];
   const progress = loadProgress();
   const cleared = Number(progress[`${subject.id}:${branch.id}`] || 0);
-  const isLocked = state.stageIndex > cleared;
-  if (isLocked) {
-    state.stageIndex = Math.min(cleared, branch.stages.length - 1);
-    state.selected = null;
-    state.checked = false;
-    state.lastCorrect = false;
-  }
-  const stage = branch.stages[state.stageIndex] || branch.stages[0];
-  const canGoNext = state.checked && state.lastCorrect && state.stageIndex < branch.stages.length - 1;
   $("storyPlayArea").innerHTML = `
     <article class="story-stage-card">
       <div class="question-meta-row">
         <h3>${escapeHtml(branch.title)}：第 ${stage.level} 關</h3>
-        <div class="story-status-row">
-          <span class="story-lives text-danger">${"♥".repeat(state.lives)}${"♡".repeat(3 - state.lives)}</span>
-          <span class="answer-pill">${escapeHtml(stage.difficulty)}</span>
-        </div>
+        <span class="answer-pill">${escapeHtml(stage.difficulty)}</span>
       </div>
       <p class="story-scene">${escapeHtml(stage.scene)}</p>
       <h4>${escapeHtml(stage.q)}</h4>
@@ -547,8 +395,8 @@ function renderPlayArea() {
         }).join("")}
       </div>
       <div class="practice-actions">
-        <button id="checkStoryBtn" class="tool-btn" ${state.checked ? "disabled" : ""}><i class="fa-solid fa-check"></i> 確認答案</button>
-        <button id="nextStoryBtn" class="tool-btn secondary" ${canGoNext ? "" : "disabled"}><i class="fa-solid fa-forward"></i> 下一關</button>
+        <button id="checkStoryBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 確認答案</button>
+        <button id="nextStoryBtn" class="tool-btn secondary"><i class="fa-solid fa-forward"></i> 下一關</button>
       </div>
       <div class="story-clear-state">本支線已通關 ${cleared} / ${branch.stages.length} 關</div>
     </article>
@@ -572,10 +420,7 @@ function checkStoryAnswer() {
   }
   state.checked = true;
   if (state.selected === stage.answer) {
-    state.lastCorrect = true;
     saveProgress(state.subjectId, state.branchId, stage.level);
-    state.lives = 3;
-    saveLives();
     if (!checkStoryAchievements()) {
       showStoryModal(
         "新的支線片段",
@@ -583,32 +428,16 @@ function checkStoryAnswer() {
       );
     }
   } else {
-    state.lastCorrect = false;
-    state.lives -= 1;
-    saveLives();
-    if (state.lives <= 0) {
-      resetRun("三顆愛心都扣完了，這條故事線需要從第一關重新開始。");
-      return;
-    }
-    state.checked = false;
-    state.selected = null;
-    showToast(`答錯了，扣 1 顆愛心，剩下 ${state.lives} 顆`);
+    showToast("答錯了，可以再看一次正解");
   }
   renderAll();
 }
 
 function nextStoryStage() {
   const branch = activeBranch();
-  const progress = loadProgress();
-  const cleared = Number(progress[`${state.subjectId}:${state.branchId}`] || 0);
-  if (!(state.checked && state.lastCorrect) && state.stageIndex >= cleared) {
-    showToast("答對這題後才能前往下一關");
-    return;
-  }
-  state.stageIndex = Math.min(state.stageIndex + 1, branch.stages.length - 1);
+  state.stageIndex = (state.stageIndex + 1) % branch.stages.length;
   state.selected = null;
   state.checked = false;
-  state.lastCorrect = false;
   renderPlayArea();
 }
 
@@ -616,28 +445,416 @@ function resetCurrentProgress() {
   const progress = loadProgress();
   delete progress[`${state.subjectId}:${state.branchId}`];
   localStorage.setItem(progressKey(), JSON.stringify(progress));
-  state.stageIndex = 0;
-  state.selected = null;
-  state.checked = false;
-  state.lastCorrect = false;
-  state.lives = 3;
-  saveLives();
   showToast("已重設本支線進度");
   renderAll();
 }
 
 function renderAll() {
-  loadLives();
   $("storyUserName").textContent = userKey() === "guest" ? "訪客" : userKey();
   renderSubjects();
   renderBranches();
-  renderStoryFriends();
   renderPlayArea();
 }
 
 $("resetStoryBtn")?.addEventListener("click", resetCurrentProgress);
 $("generateStoryBtn")?.addEventListener("click", generateAiStoryQuestions);
-$("copyStoryChallengeBtn")?.addEventListener("click", () => copyStoryChallenge());
 $("storyModalCloseBtn")?.addEventListener("click", () => $("storyModalBackdrop").classList.remove("show"));
-loadStoryFriends();
 renderAll();
+
+
+// ═══════════════════════════════════════════════════════
+//  錯題本整合
+// ═══════════════════════════════════════════════════════
+function wrongBookKey() {
+  return `quizarena_wrong_book_${userKey()}`;
+}
+
+function addToWrongBook(stage, subjectTitle) {
+  if (!stage) return;
+  try {
+    const book = JSON.parse(localStorage.getItem(wrongBookKey()) || "[]");
+    const existing = book.findIndex((item) => item.q === stage.q);
+    if (existing >= 0) {
+      book[existing].wrongCount = (book[existing].wrongCount || 1) + 1;
+      book[existing].lastWrongAt = Date.now();
+    } else {
+      book.push({
+        q: stage.q,
+        options: stage.options,
+        answer: stage.answer,
+        difficulty: stage.difficulty || "medium",
+        source: `故事模式 · ${subjectTitle}`,
+        wrongCount: 1,
+        lastWrongAt: Date.now(),
+      });
+    }
+    localStorage.setItem(wrongBookKey(), JSON.stringify(book));
+  } catch (e) {
+    console.warn("[WrongBook] 寫入失敗", e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  單人模式：答錯加入錯題本（patch checkStoryAnswer）
+// ═══════════════════════════════════════════════════════
+const _origCheckStoryAnswer = checkStoryAnswer;
+window._patchedStoryAnswer = function checkStoryAnswerPatched() {
+  const stage = activeBranch().stages[state.stageIndex];
+  if (state.selected !== null && state.selected !== stage.answer) {
+    addToWrongBook(stage, activeSubject().title);
+  }
+  _origCheckStoryAnswer();
+};
+// 重新綁定
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "checkStoryBtn") {
+    e.stopImmediatePropagation();
+    window._patchedStoryAnswer();
+  }
+}, true);
+
+// ═══════════════════════════════════════════════════════
+//  模式選擇系統
+// ═══════════════════════════════════════════════════════
+let currentStoryMode = "solo"; // "solo" | "pvp" | "coop"
+
+function setStoryMode(mode) {
+  currentStoryMode = mode;
+  const pill = $("storyModePill");
+  const multiPanel = $("storyMultiPanel");
+  const soloSection = $("storySoloSection");
+  const duelSection = $("storyDuelSection");
+  const subjectSection = document.querySelector(".story-subject-grid")?.closest(".tool-card");
+  const branchSection = $("storyBranchList")?.closest(".tool-card");
+
+  document.querySelectorAll(".story-mode-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === mode);
+  });
+
+  if (mode === "solo") {
+    if (pill) pill.textContent = "單人闖關";
+    if (multiPanel) multiPanel.style.display = "none";
+    if (soloSection) soloSection.style.display = "";
+    if (duelSection) duelSection.style.display = "none";
+    if (subjectSection) subjectSection.style.display = "";
+    if (branchSection) branchSection.style.display = "";
+    renderAll();
+  } else {
+    if (pill) pill.textContent = mode === "pvp" ? "挑戰模式" : "合作模式";
+    if (multiPanel) multiPanel.style.display = "";
+    if (soloSection) soloSection.style.display = "none";
+    if (duelSection) duelSection.style.display = "none";
+    if (subjectSection) subjectSection.style.display = "";
+    if (branchSection) branchSection.style.display = "";
+  }
+}
+
+document.querySelectorAll(".story-mode-tab").forEach((btn) => {
+  btn.addEventListener("click", () => setStoryMode(btn.dataset.mode));
+});
+
+// ═══════════════════════════════════════════════════════
+//  挑戰連結系統
+// ═══════════════════════════════════════════════════════
+function generateChallengeToken() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function buildChallengeLink(token, mode, subjectId, branchId) {
+  const base = location.href.split("?")[0];
+  return `${base}?challenge=${token}&mode=${mode}&sub=${subjectId}&branch=${branchId}`;
+}
+
+function parseChallengeLink(url) {
+  try {
+    const u = new URL(url);
+    return {
+      token: u.searchParams.get("challenge"),
+      mode: u.searchParams.get("mode"),
+      subjectId: u.searchParams.get("sub"),
+      branchId: u.searchParams.get("branch"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+$("createChallengeBtn")?.addEventListener("click", () => {
+  const token = generateChallengeToken();
+  const link = buildChallengeLink(token, currentStoryMode, state.subjectId, state.branchId);
+  const linkDisplay = $("storyLinkDisplay");
+  const linkText = $("storyLinkText");
+  const waitingMsg = $("storyWaitingMsg");
+  if (linkText) linkText.textContent = link;
+  if (linkDisplay) linkDisplay.style.display = "";
+  if (waitingMsg) waitingMsg.style.display = "";
+  // 存入 sessionStorage 等待對手
+  sessionStorage.setItem("pendingChallengeToken", token);
+  sessionStorage.setItem("pendingChallengeMode", currentStoryMode);
+  showToast("連結已建立，等待對手加入");
+  // 模擬：3 秒後啟動（實際應透過 WebSocket）
+  setTimeout(() => {
+    if (waitingMsg) waitingMsg.style.display = "none";
+    startDuelGame(
+      userKey(),
+      "對手",
+      currentStoryMode,
+      activeBranch().stages
+    );
+  }, 3000);
+});
+
+$("copyLinkBtn")?.addEventListener("click", () => {
+  const link = $("storyLinkText")?.textContent || "";
+  if (!link) return;
+  navigator.clipboard.writeText(link).then(() => showToast("連結已複製！")).catch(() => {
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = link;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    showToast("連結已複製！");
+  });
+});
+
+$("joinChallengeBtn")?.addEventListener("click", () => {
+  const raw = $("challengeLinkInput")?.value?.trim() || "";
+  if (!raw) { showToast("請先貼上挑戰連結"); return; }
+  const parsed = parseChallengeLink(raw);
+  if (!parsed?.token) { showToast("連結格式不正確"); return; }
+  // 切換科目/支線
+  if (parsed.subjectId) state.subjectId = parsed.subjectId;
+  if (parsed.branchId) state.branchId = parsed.branchId;
+  const mode = parsed.mode || "pvp";
+  currentStoryMode = mode;
+  showToast("正在加入挑戰...");
+  setTimeout(() => {
+    startDuelGame(
+      userKey(),
+      "挑戰者",
+      mode,
+      activeBranch().stages
+    );
+  }, 800);
+});
+
+// 頁面載入時自動判斷 URL 參數（被貼入連結後跳轉）
+(function checkIncomingChallenge() {
+  const params = new URLSearchParams(location.search);
+  const token = params.get("challenge");
+  const mode = params.get("mode");
+  const subjectId = params.get("sub");
+  const branchId = params.get("branch");
+  if (!token) return;
+  if (subjectId) state.subjectId = subjectId;
+  if (branchId) state.branchId = branchId;
+  if (mode) currentStoryMode = mode;
+  // 小延遲等 DOM/資料就緒
+  setTimeout(() => {
+    setStoryMode(mode || "pvp");
+    showToast("偵測到挑戰邀請，即將開始！");
+    setTimeout(() => {
+      startDuelGame(userKey(), "邀請者", mode || "pvp", activeBranch().stages);
+    }, 1200);
+  }, 600);
+})();
+
+// ═══════════════════════════════════════════════════════
+//  雙人遊戲引擎
+// ═══════════════════════════════════════════════════════
+const DUEL_TOTAL = 20;
+const DUEL_TIME = 10;
+const MAX_SCORE_PER_Q = 1000;
+
+const duelState = {
+  mode: "pvp",         // "pvp" | "coop"
+  stages: [],
+  index: 0,
+  scores: [0, 0],
+  names: ["你", "對手"],
+  answered: false,     // 本題是否已有人送出（合作用）
+  timerInterval: null,
+  timeLeft: DUEL_TIME,
+};
+
+function startDuelGame(nameLeft, nameRight, mode, stages) {
+  duelState.mode = mode;
+  duelState.stages = stages.slice(0, DUEL_TOTAL);
+  // 若題目不足 20 題，循環補足
+  while (duelState.stages.length < DUEL_TOTAL) {
+    duelState.stages.push(...stages.slice(0, DUEL_TOTAL - duelState.stages.length));
+  }
+  duelState.index = 0;
+  duelState.scores = [0, 0];
+  duelState.names = [nameLeft, nameRight];
+
+  // 顯示雙人區塊，隱藏單人
+  $("storySoloSection").style.display = "none";
+  $("storyDuelSection").style.display = "";
+  $("storyMultiPanel").style.display = "none";
+  $("duelResultOverlay").style.display = "none";
+
+  if ($("duelNameLeft")) $("duelNameLeft").textContent = nameLeft;
+  if ($("duelNameRight")) $("duelNameRight").textContent = nameRight;
+  if ($("duelModeLabel")) $("duelModeLabel").textContent = mode === "pvp" ? "挑戰模式" : "合作模式";
+
+  renderDuelQuestion();
+}
+
+function renderDuelQuestion() {
+  const stage = duelState.stages[duelState.index];
+  if (!stage) { endDuelGame(); return; }
+  duelState.answered = false;
+
+  // 進度
+  if ($("duelQIndex")) $("duelQIndex").textContent = `第 ${duelState.index + 1} 題`;
+  if ($("duelScoreLeft")) $("duelScoreLeft").textContent = duelState.scores[0];
+  if ($("duelScoreRight")) $("duelScoreRight").textContent = duelState.scores[1];
+
+  // 題目
+  if ($("duelQuestionBox")) $("duelQuestionBox").textContent = stage.q;
+
+  // 選項
+  if ($("duelOptions")) {
+    $("duelOptions").innerHTML = stage.options.map((opt, i) => `
+      <button class="duel-option-btn" data-idx="${i}">
+        <b>${String.fromCharCode(65 + i)}</b><span>${escapeHtml(opt)}</span>
+      </button>
+    `).join("");
+    $("duelOptions").querySelectorAll(".duel-option-btn").forEach((btn) => {
+      btn.addEventListener("click", () => onDuelAnswer(Number(btn.dataset.idx)));
+    });
+  }
+
+  // 合作模式提示重置
+  if ($("coopAnsweredMsg")) $("coopAnsweredMsg").style.display = "none";
+
+  // 倒數計時
+  startDuelTimer();
+}
+
+function startDuelTimer() {
+  clearInterval(duelState.timerInterval);
+  duelState.timeLeft = DUEL_TIME;
+  updateTimerUI();
+  duelState.timerInterval = setInterval(() => {
+    duelState.timeLeft--;
+    updateTimerUI();
+    if (duelState.timeLeft <= 0) {
+      clearInterval(duelState.timerInterval);
+      if (!duelState.answered) {
+        // 超時：答錯，加入錯題本
+        const stage = duelState.stages[duelState.index];
+        addToWrongBook(stage, activeSubject().title);
+        highlightDuelAnswer(-1, stage.answer);
+        setTimeout(() => advanceDuel(), 1200);
+      }
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const pct = (duelState.timeLeft / DUEL_TIME) * 100;
+  if ($("duelTimerDisplay")) $("duelTimerDisplay").textContent = duelState.timeLeft;
+  if ($("duelTimerFill")) {
+    $("duelTimerFill").style.width = pct + "%";
+    $("duelTimerFill").style.background =
+      duelState.timeLeft > 5 ? "linear-gradient(90deg,#7c7bff,#ff8fbd)"
+        : "linear-gradient(90deg,#ff4444,#ff8800)";
+  }
+}
+
+function onDuelAnswer(idx) {
+  if (duelState.answered) return;
+  if (duelState.timeLeft <= 0) return;
+  duelState.answered = true;
+  clearInterval(duelState.timerInterval);
+
+  const stage = duelState.stages[duelState.index];
+  const isCorrect = idx === stage.answer;
+
+  // 計分：剩餘時間越多分越高
+  const bonus = Math.round((duelState.timeLeft / DUEL_TIME) * MAX_SCORE_PER_Q);
+  const points = isCorrect ? Math.max(100, bonus) : 0;
+
+  if (duelState.mode === "pvp") {
+    // PvP：玩家0（左）得分
+    duelState.scores[0] += points;
+    // 模擬對手（右）答題
+    const opponentCorrect = Math.random() > 0.45;
+    const opponentTime = Math.random() * DUEL_TIME;
+    const opponentPoints = opponentCorrect
+      ? Math.max(100, Math.round((opponentTime / DUEL_TIME) * MAX_SCORE_PER_Q))
+      : 0;
+    duelState.scores[1] += opponentPoints;
+  } else {
+    // Coop：合併得分到左
+    duelState.scores[0] += points;
+    if ($("coopAnsweredMsg")) $("coopAnsweredMsg").style.display = "";
+  }
+
+  if (!isCorrect) addToWrongBook(stage, activeSubject().title);
+
+  highlightDuelAnswer(idx, stage.answer);
+  setTimeout(() => advanceDuel(), 1400);
+}
+
+function highlightDuelAnswer(selected, correct) {
+  document.querySelectorAll(".duel-option-btn").forEach((btn) => {
+    const i = Number(btn.dataset.idx);
+    btn.disabled = true;
+    if (i === correct) btn.classList.add("duel-correct");
+    else if (i === selected) btn.classList.add("duel-wrong");
+  });
+  if ($("duelScoreLeft")) $("duelScoreLeft").textContent = duelState.scores[0];
+  if ($("duelScoreRight")) $("duelScoreRight").textContent = duelState.scores[1];
+}
+
+function advanceDuel() {
+  duelState.index++;
+  if (duelState.index >= duelState.stages.length) {
+    endDuelGame();
+  } else {
+    renderDuelQuestion();
+  }
+}
+
+function endDuelGame() {
+  clearInterval(duelState.timerInterval);
+  const [s0, s1] = duelState.scores;
+  const [n0, n1] = duelState.names;
+  const isPvp = duelState.mode === "pvp";
+
+  let icon = "🏆", title = "";
+  if (isPvp) {
+    if (s0 > s1) { icon = "🏆"; title = `${n0} 獲勝！`; }
+    else if (s1 > s0) { icon = "😅"; title = `${n1} 獲勝！`; }
+    else { icon = "🤝"; title = "平局！"; }
+  } else {
+    const total = s0;
+    icon = total >= 10000 ? "🎉" : "💪";
+    title = `合作得分：${total}`;
+  }
+
+  if ($("duelResultIcon")) $("duelResultIcon").textContent = icon;
+  if ($("duelResultTitle")) $("duelResultTitle").textContent = title;
+  if ($("duelFinalNameLeft")) $("duelFinalNameLeft").textContent = n0;
+  if ($("duelFinalScoreLeft")) $("duelFinalScoreLeft").textContent = s0;
+  if ($("duelFinalNameRight")) $("duelFinalNameRight").textContent = n1;
+  if ($("duelFinalScoreRight")) $("duelFinalScoreRight").textContent = s1;
+  if ($("duelResultOverlay")) $("duelResultOverlay").style.display = "";
+}
+
+$("duelPlayAgainBtn")?.addEventListener("click", () => {
+  $("duelResultOverlay").style.display = "none";
+  startDuelGame(duelState.names[0], duelState.names[1], duelState.mode, activeBranch().stages);
+});
+
+$("duelBackBtn")?.addEventListener("click", () => {
+  clearInterval(duelState.timerInterval);
+  $("storyDuelSection").style.display = "none";
+  $("storySoloSection").style.display = "";
+  setStoryMode("solo");
+});

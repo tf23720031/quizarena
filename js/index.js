@@ -54,6 +54,14 @@
         return username;
       }
     } catch {}
+    try {
+      const roomProfile = JSON.parse(localStorage.getItem("roomPlayerProfile") || "null");
+      const username = String(roomProfile?.username || roomProfile?.account || roomProfile?.name || "").trim();
+      if (username) {
+        localStorage.setItem("currentUser", username);
+        return username;
+      }
+    } catch {}
     return "";
   }
 
@@ -64,11 +72,6 @@
   function clearCurrentUser() {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("currentUserProfile");
-    sessionStorage.removeItem("currentUser");
-    localStorage.removeItem("roomPlayerProfile");
-    localStorage.removeItem("pendingJoinContext");
-    localStorage.removeItem("currentRoomPin");
-    localStorage.removeItem("currentRoomKey");
   }
 
   function setCachedProfile(profile) {
@@ -165,7 +168,6 @@
     $("wrongBookBtn")?.classList.toggle("d-none", !user);
     $("storyModeBtn")?.classList.toggle("d-none", !user);
     $("dailyMissionBtn")?.classList.toggle("d-none", !user);
-    $("challengeBtn")?.classList.toggle("d-none", !user);
     $("teacherReportBtn")?.classList.toggle("d-none", !user);
     if (!user) document.body.classList.remove("nav-drawer-open");
 
@@ -264,6 +266,30 @@
         </div>
       </section>
     `;
+
+    // 渲染裝備中的成就徽章
+    const badgesSection = $("friendBadgesSection");
+    const badgesList = $("friendBadgesList");
+    const achievementList = Array.isArray(summary.achievements) ? summary.achievements : [];
+    const equippedBadges = achievementList.filter((a) => a.unlocked && a.equipped);
+    // 若沒有 equipped 欄位，改顯示前 3 個已解鎖成就
+    const displayBadges = equippedBadges.length
+      ? equippedBadges
+      : achievementList.filter((a) => a.unlocked).slice(0, 3);
+
+    if (badgesSection && badgesList) {
+      if (displayBadges.length) {
+        badgesList.innerHTML = displayBadges.map((a) => `
+          <div class="friend-badge-chip">
+            <i class="fa-solid ${escapeHtml(a.icon || "fa-award")}"></i>
+            <span>${escapeHtml(a.title || "成就")}</span>
+          </div>
+        `).join("");
+        badgesSection.style.display = "";
+      } else {
+        badgesSection.style.display = "none";
+      }
+    }
   }
 
   async function openFriendProfileModal(username) {
@@ -432,6 +458,10 @@
     try {
       const data = await api(`/user_profile?username=${encodeURIComponent(user)}`);
       setCachedProfile(data.profile);
+      if (data.profile?.language && window.I18N?.applyLang) {
+        localStorage.setItem("quizLang", data.profile.language);
+        window.I18N.applyLang(data.profile.language);
+      }
       updateAuthUI();
       return data.profile;
     } catch (error) {
@@ -839,19 +869,6 @@
     window.location.href = "business_dashboard.html";
   }
 
-  function handleMarketplaceClick() {
-    window.location.href = "marketplace.html";
-  }
-
-  function handleChallengeClick() {
-    if (!getCurrentUser()) {
-      showToast("請先登入，才能挑戰好友");
-      openLoginModal();
-      return;
-    }
-    window.location.href = "challenge.html";
-  }
-
   function handleLogout() {
     clearCurrentUser();
     state.friendRequests = [];
@@ -897,8 +914,6 @@
     $("dailyMissionBtn")?.addEventListener("click", handleDailyMissionClick);
     $("teacherReportBtn")?.addEventListener("click", handleTeacherReportClick);
     $("businessDashboardBtn")?.addEventListener("click", handleBusinessDashboardClick);
-    $("marketplaceBtn")?.addEventListener("click", handleMarketplaceClick);
-    $("challengeBtn")?.addEventListener("click", handleChallengeClick);
 
     $("loginForm")?.addEventListener("submit", handleLogin);
     $("registerForm")?.addEventListener("submit", handleRegister);
