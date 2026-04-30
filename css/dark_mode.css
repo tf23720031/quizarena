@@ -897,7 +897,6 @@ body.dark-mode:has(#wrongBookList) .practice-box > p {
 
 body.dark-mode:has(#storySubjectList) .story-hero-card {
   background:
-    url('../images/waiting_bg.gif') right center / 430px auto no-repeat,
     linear-gradient(135deg, rgba(21, 24, 59, .68), rgba(47, 22, 72, .48)),
     radial-gradient(circle at 22% 20%, rgba(255,255,255,.15), transparent 23%),
     radial-gradient(circle at 88% 18%, rgba(175,103,255,.28), transparent 36%) !important;
