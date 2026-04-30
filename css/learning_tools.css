@@ -140,150 +140,6 @@ h2 {
   opacity: 0.48;
 }
 
-.daily-summary-grid {
-  grid-template-columns: 1fr 1.35fr 1fr;
-}
-
-.daily-streak-card {
-  min-width: 0;
-}
-
-.daily-streak-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin-top: 4px;
-}
-
-.daily-streak-row strong {
-  margin-top: 0;
-  white-space: nowrap;
-}
-
-.daily-streak-dots {
-  display: grid;
-  grid-template-columns: repeat(7, 14px);
-  gap: 7px;
-  align-items: center;
-}
-
-.daily-streak-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid rgba(124, 123, 255, 0.25);
-  background: #edf0ff;
-}
-
-.daily-streak-dot.active {
-  border-color: rgba(93, 99, 216, 0.86);
-  background: linear-gradient(135deg, #7c7bff, #48c0d8);
-  box-shadow: 0 0 0 4px rgba(124, 123, 255, 0.12);
-}
-
-.daily-streak-dot.current {
-  outline: 3px solid rgba(255, 126, 179, 0.26);
-}
-
-.daily-subtitle {
-  margin: 6px 0 0;
-  color: #7880a5;
-  font-weight: 800;
-}
-
-.daily-break-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 22px;
-  background: rgba(18, 24, 45, 0.56);
-}
-
-.daily-break-modal.show {
-  display: flex;
-}
-
-.daily-break-dialog {
-  width: min(430px, 100%);
-  padding: 26px;
-  text-align: center;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(18, 24, 45, 0.28);
-}
-
-.daily-break-dialog > i {
-  width: 58px;
-  height: 58px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14px;
-  color: #fff;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ff7eb3, #7c7bff);
-}
-
-.daily-break-dialog h2 {
-  margin-bottom: 10px;
-}
-
-.daily-break-dialog p {
-  margin: 0 0 18px;
-  color: #626b91;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-.ai-personal-explanation {
-  border-left: 4px solid #7c7bff;
-  background: linear-gradient(135deg, rgba(124, 123, 255, 0.1), rgba(72, 192, 216, 0.1));
-}
-
-body.dark-mode .daily-streak-dot {
-  border-color: rgba(232, 240, 254, 0.24);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-body.dark-mode .daily-subtitle,
-body.dark-mode .daily-break-dialog p {
-  color: #b8c3e6;
-}
-
-body.dark-mode .daily-break-dialog {
-  color: #e8f0fe;
-  background: #222844;
-}
-
-.lang-switcher {
-  min-height: 46px;
-  padding: 8px 16px;
-  color: #8b5c7e;
-  font-weight: 900;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 999px;
-  outline: none;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 10px 24px rgba(83, 92, 143, 0.14);
-}
-
-.lang-switcher-slot {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-}
-
-body.dark-mode .lang-switcher {
-  color: #f7fbff;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: linear-gradient(135deg, rgba(32, 46, 94, 0.94), rgba(24, 37, 78, 0.9));
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
-}
-
 .question-list {
   display: grid;
   gap: 12px;
@@ -350,46 +206,14 @@ body.dark-mode .profile-title-option {
 
 body.dark-mode .tool-topbar h1,
 body.dark-mode .tool-kicker {
-  color: #f7fbff;
+  color: #fff;
 }
 
 body.dark-mode .question-card p,
 body.dark-mode .profile-main p,
 body.dark-mode .history-card span,
 body.dark-mode .wrong-insight-grid span {
-  color: #34405f;
-}
-
-body.dark-mode .tool-card-head,
-body.dark-mode .analysis-card h3,
-body.dark-mode .story-subject-card strong,
-body.dark-mode .story-branch-card strong,
-body.dark-mode .story-stage-card h4,
-body.dark-mode .story-hero-card h2,
-body.dark-mode .summary-grid strong,
-body.dark-mode .radar-legend b,
-body.dark-mode .bar-row,
-body.dark-mode .practice-option,
-body.dark-mode .question-card,
-body.dark-mode .answer-pill,
-body.dark-mode .tool-note,
-body.dark-mode .story-clear-state,
-body.dark-mode .story-scene,
-body.dark-mode .report-empty {
-  color: #243052;
-}
-
-body.dark-mode .tool-card-head h2,
-body.dark-mode .analysis-card > h3 {
-  color: #f7fbff;
-}
-
-body.dark-mode .tool-card .question-card h3,
-body.dark-mode .tool-card .story-stage-card h3,
-body.dark-mode .tool-card .story-stage-card h4,
-body.dark-mode .tool-card .profile-main h2,
-body.dark-mode .tool-card .profile-achievement-card strong {
-  color: #243052;
+  color: #58617f;
 }
 
 body.dark-mode .report-table th {
@@ -511,7 +335,6 @@ body.dark-mode .tool-btn.primary {
 
 .analysis-card {
   min-width: 0;
-  overflow: hidden;
   padding: 16px;
   border: 1px solid rgba(124, 123, 255, 0.16);
   border-radius: 16px;
@@ -606,9 +429,7 @@ body.dark-mode .tool-btn.primary {
 }
 
 .radar-layout {
-  display: grid;   
-    padding: 5px;
-    margin: 20px;
+  display: grid;
   grid-template-columns: minmax(260px, 420px) minmax(180px, 1fr);
   align-items: center;
   gap: 18px;
@@ -618,8 +439,6 @@ body.dark-mode .tool-btn.primary {
   width: 100%;
   max-width: 420px;
   aspect-ratio: 1;
-  display: block;
-  min-width: 0;
   border-radius: 18px;
   background: linear-gradient(135deg, #fff7fb, #f7f8ff);
 }
@@ -631,25 +450,20 @@ body.dark-mode .tool-btn.primary {
 
 .radar-legend span,
 .practice-box > p {
-  width: 100%;
-  max-width: 100%;
-  padding:15px;
+  padding: 12px 14px;
   border-radius: 14px;
   color: #66709b;
   font-weight: 800;
-  margin:15px 0 ;
   background: #f4f6ff;
 }
 
-.radar-legend b { 
-      border-radius: 15px;
+.radar-legend b {
   display: block;
   color: #5963d9;
 }
 
 .practice-card {
   display: grid;
-      border-radius: 15px;
   gap: 14px;
 }
 
@@ -743,14 +557,6 @@ body.dark-mode .tool-btn.primary {
   max-width: 1180px;
 }
 
-.story-shell .tool-card {
-  overflow: hidden;
-}
-
-.story-shell .tool-card-head {
-  margin-bottom: 16px;
-}
-
 .story-hero-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
@@ -814,12 +620,6 @@ body.dark-mode .tool-btn.primary {
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.story-subject-card > *,
-.story-branch-card > * {
-  justify-self: start;
-  text-align: left;
-}
-
 .story-subject-card i {
   width: 44px;
   height: 44px;
@@ -869,26 +669,6 @@ body.dark-mode .tool-btn.primary {
   flex-wrap: wrap;
 }
 
-.story-status-row {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.story-lives {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 5px 10px;
-  color: #ff477f;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  border-radius: 999px;
-  background: #fff0f7;
-}
-
 .story-branch-card {
   min-height: 96px;
 }
@@ -902,7 +682,6 @@ body.dark-mode .tool-btn.primary {
 .story-stage-card {
   display: grid;
   gap: 14px;
-  min-width: 0;
 }
 
 .story-stage-card h4 {
@@ -1032,37 +811,6 @@ body.dark-mode .tool-btn.primary {
 .profile-main {
   min-width: 0;
   flex: 1;
-  display: grid;
-  grid-template-columns: minmax(190px, 240px) minmax(260px, 1fr);
-  align-items: center;
-  column-gap: 28px;
-}
-
-.profile-hero-progress {
-  width: 100%;
-  margin-top: 0;
-  grid-column: 2;
-  grid-row: 1 / span 3;
-}
-
-.profile-hero-progress-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.profile-hero-progress-head strong {
-  color: #5d63d8;
-  font-size: 1.35rem;
-  font-weight: 900;
-}
-
-.profile-hero-progress-head span {
-  color: #c8518a;
-  font-size: 1rem;
-  font-weight: 900;
 }
 
 .profile-kicker {
@@ -1071,6 +819,16 @@ body.dark-mode .tool-btn.primary {
   font-size: 0.86rem;
   font-weight: 900;
   letter-spacing: 0.08em;
+}
+
+.profile-title-pill {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  color: #d84c86;
+  font-weight: 900;
+  border-radius: 999px;
+  background: #fff0f7;
 }
 
 .profile-main h2 {
@@ -1360,11 +1118,12 @@ body.dark-mode .tool-btn.primary {
 
 .profile-achievement-card strong {
   font-weight: 900;
+  color: #1e2a5e;
 }
 
 .profile-achievement-card span {
   margin-top: 3px;
-  color: #66709b;
+  color: #3d4a7a;
   font-size: 0.84rem;
   font-weight: 800;
 }
@@ -1440,16 +1199,6 @@ body.dark-mode .tool-btn.primary {
     flex-direction: column;
   }
 
-  .profile-main {
-    grid-template-columns: 1fr;
-    row-gap: 12px;
-  }
-
-  .profile-hero-progress {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
   .profile-edit-grid,
   .profile-controls {
     grid-template-columns: 1fr;
@@ -1463,10 +1212,6 @@ body.dark-mode .tool-btn.primary {
   .practice-actions,
   .story-hero-card {
     grid-template-columns: 1fr;
-  }
-
-  .radar-layout canvas {
-    max-width: 100%;
   }
 
   .bar-row {
@@ -1488,473 +1233,431 @@ body.dark-mode .tool-btn.primary {
     flex-direction: column;
   }
 
-  .story-status-row {
-    justify-content: flex-start;
-  }
-
   .tool-btn,
   .report-search input {
     width: 100%;
   }
 }
 
-/* =========================================================
-   QuizArena Learning Tools - 強化玻璃擬態美編
-   只靠 CSS 判斷頁面：故事模式 / 錯題本 / 每日任務
-   ========================================================= */
-:root {
-  --qa-glass-dark-text: #241f38;
-  --qa-glass-muted-text: #655a76;
-  --qa-glass-pink: #ff72b8;
-  --qa-glass-purple: #8d76ff;
-  --qa-glass-blue: #56c9ff;
-  --qa-glass-gold: #ffbf4d;
+
+
+/* ===== FRIEND LEADERBOARD LIGHT THEME ONLY ===== */
+
+.friend-rank-section,
+.friend-board,
+.friend-leaderboard,
+.friends-ranking-panel,
+.friend-ranking-wrap{
+    background:
+    linear-gradient(
+        135deg,
+        #fff7fd 0%,
+        #ffe7fb 35%,
+        #f1e8ff 70%,
+        #eef3ff 100%
+    ) !important;
+
+    border: 1px solid rgba(255,255,255,.8) !important;
+
+    box-shadow:
+    0 10px 30px rgba(255,180,240,.18),
+    inset 0 1px 0 rgba(255,255,255,.85) !important;
+
+    color:#5e538b !important;
 }
 
-body:has(#storySubjectList),
-body:has(#wrongBookList),
-body:has(#dailyMissionList) {
-  color: var(--qa-glass-dark-text) !important;
-  background:
-    radial-gradient(circle at 11% 9%, rgba(255, 126, 190, .34), transparent 25%),
-    radial-gradient(circle at 90% 7%, rgba(111, 201, 255, .28), transparent 27%),
-    radial-gradient(circle at 48% 92%, rgba(163, 132, 255, .24), transparent 30%),
-    linear-gradient(135deg, #fff8fc 0%, #eef7ff 52%, #fff7ee 100%) !important;
-  background-attachment: fixed;
+/* cards */
+.friend-rank-section .rank-card,
+.friend-rank-section .friend-card,
+.friend-board .rank-card{
+    background: rgba(255,255,255,.72) !important;
+    backdrop-filter: blur(14px);
+    border:1px solid rgba(255,255,255,.8);
 }
 
-body:has(#storySubjectList)::before,
-body:has(#wrongBookList)::before,
-body:has(#dailyMissionList)::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    url('../images/girl-bg.png') left bottom / 330px auto no-repeat,
-    linear-gradient(120deg, transparent 0 42%, rgba(255,255,255,.52) 50%, transparent 58%);
-  opacity: .23;
-  animation: qaGlassBgFloat 11s ease-in-out infinite alternate;
+/* titles */
+.friend-rank-section h1,
+.friend-rank-section .section-title,
+.friend-board h1{
+    color:#db62cb !important;
+    text-shadow: 0 4px 12px rgba(255,170,240,.22);
 }
 
-body:has(#storySubjectList)::after,
-body:has(#wrongBookList)::after,
-body:has(#dailyMissionList)::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle, rgba(255,255,255,.92) 0 2px, transparent 3px),
-    radial-gradient(circle, rgba(255, 135, 201, .42) 0 2px, transparent 3px),
-    radial-gradient(circle, rgba(131, 118, 255, .32) 0 1.5px, transparent 3px);
-  background-size: 120px 120px, 170px 170px, 220px 220px;
-  background-position: 0 0, 45px 25px, 80px 65px;
-  opacity: .62;
-  animation: qaSparkleDrift 18s linear infinite;
+/* text */
+.friend-rank-section p,
+.friend-rank-section span,
+.friend-rank-section div,
+.friend-board p,
+.friend-board span,
+.friend-board div{
+    color:#6d6498 !important;
 }
 
-body:has(#storySubjectList) .tool-shell,
-body:has(#wrongBookList) .tool-shell,
-body:has(#dailyMissionList) .tool-shell {
-  width: min(1180px, calc(100% - 32px));
+/* buttons */
+.friend-rank-section button,
+.friend-rank-section .glass-btn,
+.friend-board button{
+    background:
+    linear-gradient(
+        135deg,
+        #ffd7f1,
+        #f3e6ff
+    ) !important;
+
+    color:#7d5be0 !important;
 }
 
-body:has(#storySubjectList) .tool-topbar,
-body:has(#wrongBookList) .tool-topbar,
-body:has(#dailyMissionList) .tool-topbar {
-  padding: 14px 16px;
-  border: 1px solid rgba(255,255,255,.72);
-  border-radius: 28px;
-  background: rgba(255,255,255,.44);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.90),
-    0 22px 52px rgba(111, 96, 160, .16);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
+/* remove extra tiny input */
+.practice-mini-input,
+.secondary-answer-input,
+.extra-answer-box{
+    display:none !important;
 }
 
-body:has(#storySubjectList) .tool-topbar h1,
-body:has(#wrongBookList) .tool-topbar h1,
-body:has(#dailyMissionList) .tool-topbar h1 {
-  color: #262044 !important;
-  text-shadow: 0 1px 0 rgba(255,255,255,.75);
+/* ═══════════════════════════════════════════════
+   好友彈窗：成就徽章展示
+═══════════════════════════════════════════════ */
+.friend-badges-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(124,123,255,.14);
+}
+.friend-badges-label {
+  font-size: .82rem;
+  font-weight: 700;
+  color: #8b82df;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+.friend-badges-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.friend-badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg,#fff0f8,#ede9ff);
+  border: 1px solid rgba(124,123,255,.2);
+  font-size: .84rem;
+  font-weight: 700;
+  color: #5a4fcf;
+}
+.friend-badge-chip i {
+  color: #ff8fbd;
 }
 
-body:has(#storySubjectList) .tool-kicker,
-body:has(#wrongBookList) .tool-kicker,
-body:has(#dailyMissionList) .tool-kicker {
-  color: #7e6f93 !important;
+/* ═══════════════════════════════════════════════
+   故事模式：模式選擇 tabs
+═══════════════════════════════════════════════ */
+.story-mode-picker-card { margin-bottom: 0; }
+.story-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.story-mode-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border-radius: 14px;
+  border: 2px solid rgba(124,123,255,.15);
+  background: var(--surface, #fff);
+  cursor: pointer;
+  transition: border-color .18s, box-shadow .18s, background .18s;
+  text-align: center;
+}
+.story-mode-tab i {
+  font-size: 1.4rem;
+  color: #8b82df;
+  transition: color .18s;
+}
+.story-mode-tab strong {
+  font-size: .92rem;
+  font-weight: 900;
+  color: #293150;
+}
+.story-mode-tab span {
+  font-size: .76rem;
+  color: #66709b;
+  line-height: 1.3;
+}
+.story-mode-tab.active,
+.story-mode-tab:hover {
+  border-color: #7c7bff;
+  background: linear-gradient(135deg,#f0eeff,#fff0f8);
+  box-shadow: 0 6px 18px rgba(124,123,255,.14);
+}
+.story-mode-tab.active i { color: #7c7bff; }
+@media (max-width: 520px) {
+  .story-mode-tabs { grid-template-columns: 1fr; }
 }
 
-body:has(#storySubjectList) .tool-back,
-body:has(#wrongBookList) .tool-back,
-body:has(#dailyMissionList) .tool-back {
-  border: 1px solid rgba(255,255,255,.72);
-  background: linear-gradient(135deg, rgba(255,120,188,.88), rgba(139,118,255,.88)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.55),
-    0 12px 30px rgba(139,118,255,.24),
-    0 0 26px rgba(255,114,184,.18);
+/* ═══════════════════════════════════════════════
+   故事模式：連結建立 / 貼上 UI
+═══════════════════════════════════════════════ */
+.story-multi-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+.story-link-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.story-link-divider {
+  font-size: .82rem;
+  color: #aaa;
+  padding: 0 2px;
+}
+.story-paste-row {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.story-link-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(124,123,255,.3);
+  font-size: .9rem;
+  background: rgba(124,123,255,.04);
+  color: inherit;
+  outline: none;
+  transition: border-color .15s;
+}
+.story-link-input:focus { border-color: #7c7bff; }
+.story-link-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(124,123,255,.06);
+  border: 1px dashed rgba(124,123,255,.3);
+}
+.story-link-value {
+  flex: 1;
+  font-size: .8rem;
+  word-break: break-all;
+  color: #5a4fcf;
+  font-family: monospace;
+}
+.story-waiting-msg {
+  font-size: .88rem;
+  color: #8b82df;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-body:has(#storySubjectList) .summary-grid article,
-body:has(#wrongBookList) .summary-grid article,
-body:has(#dailyMissionList) .summary-grid article,
-body:has(#storySubjectList) .tool-card,
-body:has(#wrongBookList) .tool-card,
-body:has(#dailyMissionList) .tool-card,
-body:has(#storySubjectList) .question-card,
-body:has(#wrongBookList) .question-card,
-body:has(#dailyMissionList) .question-card,
-body:has(#wrongBookList) .analysis-card,
-body:has(#wrongBookList) .wrong-insight-grid article,
-body:has(#storySubjectList) .story-subject-card,
-body:has(#storySubjectList) .story-branch-card,
-body:has(#storySubjectList) .story-progress-card,
-body:has(#storySubjectList) .story-modal,
-body:has(#wrongBookList) .radar-legend span,
-body:has(#wrongBookList) .practice-box > p {
+/* ═══════════════════════════════════════════════
+   雙人遊戲：對戰卡片
+═══════════════════════════════════════════════ */
+.story-duel-card {
   position: relative;
   overflow: hidden;
-  color: var(--qa-glass-dark-text) !important;
-  border: 1px solid rgba(255,255,255,.70) !important;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.34)),
-    radial-gradient(circle at 16% 8%, rgba(255,255,255,.86), transparent 28%),
-    radial-gradient(circle at 88% 12%, rgba(255,122,188,.22), transparent 32%),
-    radial-gradient(circle at 12% 90%, rgba(105,201,255,.18), transparent 28%) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.95),
-    inset 0 -1px 0 rgba(255,255,255,.42),
-    0 18px 45px rgba(93, 87, 145, .18),
-    0 0 0 1px rgba(255,255,255,.20) !important;
-  backdrop-filter: blur(24px) saturate(165%);
-  -webkit-backdrop-filter: blur(24px) saturate(165%);
 }
 
-body:has(#storySubjectList) .summary-grid article,
-body:has(#wrongBookList) .summary-grid article,
-body:has(#dailyMissionList) .summary-grid article {
-  min-height: 112px;
-  border-radius: 26px !important;
+/* 倒數計時條 */
+.duel-timer-bar {
+  margin-bottom: 16px;
 }
-
-body:has(#storySubjectList) .tool-card,
-body:has(#wrongBookList) .tool-card,
-body:has(#dailyMissionList) .tool-card {
-  border-radius: 30px !important;
-  padding: 24px !important;
+.duel-timer-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #293150;
+  margin-bottom: 8px;
 }
-
-body:has(#storySubjectList) .tool-card::before,
-body:has(#wrongBookList) .tool-card::before,
-body:has(#dailyMissionList) .tool-card::before,
-body:has(#storySubjectList) .summary-grid article::before,
-body:has(#wrongBookList) .summary-grid article::before,
-body:has(#dailyMissionList) .summary-grid article::before,
-body:has(#storySubjectList) .story-subject-card::before,
-body:has(#storySubjectList) .story-branch-card::before,
-body:has(#wrongBookList) .question-card::before,
-body:has(#dailyMissionList) .question-card::before {
-  content: "";
-  position: absolute;
-  inset: -45% -20%;
-  pointer-events: none;
-  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.64) 48%, rgba(255,255,255,.22) 54%, transparent 64%);
-  transform: translateX(-38%) rotate(8deg);
-  animation: qaGlassSheen 8.5s ease-in-out infinite;
-}
-
-body:has(#storySubjectList) .tool-card::after,
-body:has(#wrongBookList) .tool-card::after,
-body:has(#dailyMissionList) .tool-card::after {
-  content: "✦";
-  position: absolute;
-  top: 17px;
-  right: 22px;
-  color: rgba(255, 124, 193, .46);
-  font-size: 32px;
-  text-shadow: 0 0 18px rgba(255, 124, 193, .38);
-  pointer-events: none;
-}
-
-body:has(#storySubjectList) .story-hero-card {
-  grid-template-columns: minmax(0, 1.2fr) 260px;
-  min-height: 285px;
-  background:
-    url('../images/waiting_bg.gif') right center / 430px auto no-repeat,
-    linear-gradient(135deg, rgba(255,255,255,.63), rgba(236,231,255,.44)),
-    radial-gradient(circle at 22% 20%, rgba(255,255,255,.95), transparent 23%),
-    radial-gradient(circle at 88% 18%, rgba(164,135,255,.36), transparent 36%) !important;
-}
-
-body:has(#storySubjectList) .story-hero-card h2 {
-  color: #262044 !important;
-  font-size: clamp(2rem, 4vw, 3.35rem);
-  line-height: 1.18;
-}
-
-body:has(#storySubjectList) .story-hero-card p,
-body:has(#storySubjectList) .story-scene,
-body:has(#storySubjectList) .story-clear-state,
-body:has(#storySubjectList) .story-play-area > p,
-body:has(#wrongBookList) .tool-note,
-body:has(#wrongBookList) .question-card p,
-body:has(#dailyMissionList) .question-card p {
-  color: var(--qa-glass-muted-text) !important;
-}
-
-body:has(#storySubjectList) .story-subject-card,
-body:has(#storySubjectList) .story-branch-card,
-body:has(#wrongBookList) .question-card,
-body:has(#dailyMissionList) .question-card {
-  border-radius: 24px !important;
-  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
-}
-
-body:has(#storySubjectList) .story-subject-card:hover,
-body:has(#storySubjectList) .story-branch-card:hover,
-body:has(#wrongBookList) .question-card:hover,
-body:has(#dailyMissionList) .question-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255, 126, 190, .56) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.95),
-    0 26px 54px rgba(139, 118, 255, .22),
-    0 0 26px rgba(255,126,190,.14) !important;
-}
-
-body:has(#storySubjectList) .story-subject-card.active,
-body:has(#storySubjectList) .story-branch-card.active {
-  border-color: rgba(255, 103, 181, .78) !important;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,226,242,.48)),
-    radial-gradient(circle at 78% 15%, rgba(255,118,187,.32), transparent 32%) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.95),
-    0 22px 54px rgba(255, 103, 181, .25),
-    0 0 0 4px rgba(255, 142, 200, .12) !important;
-}
-
-body:has(#storySubjectList) .story-subject-card i,
-body:has(#storySubjectList) .practice-option b {
-  border: 1px solid rgba(255,255,255,.64);
-  background: linear-gradient(135deg, #ff71b8, #8d76ff 62%, #5ccfff) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 10px 22px rgba(139,118,255,.22);
-}
-
-body:has(#storySubjectList) .story-subject-card strong,
-body:has(#storySubjectList) .story-branch-card strong,
-body:has(#storySubjectList) .story-stage-card h4,
-body:has(#wrongBookList) .question-card h3,
-body:has(#dailyMissionList) .question-card h3,
-body:has(#wrongBookList) .tool-card-head h2,
-body:has(#dailyMissionList) .tool-card-head h2,
-body:has(#storySubjectList) .tool-card-head h2 {
-  color: #27213d !important;
-}
-
-body:has(#storySubjectList) .story-subject-card span,
-body:has(#storySubjectList) .story-branch-card span,
-body:has(#wrongBookList) .question-tags span,
-body:has(#dailyMissionList) .question-tags span,
-body:has(#wrongBookList) .answer-pill,
-body:has(#dailyMissionList) .answer-pill,
-body:has(#storySubjectList) .answer-pill {
-  color: #5f5571 !important;
-}
-
-body:has(#wrongBookList) .summary-grid article:nth-child(1) strong,
-body:has(#dailyMissionList) .summary-grid article:nth-child(1) strong { color: #ff5fae !important; }
-body:has(#wrongBookList) .summary-grid article:nth-child(2) strong,
-body:has(#dailyMissionList) .summary-grid article:nth-child(2) strong { color: #8a6cff !important; }
-body:has(#wrongBookList) .summary-grid article:nth-child(3) strong,
-body:has(#dailyMissionList) .summary-grid article:nth-child(3) strong { color: #28a9d6 !important; }
-
-body:has(#wrongBookList) .wrong-insight-grid article,
-body:has(#wrongBookList) .radar-legend span,
-body:has(#wrongBookList) .practice-box > p {
-  border-radius: 22px !important;
-}
-
-body:has(#wrongBookList) .radar-layout canvas {
-  border: 1px solid rgba(255,255,255,.72) !important;
-  border-radius: 28px !important;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.58), rgba(240,246,255,.36)),
-    radial-gradient(circle at 80% 10%, rgba(255,120,188,.20), transparent 30%) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.92),
-    0 20px 46px rgba(93, 87, 145, .17) !important;
-  backdrop-filter: blur(20px) saturate(155%);
-  -webkit-backdrop-filter: blur(20px) saturate(155%);
-}
-
-body:has(#dailyMissionList) .question-card,
-body:has(#dailyMissionList) .tool-card {
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.65), rgba(255,244,225,.42)),
-    radial-gradient(circle at 85% 15%, rgba(255,190,80,.26), transparent 31%),
-    radial-gradient(circle at 8% 92%, rgba(86,201,255,.20), transparent 27%) !important;
-}
-
-body:has(#storySubjectList) .tool-btn,
-body:has(#wrongBookList) .tool-btn,
-body:has(#dailyMissionList) .tool-btn {
-  position: relative;
+.duel-timer-track {
+  height: 10px;
+  border-radius: 99px;
+  background: rgba(124,123,255,.12);
   overflow: hidden;
-  color: #fff !important;
-  border: 1px solid rgba(255,255,255,.58) !important;
-  background: linear-gradient(135deg, rgba(255,113,184,.95), rgba(141,118,255,.96), rgba(86,201,255,.90)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.48),
-    0 14px 30px rgba(139, 118, 255, .24),
-    0 0 22px rgba(255, 113, 184, .16) !important;
+}
+.duel-timer-fill {
+  height: 100%;
+  border-radius: 99px;
+  width: 100%;
+  transition: width 1s linear, background .3s;
 }
 
-body:has(#dailyMissionList) .tool-btn {
-  background: linear-gradient(135deg, rgba(255,181,70,.96), rgba(255,113,184,.92), rgba(141,118,255,.92)) !important;
+/* 雙人分數列 */
+.duel-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 10px;
+}
+.duel-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.duel-player-left { align-items: flex-start; }
+.duel-player-right { align-items: flex-end; }
+.duel-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg,#ff8fbd,#7c7bff);
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+}
+.duel-player strong {
+  font-size: .88rem;
+  font-weight: 900;
+  color: #293150;
+}
+.duel-score {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #7c7bff;
+  letter-spacing: -.01em;
+}
+.duel-vs-badge {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #aaa;
+  padding: 0 8px;
 }
 
-body:has(#storySubjectList) .tool-btn:hover,
-body:has(#wrongBookList) .tool-btn:hover,
-body:has(#dailyMissionList) .tool-btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
+/* 進度行 */
+.duel-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: .86rem;
+  color: #66709b;
 }
 
-body:has(#wrongBookList) .option-list li,
-body:has(#dailyMissionList) .option-list li,
-body:has(#storySubjectList) .option-list li,
-body:has(#wrongBookList) .practice-option,
-body:has(#storySubjectList) .practice-option,
-body:has(#dailyMissionList) .practice-option,
-body:has(#wrongBookList) .explanation-box,
-body:has(#dailyMissionList) .explanation-box,
-body:has(#storySubjectList) .explanation-box {
-  color: #332a45 !important;
-  border: 1px solid rgba(255,255,255,.66) !important;
-  background: rgba(255,255,255,.58) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.82), 0 10px 22px rgba(93,87,145,.10);
-  backdrop-filter: blur(16px) saturate(145%);
-  -webkit-backdrop-filter: blur(16px) saturate(145%);
+/* 題目 */
+.duel-question-box {
+  font-size: 1.06rem;
+  font-weight: 800;
+  color: #1e2a5e;
+  margin-bottom: 16px;
+  line-height: 1.55;
 }
 
-body:has(#storySubjectList) .bar-track,
-body:has(#wrongBookList) .bar-track,
-body:has(#dailyMissionList) .bar-track,
-body:has(#storySubjectList) .level-track,
-body:has(#wrongBookList) .level-track,
-body:has(#dailyMissionList) .level-track {
-  background: rgba(255,255,255,.66) !important;
-  box-shadow: inset 0 1px 3px rgba(70,60,100,.12);
+/* 選項 */
+.duel-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.duel-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(124,123,255,.18);
+  background: rgba(124,123,255,.05);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 700;
+  text-align: left;
+  transition: border-color .14s, background .14s, transform .1s;
+}
+.duel-option-btn b {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(124,123,255,.14);
+  font-size: .8rem;
+  flex-shrink: 0;
+  color: #7c7bff;
+}
+.duel-option-btn span { color: #293150; }
+.duel-option-btn:hover:not(:disabled) {
+  border-color: #7c7bff;
+  background: rgba(124,123,255,.1);
+  transform: translateY(-1px);
+}
+.duel-option-btn.duel-correct {
+  border-color: #43a047 !important;
+  background: #e8f5e9 !important;
+}
+.duel-option-btn.duel-correct b { background: #43a047; color: #fff; }
+.duel-option-btn.duel-wrong {
+  border-color: #e53935 !important;
+  background: #ffebee !important;
+}
+.duel-option-btn.duel-wrong b { background: #e53935; color: #fff; }
+@media (max-width: 480px) {
+  .duel-options { grid-template-columns: 1fr; }
 }
 
-body:has(#storySubjectList) .bar-fill,
-body:has(#wrongBookList) .bar-fill,
-body:has(#dailyMissionList) .bar-fill,
-body:has(#storySubjectList) .level-track span,
-body:has(#wrongBookList) .level-track span,
-body:has(#dailyMissionList) .level-track span {
-  background: linear-gradient(90deg, #ff72b8, #8d76ff, #56c9ff) !important;
-  box-shadow: 0 0 16px rgba(255,114,184,.36);
+/* 合作模式：已作答提示 */
+.coop-answered-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: .88rem;
+  font-weight: 700;
+  margin-top: 4px;
 }
 
-@keyframes qaGlassSheen {
-  0%, 45% { transform: translateX(-42%) rotate(8deg); opacity: 0; }
-  55% { opacity: .95; }
-  100% { transform: translateX(42%) rotate(8deg); opacity: 0; }
+/* 遊戲結束結果浮層 */
+.duel-result-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  z-index: 10;
 }
-
-@keyframes qaSparkleDrift {
-  from { background-position: 0 0, 45px 25px, 80px 65px; }
-  to { background-position: 120px 120px, 215px 195px, 300px 285px; }
+.duel-result-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 24px;
+  text-align: center;
 }
-
-@keyframes qaGlassBgFloat {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(12px, -10px, 0) scale(1.025); }
+.duel-result-icon { font-size: 3.5rem; }
+.duel-result-card h2 { font-size: 1.5rem; font-weight: 900; color: #1e2a5e; margin: 0; }
+.duel-final-scores {
+  display: flex;
+  gap: 32px;
 }
-
-@media (max-width: 720px) {
-  body:has(#storySubjectList) .story-hero-card {
-    grid-template-columns: 1fr;
-    background-size: 260px auto, auto, auto, auto !important;
-  }
-  body:has(#storySubjectList) .tool-card,
-  body:has(#wrongBookList) .tool-card,
-  body:has(#dailyMissionList) .tool-card {
-    padding: 18px !important;
-    border-radius: 24px !important;
-  }
+.duel-final-scores > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
-
-/* ── 成就展示牆 ── */
-.achievement-showcase-title {
-  font-size: .8rem; font-weight: 700; color: #f59e0b; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 6px;
-}
-.achievement-showcase-row {
-  display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; min-height: 48px;
-  padding: 10px; background: rgba(245,158,11,.06); border: 1.5px dashed rgba(245,158,11,.35);
-  border-radius: 16px;
-}
-.showcase-empty {
-  color: #aaa; font-size: .83rem; display: flex; align-items: center; gap: 6px;
-}
-.showcase-badge {
-  display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 10px;
-  border-radius: 99px; color: #fff; font-size: .82rem; font-weight: 700;
-  position: relative; box-shadow: 0 2px 8px rgba(0,0,0,.18);
-}
-.showcase-badge-icon { font-size: 1rem; }
-.showcase-badge-label { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.showcase-remove {
-  background: rgba(0,0,0,.25); border: none; color: #fff; border-radius: 50%;
-  width: 18px; height: 18px; font-size: .65rem; cursor: pointer; display: flex;
-  align-items: center; justify-content: center; flex-shrink: 0;
-}
-
-/* ── 成就卡片徽章圖示 ── */
-.achievement-badge-icon {
-  width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; flex-shrink: 0; font-size: 1.2rem; color: #fff;
-  box-shadow: 0 3px 10px rgba(0,0,0,.18);
-}
-.profile-achievement-card {
-  display: flex; align-items: center; gap: 14px;
-}
-.showcase-toggle-btn {
-  margin-left: auto; background: none; border: 1.5px solid rgba(245,158,11,.4);
-  border-radius: 99px; width: 34px; height: 34px; cursor: pointer; flex-shrink: 0;
-  font-size: .9rem; color: #f59e0b; transition: all .15s; display: flex;
-  align-items: center; justify-content: center;
-}
-.showcase-toggle-btn.active { background: rgba(245,158,11,.15); border-color: #f59e0b; }
-.showcase-toggle-btn:hover { background: rgba(245,158,11,.12); }
-
-body.dark-mode .achievement-showcase-row { background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.25); }
-body.dark-mode .showcase-empty { color: #666; }
-
-/* ── 故事模式合作行 ── */
-.story-coop-row {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;
-}
-.story-coop-card {
-  display: flex; flex-direction: column; gap: 8px;
-  background: rgba(255,255,255,.55); border: 1.5px solid rgba(255,255,255,.7);
-  border-radius: 18px; padding: 14px; transition: transform .15s;
-}
-.story-coop-card:hover { transform: translateY(-2px); }
-.story-coop-icon { font-size: 1.6rem; margin-bottom: 2px; }
-.story-coop-card strong { font-size: .95rem; color: #293150; }
-.story-coop-card p { font-size: .82rem; color: #666; margin: 0; }
-@media (max-width: 580px) {
-  .story-coop-row { grid-template-columns: 1fr; }
-}
-body.dark-mode .story-coop-card { background: rgba(40,35,60,.6); border-color: rgba(255,255,255,.1); }
-body.dark-mode .story-coop-card strong { color: #e8eaf6; }
-body.dark-mode .story-coop-card p { color: #aaa; }
+.duel-final-scores span { font-size: .86rem; color: #66709b; }
+.duel-final-scores strong { font-size: 2rem; font-weight: 900; color: #7c7bff; }
