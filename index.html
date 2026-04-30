@@ -7,19 +7,19 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dark_mode.css">
 </head>
 <body>
   <div class="sparkle-layer"></div>
   <main class="page-wrap home-page">
-    <header class="top-bar">
+    <header class="top-bar container-fluid">
       <div class="logo-area">
         <img src="images/LOGO.png" class="logo-img" alt="QuizArena Logo">
       </div>
 
-      <div class="top-actions">
+      <div class="top-actions d-flex flex-wrap justify-content-center justify-content-lg-end">
         <div class="login-status-card" id="loginStatusCard">
-          <div class="login-status-icon">
-            <img id="loginStatusAvatar" alt="avatar" style="display:none;">
+          <div class="login-status-icon" id="loginStatusAvatar">
             <i class="fa-solid fa-circle-user"></i>
           </div>
           <div class="login-status-text">
@@ -27,6 +27,10 @@
             <strong id="loginStatus" class="status-name">尚未登入</strong>
           </div>
         </div>
+
+        <button class="custom-btn btn-auth nav-menu-btn d-none" id="navMenuBtn" type="button" aria-label="開啟選單">
+          <i class="fa-solid fa-bars"></i>
+        </button>
 
         <button class="custom-btn btn-auth" id="loginBtn">
           <i class="fa fa-user"></i> 登入 / 註冊
@@ -36,9 +40,31 @@
           <i class="fa-solid fa-right-from-bracket"></i> 登出
         </button>
 
-        <button class="custom-btn btn-create" id="createQuizBtn">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫
-        </button>
+        <div class="nav-actions-drawer" id="navActionsDrawer">
+          <button class="custom-btn btn-auth d-none" id="profileBtn">
+            <i class="fa-solid fa-id-card"></i> 個人資料
+          </button>
+
+          <button class="custom-btn btn-create d-none" id="createQuizBtn">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫
+          </button>
+
+          <button class="custom-btn btn-join d-none" id="wrongBookBtn">
+            <i class="fa-solid fa-book-open-reader"></i> 錯題本
+          </button>
+
+          <button class="custom-btn btn-story d-none" id="storyModeBtn">
+            <i class="fa-solid fa-map-location-dot"></i> 故事模式
+          </button>
+
+          <button class="custom-btn btn-daily d-none" id="dailyMissionBtn">
+            <i class="fa-solid fa-calendar-check"></i> 每日任務
+          </button>
+
+          <button class="custom-btn btn-auth d-none" id="teacherReportBtn">
+            <i class="fa-solid fa-chart-line"></i> 老師模式
+          </button>
+        </div>
 
         <span class="lang-switcher-slot"></span>
 
@@ -49,10 +75,19 @@
         <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
           <i class="fa-solid fa-moon" id="darkModeIcon"></i>
         </button>
+        <select class="music-theme-select" id="homeMusicThemeSelect" title="首頁音樂">
+          <option value="spark">Spark Pop</option>
+          <option value="lofi">Lo-fi Study</option>
+          <option value="arcade">Arcade Rush</option>
+          <option value="focus">Focus Piano</option>
+          <option value="adventure">Adventure Brass</option>
+          <option value="dream">Dream Synth</option>
+        </select>
       </div>
     </header>
+    <div class="nav-drawer-overlay" id="navDrawerOverlay"></div>
 
-    <section class="main-section text-center">
+    <section class="main-section text-center container">
       <div class="decor decor-q1">?</div>
       <div class="decor decor-star">★</div>
       <div class="decor decor-q2">?</div>
@@ -75,6 +110,7 @@
     <div class="friends-fab-stack">
       <button id="friendsDockBtn" class="friends-dock-btn" style="display:none;" type="button">
         <i class="fa-solid fa-user-group"></i>
+        <span id="friendDockBadge" class="friends-dock-badge d-none">0</span>
         <span>好友排行</span>
       </button>
       <button id="openAddFriendBtn" class="friends-fab-mini" style="display:none;" type="button" aria-label="加入好友">
@@ -106,9 +142,17 @@
           <i class="fa-solid fa-envelope-open-text"></i>
           <span id="friendRequestBadge" class="friends-request-badge d-none">0</span>
         </span>
-        <span>好友申請紀錄</span>
+        <span>好友申請</span>
         <i class="fa-solid fa-angle-right"></i>
       </button>
+
+      <section class="achievements-panel">
+        <div class="achievements-head">
+          <span><i class="fa-solid fa-award"></i> 成就</span>
+          <strong id="achievementCount">0/0</strong>
+        </div>
+        <div id="achievementsList" class="achievements-list"></div>
+      </section>
     </section>
 
     <section class="lobby-shell">
@@ -163,12 +207,22 @@
         <div class="modal-body p-4">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0">加入好友</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <p class="text-pink mb-3">輸入玩家帳號後送出好友申請。</p>
           <input type="text" id="friendUsernameInput" class="pin-input small-pin-input friends-modal-input" placeholder="輸入玩家帳號">
+          <section class="friend-recommend-section">
+            <div class="friend-recommend-head">
+              <strong>推薦增加</strong>
+              <span>依縣市與共同遊玩紀錄推薦</span>
+            </div>
+            <div id="friendRecommendationList" class="friend-recommend-list">
+              <div class="friend-recommend-empty">載入推薦中...</div>
+            </div>
+          </section>
           <div class="d-flex justify-content-end gap-2 mt-3">
-            <button class="custom-btn btn-join" data-bs-dismiss="modal">取消</button>
-            <button class="custom-btn btn-create" id="addFriendBtn">送出申請</button>
+            <button class="custom-btn btn-join px-4" data-bs-dismiss="modal">取消</button>
+            <button class="custom-btn btn-create px-4" id="addFriendBtn">送出申請</button>
           </div>
         </div>
       </div>
@@ -176,7 +230,7 @@
   </div>
 
   <div class="modal fade" id="friendRequestsModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content cute-modal">
         <div class="modal-body p-4">
           <div class="d-flex justify-content-between align-items-center mb-3">
@@ -189,195 +243,15 @@
     </div>
   </div>
 
-  <div class="modal fade" id="profileModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+  <div class="modal fade" id="friendProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content cute-modal">
         <div class="modal-body p-4">
-          <div class="game-hub-shell">
-            <div class="game-hub-header mb-4">
-              <div>
-                <div class="game-hub-kicker">Player Hub</div>
-                <h5 class="mb-1">冒險資料站</h5>
-                <div class="profile-helper-text">把成長、複習、任務與戰績整理成一座可探索的學習宇宙。</div>
-              </div>
-              <div class="game-hub-nav" id="gameHubNav">
-                <button type="button" class="hub-nav-btn active" data-scene="profile"><i class="fa-solid fa-user-astronaut"></i><span>Profile</span></button>
-                <button type="button" class="hub-nav-btn" data-scene="report"><i class="fa-solid fa-chart-line"></i><span>Teacher Report</span></button>
-                <button type="button" class="hub-nav-btn" data-scene="wrongbook"><i class="fa-solid fa-book-open-reader"></i><span>Wrong Book</span></button>
-                <button type="button" class="hub-nav-btn" data-scene="story"><i class="fa-solid fa-map-location-dot"></i><span>Story Mode</span></button>
-                <button type="button" class="hub-nav-btn" data-scene="daily"><i class="fa-solid fa-gift"></i><span>Daily Mission</span></button>
-              </div>
-            </div>
-
-            <section class="hub-scene scene-profile active" data-scene="profile">
-              <div class="scene-hero profile-scene-hero">
-                <div class="profile-modal-head">
-                  <label class="profile-avatar-upload" for="profileAvatarInput">
-                    <img id="profileAvatarPreview" alt="avatar" style="display:none;">
-                    <span id="profileAvatarFallback"><i class="fa-solid fa-circle-user"></i></span>
-                  </label>
-                  <div class="profile-head-copy">
-                    <div class="profile-username" id="profileUsernameText">-</div>
-                    <div class="profile-current-title" id="profileCurrentTitle">尚未選擇稱號</div>
-                    <div class="hub-status-row" id="profileStatusChips"></div>
-                  </div>
-                </div>
-              </div>
-              <input type="file" id="profileAvatarInput" accept="image/png, image/jpeg" hidden>
-              <div class="profile-scene-grid">
-                <div class="soft-box profile-identity-panel">
-                  <div class="section-label mb-2">英雄名片</div>
-                  <label class="form-label pink-text">已擁有頭像</label>
-                  <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                    <label class="custom-btn btn-create profile-upload-btn" for="profileAvatarInput">
-                      <i class="fa-solid fa-upload"></i> 上傳頭像
-                    </label>
-                    <span class="profile-helper-text">上傳後會直接加入你的頭像清單，點一下就能切換使用。</span>
-                  </div>
-                  <div id="profileAvatarGallery" class="profile-avatar-gallery"></div>
-                  <div class="mt-3">
-                    <label class="form-label pink-text">選擇稱號</label>
-                    <select id="profileTitleSelect" class="form-select cute-select"></select>
-                  </div>
-                </div>
-                <div class="soft-box profile-appearance-box">
-                  <div class="section-label mb-2">外觀工坊</div>
-                  <div class="profile-appearance-shell">
-                    <button type="button" class="circle-arrow profile-nav-btn" id="profilePrevPartBtn">
-                      <i class="fa-solid fa-chevron-left"></i>
-                    </button>
-                    <div class="profile-appearance-stage-wrap">
-                      <div class="avatar-stage profile-appearance-stage">
-                        <img src="images/face/face.png" class="avatar-layer" id="profileFaceLayer" alt="face">
-                        <img src="images/face/eyes01.png" class="avatar-layer" id="profileEyeLayer" alt="eyes">
-                        <img src="images/hair/hair01.png" class="avatar-layer" id="profileHairLayer" alt="hair">
-                      </div>
-                      <div class="profile-appearance-actions">
-                        <div class="tab-switch compact">
-                          <button type="button" class="switch-btn active" id="profileHairTabBtn">髮型</button>
-                          <button type="button" class="switch-btn" id="profileEyeTabBtn">眼睛</button>
-                        </div>
-                        <div class="profile-slider-row">
-                          <span>眼睛上下微調</span>
-                          <input type="range" min="-12" max="12" value="0" id="profileEyeSlider">
-                        </div>
-                        <div class="profile-appearance-buttons">
-                          <button type="button" class="mini-btn" id="profileRandomBtn"><i class="fa-solid fa-dice"></i> 隨機</button>
-                          <button type="button" class="mini-btn" id="profileResetBtn"><i class="fa-solid fa-rotate-left"></i> 重設</button>
-                        </div>
-                      </div>
-                    </div>
-                    <button type="button" class="circle-arrow profile-nav-btn" id="profileNextPartBtn">
-                      <i class="fa-solid fa-chevron-right"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div class="profile-layout-grid mt-3">
-                <div class="soft-box profile-achievement-box">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div>
-                      <div class="section-label">成就收藏</div>
-                      <div class="profile-helper-text">像 RPG 勳章牆一樣展示你已解鎖的里程碑。</div>
-                    </div>
-                    <span class="profile-count-pill" id="profileAchievementCount">0 項</span>
-                  </div>
-                  <div id="profileAchievements" class="profile-achievements-list"></div>
-                </div>
-                <div class="soft-box">
-                  <div class="section-label mb-2">錯題摘要</div>
-                  <div id="profileWrongStats" class="profile-wrong-stats"></div>
-                </div>
-              </div>
-              <div class="d-flex justify-content-end mt-3">
-                <button class="custom-btn btn-create" id="saveProfileBtn">儲存個人資料</button>
-              </div>
-            </section>
-
-            <section class="hub-scene scene-report" data-scene="report">
-              <div class="scene-hero report-scene-hero">
-                <div>
-                  <div class="game-hub-kicker">Teacher Report</div>
-                  <h3>戰績分析中心</h3>
-                  <p>保留原本的歷史房間報表功能，改成更像遊戲戰績中心的資訊架構。</p>
-                </div>
-                <button class="mini-btn" type="button" id="exportRoomHistoryBtn"><i class="fa-solid fa-file-csv"></i> 匯出 CSV</button>
-              </div>
-              <div class="soft-box profile-report-box">
-                <div class="profile-report-filters">
-                  <input type="text" id="historyPlayerFilter" class="form-control cute-input" placeholder="搜尋玩家名稱">
-                  <input type="text" id="historyBankFilter" class="form-control cute-input" placeholder="搜尋題庫或房間">
-                  <select id="historyModeFilter" class="form-select cute-select">
-                    <option value="">全部賽制</option>
-                    <option value="individual">個人</option>
-                    <option value="team">團隊</option>
-                  </select>
-                  <input type="date" id="historyStartDate" class="form-control cute-input">
-                  <input type="date" id="historyEndDate" class="form-control cute-input">
-                  <button class="mini-btn" type="button" id="reloadRoomHistoryBtn"><i class="fa-solid fa-rotate"></i> 載入所有房間記錄</button>
-                </div>
-                <div class="report-overview-grid" id="reportOverviewCards"></div>
-                <div class="profile-report-grid">
-                  <div id="roomHistoryList" class="room-history-list"></div>
-                  <div id="roomHistoryDetail" class="room-history-detail">
-                    <div class="profile-wrong-empty">點左邊任一筆歷史記錄後，這裡會自動顯示完整房間資訊、統計與圖表。</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="hub-scene scene-wrongbook" data-scene="wrongbook">
-              <div class="scene-hero wrongbook-scene-hero">
-                <div>
-                  <div class="game-hub-kicker">Wrong Book</div>
-                  <h3>回憶修復站</h3>
-                  <p>把錯題整理成可重刷的記憶路徑，讓複習更像養成而不是被懲罰。</p>
-                </div>
-                <a class="mini-btn" href="create_home.html?openWrongBook=1"><i class="fa-solid fa-bolt"></i> 前往再挑戰</a>
-              </div>
-              <div class="wrongbook-overview-grid" id="wrongBookOverviewCards"></div>
-              <div class="wrongbook-list" id="wrongBookSceneList"></div>
-            </section>
-
-            <section class="hub-scene scene-story" data-scene="story">
-              <div class="scene-hero story-scene-hero">
-                <div>
-                  <div class="game-hub-kicker">Story Mode</div>
-                  <h3>星圖冒險</h3>
-                  <p>以你目前的成長進度生成章節路線，讓學習像推進一張 RPG 世界地圖。</p>
-                </div>
-                <div class="story-scene-badge" id="storyModeProgressText">旅程啟動中</div>
-              </div>
-              <div class="story-mode-layout">
-                <div class="story-map-panel">
-                  <div class="story-route-glow"></div>
-                  <div class="story-map-grid" id="storyChapterMap"></div>
-                </div>
-                <div class="story-preview-panel" id="storyPreviewPanel"></div>
-              </div>
-            </section>
-
-            <section class="hub-scene scene-daily" data-scene="daily">
-              <div class="scene-hero daily-scene-hero">
-                <div>
-                  <div class="game-hub-kicker">Daily Mission</div>
-                  <h3>每日行動獎勵</h3>
-                  <p>把今天的任務做成像戰鬥通行證一樣清楚又有獎勵感。</p>
-                </div>
-                <div class="daily-streak-pill" id="dailyMissionStreak">連續登入 0 天</div>
-              </div>
-              <div class="daily-mission-layout">
-                <div class="daily-mission-list" id="dailyMissionList"></div>
-                <div class="daily-reward-rail">
-                  <div class="soft-box daily-milestone-box">
-                    <div class="section-label mb-2">寶箱里程碑</div>
-                    <div id="dailyMissionMilestones" class="daily-milestone-list"></div>
-                  </div>
-                  <div class="soft-box daily-summary-box" id="dailyMissionSummary"></div>
-                </div>
-              </div>
-            </section>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">好友個人資料</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
+          <div id="friendProfileContent" class="friend-profile-content" data-i18n-skip="true"></div>
         </div>
       </div>
     </div>
@@ -443,5 +317,24 @@
   <script src="js/Audio_manager.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/index.js"></script>
+  <script>
+    const _darkBtn = document.getElementById('darkModeBtn');
+    const _darkIcon = document.getElementById('darkModeIcon');
+    function _applyDark(on) {
+      document.body.classList.toggle('dark-mode', on);
+      if (_darkIcon) _darkIcon.className = on ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      localStorage.setItem('quizDarkMode', on ? '1' : '0');
+    }
+    _darkBtn?.addEventListener('click', () => _applyDark(!document.body.classList.contains('dark-mode')));
+    _applyDark(localStorage.getItem('quizDarkMode') === '1');
+    const _musicSelect = document.getElementById('homeMusicThemeSelect');
+    if (_musicSelect) {
+      _musicSelect.value = localStorage.getItem('quizMusicTheme') || 'spark';
+      _musicSelect.addEventListener('change', () => {
+        window.AudioManager?.setTheme?.(_musicSelect.value);
+        window.AudioManager?.startBgMusic?.();
+      });
+    }
+  </script>
 </body>
 </html>

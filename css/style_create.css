@@ -130,6 +130,24 @@ body::before {
   filter: brightness(1.02);
 }
 
+.lang-switcher {
+  min-height: 48px;
+  padding: 9px 16px;
+  color: #8b5c7e;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.62);
+  border-radius: 999px;
+  outline: none;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 10px 20px rgba(77, 59, 68, 0.12);
+}
+
+body.dark-mode .lang-switcher {
+  color: #f7fbff;
+  border-color: rgba(255,255,255,.16);
+  background: linear-gradient(135deg, rgba(32, 46, 94, .94), rgba(24, 37, 78, .9));
+}
+
 .btn-join {
   background: linear-gradient(180deg, #63b5ff 0%, #448df1 100%);
 }
@@ -731,12 +749,13 @@ body::before {
 }
 
 .question-card {
-  background: rgba(255,255,255,.7);
+  background: rgba(255,255,255,.94);
   border-radius: 18px;
   padding: 14px;
-  border: 1px solid rgba(255,255,255,.75);
+  border: 1px solid rgba(255, 180, 210, .62);
   cursor: pointer;
-  color: #c96891;
+  color: #7b3157;
+  box-shadow: 0 10px 22px rgba(190, 90, 130, 0.12);
 }
 
 .question-card.active {
@@ -745,18 +764,22 @@ body::before {
 
 .question-card .meta {
   font-size: .86rem;
-  color: #9b7e8a;
+  color: #8d5f75;
   margin-top: 6px;
 }
 
 .question-card .desc {
   font-size: .92rem;
-  color: #6d5c64;
+  color: #5e4050;
   margin-top: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.question-card strong {
+  color: #8d2859;
 }
 
 .picker-list {
@@ -903,68 +926,114 @@ body::before {
     min-height: 180px;
   }
 }
+/* ================================
+   AI 生題區塊輸入框修正
+================================ */
 
-body.dark-mode {
-  background-image:
-    radial-gradient(circle at 15% 20%, rgba(118, 93, 255, 0.16), transparent 22%),
-    radial-gradient(circle at 82% 18%, rgba(93, 154, 255, 0.12), transparent 24%),
-    linear-gradient(160deg, #060b1a 0%, #0b1530 42%, #11102a 100%);
-  color: #edf3ff;
+#aiSourceModeInput,
+#aiDifficultyInput,
+#aiCountInput,
+#aiCategoryInput,
+#aiTopicInput {
+  min-height: 58px;
+  padding: 14px 18px;
+  font-size: 1rem;
+  border-radius: 18px;
+  line-height: 1.4;
 }
 
-body.dark-mode .main-card {
-  background-image: linear-gradient(180deg, rgba(19, 30, 70, 0.82), rgba(30, 18, 61, 0.86));
-  border-color: rgba(181, 206, 255, 0.16);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+/* 你圈起來的「網路」選單 */
+#aiSourceModeInput {
+  min-width: 160px;
+  width: 100%;
+  white-space: nowrap;
+}
+.option-row.is-fill {
+  grid-template-columns: 56px minmax(0, 1fr) !important;
+}
+/* AI 生題那排選項不要太擠 */
+.ai-control-row,
+.ai-form-row,
+.ai-setting-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr;
+  gap: 12px;
+  align-items: stretch;
 }
 
-body.dark-mode .left-box,
-body.dark-mode .editor-box,
-body.dark-mode .soft-box,
-body.dark-mode .question-chip,
-body.dark-mode .no-title,
-body.dark-mode .mini-list-box,
-body.dark-mode .mini-item,
-body.dark-mode .question-card,
-body.dark-mode .bank-card,
-body.dark-mode .modal-cute {
-  background: rgba(10, 21, 52, 0.68) !important;
-  border-color: rgba(176, 201, 255, 0.15) !important;
-  color: #eef4ff !important;
+/* 手機版改成一欄 */
+@media (max-width: 768px) {
+  .ai-control-row,
+  .ai-form-row,
+  .ai-setting-row {
+    grid-template-columns: 1fr;
+  }
+
+  #aiSourceModeInput,
+  #aiDifficultyInput,
+  #aiCountInput,
+  #aiCategoryInput,
+  #aiTopicInput {
+    width: 100%;
+  }
 }
 
-body.dark-mode .title-main {
-  background: linear-gradient(180deg, #ffb8de 0%, #d9b7ff 52%, #8db4ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* 修正填充題答案無法輸入 */
+.option-row {
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  align-items: center !important;
+  gap: 14px !important;
+  width: 100% !important;
 }
 
-body.dark-mode .title-sub,
-body.dark-mode .small-muted,
-body.dark-mode .setting-label,
-body.dark-mode .section-label {
-  color: #d7e2ff;
+.option-row .correct-check[style*="display:none"] {
+  display: none !important;
 }
 
-body.dark-mode .cute-input,
-body.dark-mode .cute-select,
-body.dark-mode .form-control,
-body.dark-mode .form-select {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(176, 201, 255, 0.16);
-  color: #fff;
+.option-input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 220px !important;
+  min-height: 58px !important;
+  padding: 14px 18px !important;
+  color: #5b3444 !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 2px solid rgba(255, 255, 255, 0.9) !important;
+  border-radius: 18px !important;
+  font-size: 1rem !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
-body.dark-mode .cute-input::placeholder {
-  color: rgba(255,255,255,0.55);
+#optionsArea {
+  width: 100% !important;
+  display: grid !important;
+  gap: 14px !important;
 }
 
-body.dark-mode .top-action,
-body.dark-mode .add-question-btn {
-  box-shadow: 0 16px 26px rgba(0, 0, 0, 0.24);
+@media (max-width: 576px) {
+  .option-row {
+    grid-template-columns: 44px minmax(0, 1fr) 24px !important;
+  }
+
+  .option-row.is-fill {
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+  }
+
+  .option-input {
+    min-width: 0 !important;
+  }
+}
+.matching-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
 }
 
-body.dark-mode #wrongBookQuickWrap {
-  background: linear-gradient(135deg, rgba(115, 81, 220, 0.54), rgba(255, 126, 184, 0.28));
-  border: 1px solid rgba(255,255,255,0.14);
+@media (max-width: 720px) {
+  .matching-row {
+    grid-template-columns: auto 1fr;
+  }
 }

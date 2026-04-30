@@ -1,1334 +1,965 @@
-const toastEl = document.getElementById("toast");
-const pinModal = new bootstrap.Modal(document.getElementById("pinModal"));
-const roomKeyModal = new bootstrap.Modal(document.getElementById("roomKeyModal"));
-const memberModal = new bootstrap.Modal(document.getElementById("memberModal"));
-const addFriendModal = new bootstrap.Modal(document.getElementById("addFriendModal"));
-const friendRequestsModal = new bootstrap.Modal(document.getElementById("friendRequestsModal"));
-const profileModal = new bootstrap.Modal(document.getElementById("profileModal"));
+(() => {
+  let pinModal;
+  let roomKeyModal;
+  let memberModal;
+  let addFriendModal;
+  let friendRequestsModal;
+  let friendProfileModal;
 
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const loginStatus = document.getElementById("loginStatus");
-const loginStatusCard = document.getElementById("loginStatusCard");
-const loginStatusAvatar = document.getElementById("loginStatusAvatar");
-const createQuizBtn = document.getElementById("createQuizBtn");
-const refreshLobbyBtn = document.getElementById("refreshLobbyBtn");
-const darkModeBtn = document.getElementById("darkModeBtn");
-const darkModeIcon = document.getElementById("darkModeIcon");
-
-const pinInput = document.getElementById("pinInput");
-const startBtn = document.getElementById("startBtn");
-const confirmRoomKeyBtn = document.getElementById("confirmRoomKeyBtn");
-const roomKeyInput = document.getElementById("roomKeyInput");
-const roomKeyPrompt = document.getElementById("roomKeyPrompt");
-
-const loginForm = document.getElementById("loginForm");
-const registerForm = document.getElementById("registerForm");
-const loginUsername = document.getElementById("loginUsername");
-const loginPassword = document.getElementById("loginPassword");
-const registerUsername = document.getElementById("registerUsername");
-const registerEmail = document.getElementById("registerEmail");
-const registerPassword = document.getElementById("registerPassword");
-
-const lobbyGrid = document.getElementById("lobbyGrid");
-const waitingRoomCount = document.getElementById("waitingRoomCount");
-const onlinePlayerCount = document.getElementById("onlinePlayerCount");
-const privateRoomCount = document.getElementById("privateRoomCount");
-
-const friendsShell = document.getElementById("friendsShell");
-const friendsRecords = document.getElementById("friendsRecords");
-const friendsList = document.getElementById("friendsList");
-const friendsDockBtn = document.getElementById("friendsDockBtn");
-const closeFriendsDrawerBtn = document.getElementById("closeFriendsDrawerBtn");
-const openAddFriendBtn = document.getElementById("openAddFriendBtn");
-const addFriendBtn = document.getElementById("addFriendBtn");
-const friendUsernameInput = document.getElementById("friendUsernameInput");
-const openFriendRequestsBtn = document.getElementById("openFriendRequestsBtn");
-const friendRequestBadge = document.getElementById("friendRequestBadge");
-const friendRequestsContent = document.getElementById("friendRequestsContent");
-const profileAvatarInput = document.getElementById("profileAvatarInput");
-const profileAvatarPreview = document.getElementById("profileAvatarPreview");
-const profileAvatarFallback = document.getElementById("profileAvatarFallback");
-const profileUsernameText = document.getElementById("profileUsernameText");
-const profileCurrentTitle = document.getElementById("profileCurrentTitle");
-const profileTitleSelect = document.getElementById("profileTitleSelect");
-const profileAvatarGallery = document.getElementById("profileAvatarGallery");
-const profileAchievements = document.getElementById("profileAchievements");
-const profileAchievementCount = document.getElementById("profileAchievementCount");
-const profileWrongStats = document.getElementById("profileWrongStats");
-const profileFaceLayer = document.getElementById("profileFaceLayer");
-const profileHairLayer = document.getElementById("profileHairLayer");
-const profileEyeLayer = document.getElementById("profileEyeLayer");
-const profileHairTabBtn = document.getElementById("profileHairTabBtn");
-const profileEyeTabBtn = document.getElementById("profileEyeTabBtn");
-const profilePrevPartBtn = document.getElementById("profilePrevPartBtn");
-const profileNextPartBtn = document.getElementById("profileNextPartBtn");
-const profileEyeSlider = document.getElementById("profileEyeSlider");
-const profileRandomBtn = document.getElementById("profileRandomBtn");
-const profileResetBtn = document.getElementById("profileResetBtn");
-const historyPlayerFilter = document.getElementById("historyPlayerFilter");
-const historyBankFilter = document.getElementById("historyBankFilter");
-const historyModeFilter = document.getElementById("historyModeFilter");
-const historyStartDate = document.getElementById("historyStartDate");
-const historyEndDate = document.getElementById("historyEndDate");
-const reloadRoomHistoryBtn = document.getElementById("reloadRoomHistoryBtn");
-const exportRoomHistoryBtn = document.getElementById("exportRoomHistoryBtn");
-const roomHistoryList = document.getElementById("roomHistoryList");
-const roomHistoryDetail = document.getElementById("roomHistoryDetail");
-const saveProfileBtn = document.getElementById("saveProfileBtn");
-const gameHubNav = document.getElementById("gameHubNav");
-const reportOverviewCards = document.getElementById("reportOverviewCards");
-const profileStatusChips = document.getElementById("profileStatusChips");
-const wrongBookOverviewCards = document.getElementById("wrongBookOverviewCards");
-const wrongBookSceneList = document.getElementById("wrongBookSceneList");
-const storyChapterMap = document.getElementById("storyChapterMap");
-const storyPreviewPanel = document.getElementById("storyPreviewPanel");
-const storyModeProgressText = document.getElementById("storyModeProgressText");
-const dailyMissionStreak = document.getElementById("dailyMissionStreak");
-const dailyMissionList = document.getElementById("dailyMissionList");
-const dailyMissionMilestones = document.getElementById("dailyMissionMilestones");
-const dailyMissionSummary = document.getElementById("dailyMissionSummary");
-
-const showLoginBtn = document.getElementById("showLoginBtn");
-const showRegisterBtn = document.getElementById("showRegisterBtn");
-const loginFormBox = document.getElementById("loginForm");
-const registerFormBox = document.getElementById("registerForm");
-
-const HAIRS = [
-  "images/hair/hair01.png","images/hair/hair02.png","images/hair/hair03.png","images/hair/hair04.png",
-  "images/hair/hair05.png","images/hair/hair06.png","images/hair/hair09.png","images/hair/hair10.png",
-  "images/hair/hair11.png","images/hair/hair12.png","images/hair/hair13.png","images/hair/hair14.png",
-  "images/hair/hair15.png","images/hair/hair16.png","images/hair/hair17.png"
-];
-const EYES = [
-  "images/face/eyes01.png","images/face/eyes02.png","images/face/eyes03.png","images/face/eyes04.png",
-  "images/face/eyes05.png","images/face/eyes06.png","images/face/eyes07.png","images/face/eyes08.png",
-  "images/face/eyes09.png","images/face/eyes10.png","images/face/eyes11.png","images/face/eyes12.png"
-];
-
-const state = {
-  rooms: [],
-  pendingJoinRoom: null,
-  pendingAfterLogin: null,
-  friendRequests: [],
-  pendingFriendCount: 0,
-  profile: null,
-  profileAvatarImage: "",
-  profileAvatarGallery: [],
-  currentAppearancePart: "hair",
-  hairIndex: 0,
-  eyeIndex: 0,
-  eyesOffsetY: 0,
-  isSavingProfile: false,
-  profileSyncPausedUntil: 0,
-  roomHistoryRecords: [],
-  selectedHistoryId: 0,
-  activeHubScene: "profile",
-};
-
-function showToast(message, delay = 2400) {
-  if (!toastEl) return;
-  toastEl.textContent = message;
-  toastEl.classList.add("show");
-  clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => toastEl.classList.remove("show"), delay);
-}
-
-function showModalMessage(message) {
-  const modalMessage = document.getElementById("modalMessage");
-  if (modalMessage) modalMessage.textContent = message;
-  pinModal.show();
-}
-
-function getCurrentUser() {
-  return localStorage.getItem("currentUser") || "";
-}
-
-function setCurrentUser(username) {
-  localStorage.setItem("currentUser", username);
-}
-
-function clearCurrentUser() {
-  localStorage.removeItem("currentUser");
-}
-
-function saveLocalProfile(profile) {
-  localStorage.setItem("quizUserProfile", JSON.stringify(profile || {}));
-}
-
-function clearLocalProfile() {
-  localStorage.removeItem("quizUserProfile");
-}
-
-function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function buildCsvRow(values) {
-  return values.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",");
-}
-
-function formatDateTime(ts) {
-  if (!ts) return "-";
-  const date = new Date(Number(ts) * 1000);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("zh-TW", { hour12: false });
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function applyTheme(isDark) {
-  document.body.classList.toggle("dark-mode", !!isDark);
-  if (darkModeIcon) darkModeIcon.className = isDark ? "fa-solid fa-sun" : "fa-solid fa-moon";
-}
-
-function switchHubScene(scene) {
-  state.activeHubScene = scene || "profile";
-  document.querySelectorAll(".hub-nav-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.scene === state.activeHubScene);
-  });
-  document.querySelectorAll(".hub-scene").forEach((section) => {
-    section.classList.toggle("active", section.dataset.scene === state.activeHubScene);
-  });
-}
-
-function buildDerivedProgress(profile = {}) {
-  const wrongStats = Array.isArray(profile?.wrongStats) ? profile.wrongStats : [];
-  const achievements = Array.isArray(profile?.achievements) ? profile.achievements : [];
-  const historyCount = state.roomHistoryRecords.length;
-  const totalWrong = wrongStats.reduce((sum, item) => sum + Number(item.wrongCount || 0), 0);
-  const totalQuestions = state.roomHistoryRecords.reduce((sum, item) => sum + Number(item.questionCount || 0), 0);
-  const playerVisits = state.roomHistoryRecords.reduce((sum, item) => sum + Number(item.playerCount || 0), 0);
-  const wins = Number(profile?.wins || 0);
-  const level = 1 + wins + Math.floor(achievements.length / 2);
-  const storyExp = wins * 18 + achievements.length * 12 + Math.max(0, totalQuestions - totalWrong) * 2;
-  const streakSeed = wins + historyCount + achievements.length;
-  const streak = clamp((streakSeed % 9) + 2, 2, 10);
-  return {
-    wins,
-    wrongStats,
-    achievements,
-    historyCount,
-    totalWrong,
-    totalQuestions,
-    playerVisits,
-    level,
-    storyExp,
-    streak,
+  const state = {
+    rooms: [],
+    pendingJoinRoom: null,
+    pendingAfterLogin: null,
+    friendRequests: [],
+    pendingFriendCount: 0,
+    achievements: [],
+    profile: null,
   };
-}
 
-function renderProfileStatus(profile = {}) {
-  if (!profileStatusChips) return;
-  const derived = buildDerivedProgress(profile);
-  const chips = [
-    `Lv. ${derived.level}`,
-    `${derived.wins} Wins`,
-    `${derived.achievements.length} Achievements`,
-    `${derived.wrongStats.length} Review Notes`,
-  ];
-  profileStatusChips.innerHTML = chips.map((label) => `<span class="hub-status-chip">${escapeHtml(label)}</span>`).join("");
-}
+  const $ = (id) => document.getElementById(id);
 
-function renderReportOverview(profile = {}) {
-  if (!reportOverviewCards) return;
-  const derived = buildDerivedProgress(profile);
-  const totalRooms = derived.historyCount;
-  const accuracy = derived.totalQuestions ? Math.round(((derived.totalQuestions - derived.totalWrong) / derived.totalQuestions) * 100) : 0;
-  const cards = [
-    { label: "Rooms", value: totalRooms, tone: "violet" },
-    { label: "Questions", value: derived.totalQuestions, tone: "blue" },
-    { label: "Accuracy", value: `${accuracy}%`, tone: "pink" },
-    { label: "Players", value: derived.playerVisits, tone: "gold" },
-  ];
-  reportOverviewCards.innerHTML = cards.map((card) => `
-    <div class="report-overview-card tone-${card.tone}">
-      <span>${escapeHtml(card.label)}</span>
-      <strong>${escapeHtml(card.value)}</strong>
-    </div>
-  `).join("");
-}
-
-function renderWrongBookScene(profile = {}) {
-  if (!wrongBookOverviewCards || !wrongBookSceneList) return;
-  const rows = Array.isArray(profile?.wrongStats) ? profile.wrongStats : [];
-  const totalWrong = rows.reduce((sum, item) => sum + Number(item.wrongCount || 0), 0);
-  const categories = [...new Set(rows.map((item) => item.category || "General"))];
-  const overview = [
-    { label: "To Review", value: rows.length, meta: "counted by question" },
-    { label: "Mistakes", value: totalWrong, meta: "includes repeats" },
-    { label: "Categories", value: categories.length, meta: "current coverage" },
-  ];
-  wrongBookOverviewCards.innerHTML = overview.map((item) => `
-    <div class="wrongbook-overview-card">
-      <span>${escapeHtml(item.label)}</span>
-      <strong>${escapeHtml(item.value)}</strong>
-      <small>${escapeHtml(item.meta)}</small>
-    </div>
-  `).join("");
-  wrongBookSceneList.innerHTML = rows.length ? rows.map((item, index) => {
-    const intensity = clamp(Number(item.wrongCount || 0) * 18 + 24, 24, 100);
-    return `
-      <article class="wrongbook-card">
-        <div class="wrongbook-card-top">
-          <div>
-            <div class="wrongbook-card-tag">${escapeHtml(item.category || "General")} · ${escapeHtml(item.bankTitle || "Untitled Bank")}</div>
-            <h4>${index + 1}. ${escapeHtml(item.questionTitle || "Untitled Question")}</h4>
-          </div>
-          <div class="wrongbook-intensity">
-            <span>Pressure</span>
-            <strong>${intensity}%</strong>
-          </div>
-        </div>
-        <div class="wrongbook-progress">
-          <span style="width:${intensity}%"></span>
-        </div>
-        <div class="wrongbook-card-foot">
-          <span>Wrong x${Number(item.wrongCount || 0)}</span>
-          <span>Last seen ${formatDateTime(item.lastWrongAt)}</span>
-        </div>
-      </article>
-    `;
-  }).join("") : '<div class="profile-wrong-empty">No review items yet. This page wakes up when you miss questions.</div>';
-}
-
-function renderStoryModeScene(profile = {}) {
-  if (!storyChapterMap || !storyPreviewPanel) return;
-  const derived = buildDerivedProgress(profile);
-  const chapters = [
-    {
-      title: "Morning Star Academy",
-      subtitle: "Opening lessons and first win",
-      progress: clamp(derived.wins * 45 + derived.achievements.length * 10, 18, 100),
-      status: derived.wins ? "completed" : "active",
-      stars: clamp(1 + derived.wins, 1, 3),
-      boss: "Gatekeeper",
-    },
-    {
-      title: "Mirror Lake",
-      subtitle: "Repair mistakes and master categories",
-      progress: clamp(derived.wrongStats.length * 24 + 16, 10, 100),
-      status: derived.wrongStats.length >= 2 ? "active" : "locked",
-      stars: clamp(derived.wrongStats.length, 0, 3),
-      boss: "Mist Scribe",
-    },
-    {
-      title: "Sky Arena",
-      subtitle: "Multiplayer battles and streaks",
-      progress: clamp(derived.historyCount * 18 + derived.wins * 14, 8, 100),
-      status: derived.historyCount >= 2 ? "active" : "locked",
-      stars: clamp(derived.historyCount, 0, 3),
-      boss: "Champion Echo",
-    },
-    {
-      title: "Final Star Gate",
-      subtitle: "High difficulty and title hunting",
-      progress: clamp(derived.storyExp / 3, 6, 100),
-      status: derived.achievements.length >= 3 ? "active" : "locked",
-      stars: clamp(Math.floor(derived.storyExp / 90), 0, 3),
-      boss: "Star Core",
-    },
-  ];
-  storyModeProgressText.textContent = `Journey ${Math.round(chapters.reduce((sum, item) => sum + item.progress, 0) / chapters.length)}%`;
-  storyChapterMap.innerHTML = chapters.map((chapter, index) => `
-    <button type="button" class="story-node ${chapter.status} ${index === 0 ? "focus" : ""}" data-index="${index}">
-      <span class="story-node-index">Chapter ${index + 1}</span>
-      <strong>${escapeHtml(chapter.title)}</strong>
-      <small>${escapeHtml(chapter.subtitle)}</small>
-      <div class="story-stars">${"*".repeat(chapter.stars)}${"-".repeat(3 - chapter.stars)}</div>
-    </button>
-  `).join("");
-  const previewChapter = chapters.find((item) => item.status === "active") || chapters[0];
-  storyPreviewPanel.innerHTML = `
-    <div class="story-preview-card">
-      <div class="story-preview-kicker">Active Chapter</div>
-      <h4>${escapeHtml(previewChapter.title)}</h4>
-      <p>${escapeHtml(previewChapter.subtitle)}</p>
-      <div class="story-preview-progress"><span style="width:${previewChapter.progress}%"></span></div>
-      <div class="story-preview-meta">
-        <span>Boss: ${escapeHtml(previewChapter.boss)}</span>
-        <span>${previewChapter.progress}% Cleared</span>
-      </div>
-      <div class="story-preview-note">Chapter pacing is generated from wins, achievements, and battle history.</div>
-    </div>
-  `;
-}
-
-function renderDailyMissionScene(profile = {}) {
-  if (!dailyMissionStreak || !dailyMissionList || !dailyMissionMilestones || !dailyMissionSummary) return;
-  const derived = buildDerivedProgress(profile);
-  dailyMissionStreak.textContent = `Active ${derived.streak} days`;
-  const missions = [
-    {
-      title: "Finish one match",
-      progress: clamp(derived.historyCount, 0, 1),
-      goal: 1,
-      reward: "50 Stardust",
-      tone: "pink",
-    },
-    {
-      title: "Review 3 mistakes",
-      progress: clamp(derived.wrongStats.length, 0, 3),
-      goal: 3,
-      reward: "Memory Chip x1",
-      tone: "violet",
-    },
-    {
-      title: "Unlock 1 achievement",
-      progress: clamp(derived.achievements.length, 0, 1),
-      goal: 1,
-      reward: "Title Shard x1",
-      tone: "blue",
-    },
-  ];
-  dailyMissionList.innerHTML = missions.map((mission) => {
-    const percent = Math.round((mission.progress / mission.goal) * 100);
-    return `
-      <article class="daily-mission-card tone-${mission.tone}">
-        <div class="daily-mission-top">
-          <div>
-            <h4>${escapeHtml(mission.title)}</h4>
-            <p>${mission.progress}/${mission.goal} complete</p>
-          </div>
-          <div class="daily-reward-badge">${escapeHtml(mission.reward)}</div>
-        </div>
-        <div class="daily-track"><span style="width:${percent}%"></span></div>
-        <button type="button" class="daily-claim-btn ${percent >= 100 ? "ready" : ""}">${percent >= 100 ? "Claim" : "In Progress"}</button>
-      </article>
-    `;
-  }).join("");
-  const missionTotal = missions.reduce((sum, item) => sum + item.goal, 0);
-  const missionDone = missions.reduce((sum, item) => sum + item.progress, 0);
-  const milestonePercent = Math.round((missionDone / missionTotal) * 100);
-  dailyMissionMilestones.innerHTML = [25, 60, 100].map((threshold, index) => `
-    <div class="daily-milestone-item ${milestonePercent >= threshold ? "active" : ""}">
-      <div class="daily-chest-icon"><i class="fa-solid fa-box-open"></i></div>
-      <div>
-        <strong>Chest ${index + 1}</strong>
-        <span>${threshold}% progress</span>
-      </div>
-    </div>
-  `).join("");
-  dailyMissionSummary.innerHTML = `
-    <div class="section-label mb-2">Today's Pass</div>
-    <div class="daily-summary-value">${milestonePercent}%</div>
-    <div class="daily-track large"><span style="width:${milestonePercent}%"></span></div>
-    <div class="profile-helper-text">Daily missions push the chest milestones forward using your current account progress.</div>
-  `;
-}
-
-async function api(url, options = {}) {
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  const data = await res.json();
-  if (!res.ok || data.success === false) {
-    throw new Error(data.message || "發生錯誤");
+  function getModal(id) {
+    const el = $(id);
+    if (!el || !window.bootstrap) return null;
+    return bootstrap.Modal.getOrCreateInstance(el);
   }
-  return data;
-}
 
-function syncProfileAppearanceLayers() {
-  const hair = HAIRS[state.hairIndex] || HAIRS[0];
-  const eyes = EYES[state.eyeIndex] || EYES[0];
-  if (profileHairLayer) profileHairLayer.src = hair;
-  if (profileEyeLayer) {
-    profileEyeLayer.src = eyes;
-    profileEyeLayer.style.transform = `translateY(${state.eyesOffsetY}px)`;
+  function showToast(message, delay = 2400) {
+    const toastEl = $("toast");
+    if (!toastEl) {
+      alert(message);
+      return;
+    }
+    toastEl.textContent = message;
+    toastEl.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toastEl.classList.remove("show"), delay);
   }
-  if (profileFaceLayer) profileFaceLayer.src = "images/face/face.png";
-  if (profileEyeSlider) profileEyeSlider.value = String(state.eyesOffsetY);
-  profileHairTabBtn?.classList.toggle("active", state.currentAppearancePart === "hair");
-  profileEyeTabBtn?.classList.toggle("active", state.currentAppearancePart === "eye");
-}
 
-function hydrateProfileAppearance(profile) {
-  state.hairIndex = Math.max(0, HAIRS.indexOf(profile?.hair || ""));
-  state.eyeIndex = Math.max(0, EYES.indexOf(profile?.eyes || ""));
-  state.eyesOffsetY = Number(profile?.eyesOffsetY || 0);
-  syncProfileAppearanceLayers();
-}
-
-function renderProfileAvatarGallery() {
-  if (!profileAvatarGallery) return;
-  const items = state.profileAvatarGallery.filter(Boolean);
-  profileAvatarGallery.innerHTML = items.length
-    ? items.map((src, index) => `
-        <button type="button" class="profile-gallery-item ${src === state.profileAvatarImage ? "active" : ""}" data-index="${index}">
-          <img src="${escapeHtml(src)}" alt="avatar-${index}">
-        </button>
-      `).join("")
-    : '<div class="profile-wrong-empty">尚未上傳頭像，先新增一張你喜歡的圖片。</div>';
-
-  profileAvatarGallery.querySelectorAll(".profile-gallery-item").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.profileAvatarImage = state.profileAvatarGallery[Number(btn.dataset.index)] || "";
-      renderProfileSummary({ ...(state.profile || {}), avatarImage: state.profileAvatarImage, avatarGallery: state.profileAvatarGallery }, true);
-    });
-  });
-}
-
-function renderRoomHistoryList() {
-  if (!roomHistoryList) return;
-  if (!state.roomHistoryRecords.length) {
-    roomHistoryList.innerHTML = '<div class="profile-wrong-empty">目前沒有符合條件的歷史房間記錄。</div>';
-    return;
+  function showModalMessage(message) {
+    const modalMessage = $("modalMessage");
+    if (modalMessage) modalMessage.textContent = message;
+    if (pinModal) pinModal.show();
+    else showToast(message);
   }
-  roomHistoryList.innerHTML = state.roomHistoryRecords.map((record) => `
-    <button type="button" class="room-history-card ${record.id === state.selectedHistoryId ? "active" : ""}" data-id="${record.id}">
-      <strong>${escapeHtml(record.roomName || "未命名房間")}</strong>
-      <div>${escapeHtml(record.bankTitle || "未命名題庫")}</div>
-      <div>${escapeHtml(record.gameMode === "team" ? "團隊模式" : "個人模式")} · ${formatDateTime(record.closedAt)}</div>
-      <div>${record.playerCount} 位玩家 · ${record.questionCount} 題</div>
-    </button>
-  `).join("");
-  roomHistoryList.querySelectorAll(".room-history-card").forEach((btn) => {
-    btn.addEventListener("click", () => loadRoomHistoryDetail(Number(btn.dataset.id)));
-  });
-}
 
-function renderHistoryDetail(detail) {
-  if (!roomHistoryDetail) return;
-  const room = detail?.room || {};
-  const leaderboard = Array.isArray(detail?.leaderboard) ? detail.leaderboard : [];
-  const breakdown = Array.isArray(detail?.questionBreakdown) ? detail.questionBreakdown : [];
-  const correctTotal = Number(detail?.chartStats?.correctTotal || 0);
-  const wrongTotal = Number(detail?.chartStats?.wrongTotal || 0);
-  const totalAnswers = Math.max(correctTotal + wrongTotal, 1);
-  const accuracy = Math.round((correctTotal / totalAnswers) * 100);
-  roomHistoryDetail.innerHTML = `
-    <div class="history-detail-head">
-      <div class="history-detail-kicker">Battle Snapshot</div>
-      <h4>${escapeHtml(room.roomName || "未命名房間")}</h4>
-      <div>${escapeHtml(room.bankTitle || "未命名題庫")} · ${escapeHtml(room.teamMode ? "團隊模式" : "個人模式")}</div>
-      <div>${formatDateTime(room.closedAt)}</div>
-      <div class="history-detail-pill-row">
-        <span class="history-detail-pill">${accuracy}% 正答率</span>
-        <span class="history-detail-pill">${leaderboard.length} 位上榜玩家</span>
-      </div>
-    </div>
-    <div class="history-chart-row">
-      <div class="history-chart-card">
-        <div class="section-label">答題分布（對 vs 錯）</div>
-        <div class="history-bar">
-          <span class="correct" style="width:${(correctTotal / totalAnswers) * 100}%"></span>
-          <span class="wrong" style="width:${(wrongTotal / totalAnswers) * 100}%"></span>
-        </div>
-        <div>答對 ${correctTotal} 次 / 答錯 ${wrongTotal} 次</div>
-      </div>
-      <div class="history-chart-card">
-        <div class="section-label">玩家排行榜</div>
-        ${leaderboard.slice(0, 5).map((row, index) => `<div class="history-mini-row"><span>#${index + 1} ${escapeHtml(row.playerName)}</span><strong>${row.totalScore}</strong></div>`).join("") || '<div class="profile-wrong-empty">沒有排行榜資料</div>'}
-      </div>
-    </div>
-    <div class="history-question-table">
-      <div class="section-label">答錯熱點題目</div>
-      ${breakdown.map((row) => `
-        <div class="history-question-row">
-          <div><strong>${row.seq + 1}. ${escapeHtml(row.title)}</strong></div>
-          <div>答錯 ${row.wrongCount} 次 · 正答率 ${row.correctRate}%</div>
-        </div>
-      `).join("") || '<div class="profile-wrong-empty">目前沒有題目統計</div>'}
-    </div>
-  `;
-}
-
-async function loadRoomHistorySummary() {
-  const user = getCurrentUser();
-  if (!user) return;
-  try {
-    const query = new URLSearchParams({
-      username: user,
-      playerName: historyPlayerFilter?.value.trim() || "",
-      bankKeyword: historyBankFilter?.value.trim() || "",
-      gameMode: historyModeFilter?.value || "",
-      startDate: historyStartDate?.value || "",
-      endDate: historyEndDate?.value || "",
-    });
-    const data = await api(`/room_history_summary?${query.toString()}`);
-    state.roomHistoryRecords = data.records || [];
-    state.selectedHistoryId = state.roomHistoryRecords[0]?.id || 0;
-    renderRoomHistoryList();
-    renderReportOverview(state.profile || {});
-    if (state.selectedHistoryId) await loadRoomHistoryDetail(state.selectedHistoryId);
-    else if (roomHistoryDetail) roomHistoryDetail.innerHTML = '<div class="profile-wrong-empty">目前沒有符合條件的歷史房間記錄。</div>';
-  } catch (error) {
-    if (roomHistoryDetail) roomHistoryDetail.innerHTML = `<div class="profile-wrong-empty">${escapeHtml(error.message)}</div>`;
-  }
-}
-
-async function loadRoomHistoryDetail(id) {
-  if (!id) return;
-  state.selectedHistoryId = id;
-  renderRoomHistoryList();
-  try {
-    const data = await api(`/room_history_detail?id=${encodeURIComponent(id)}`);
-    renderHistoryDetail(data.detail || {});
-  } catch (error) {
-    if (roomHistoryDetail) roomHistoryDetail.innerHTML = `<div class="profile-wrong-empty">${escapeHtml(error.message)}</div>`;
-  }
-}
-
-function exportRoomHistoryCsv() {
-  if (!state.roomHistoryRecords.length) {
-    showToast("目前沒有可匯出的歷史資料");
-    return;
-  }
-  const rows = [
-    buildCsvRow(["房間名稱", "題庫名稱", "賽制", "玩家數", "題目數", "結束時間", "玩家名單"]),
-    ...state.roomHistoryRecords.map((record) => buildCsvRow([
-      record.roomName,
-      record.bankTitle,
-      record.gameMode === "team" ? "團隊" : "個人",
-      record.playerCount,
-      record.questionCount,
-      formatDateTime(record.closedAt),
-      (record.playerNames || []).join(" / "),
-    ])),
-  ];
-  const blob = new Blob(["\ufeff" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `quizarena-room-history-${Date.now()}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
-
-function renderProfileSummary(profile, keepLocalState = false) {
-  state.profile = profile || null;
-  state.profileAvatarImage = profile?.avatarImage || "";
-  state.profileAvatarGallery = Array.isArray(profile?.avatarGallery) ? profile.avatarGallery.filter(Boolean) : [];
-  saveLocalProfile(profile || {});
-
-  if (profileUsernameText) profileUsernameText.textContent = profile?.username || getCurrentUser() || "-";
-  if (profileCurrentTitle) profileCurrentTitle.textContent = profile?.selectedTitle || "尚未選擇稱號";
-
-  if (profileAvatarPreview && profileAvatarFallback) {
-    if (state.profileAvatarImage) {
-      profileAvatarPreview.src = state.profileAvatarImage;
-      profileAvatarPreview.style.display = "block";
-      profileAvatarFallback.style.display = "none";
-      if (loginStatusAvatar) {
-        loginStatusAvatar.src = state.profileAvatarImage;
-        loginStatusAvatar.style.display = "block";
-        loginStatusCard?.classList.add("has-avatar");
+  function getCurrentUser() {
+    const direct = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+    if (direct) return direct;
+    try {
+      const profile = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
+      const username = String(profile?.username || "").trim();
+      if (username) {
+        localStorage.setItem("currentUser", username);
+        return username;
       }
-    } else {
-      profileAvatarPreview.style.display = "none";
-      profileAvatarFallback.style.display = "grid";
-      if (loginStatusAvatar) {
-        loginStatusAvatar.style.display = "none";
-        loginStatusCard?.classList.remove("has-avatar");
+    } catch {}
+    return "";
+  }
+
+  function setCurrentUser(username) {
+    localStorage.setItem("currentUser", username);
+  }
+
+  function clearCurrentUser() {
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("currentUserProfile");
+    sessionStorage.removeItem("currentUser");
+    localStorage.removeItem("roomPlayerProfile");
+    localStorage.removeItem("pendingJoinContext");
+    localStorage.removeItem("currentRoomPin");
+    localStorage.removeItem("currentRoomKey");
+  }
+
+  function setCachedProfile(profile) {
+    state.profile = profile || null;
+    if (profile) localStorage.setItem("currentUserProfile", JSON.stringify(profile));
+  }
+
+  function getCachedProfile() {
+    if (state.profile) return state.profile;
+    try {
+      state.profile = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
+    } catch {
+      state.profile = null;
+    }
+    return state.profile;
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function avatarHtml(profileOrUrl, className = "qa-avatar-img") {
+    const avatar = typeof profileOrUrl === "string" ? profileOrUrl : (profileOrUrl?.avatar || "");
+    if (avatar.startsWith("style:")) {
+      try {
+        const style = JSON.parse(avatar.slice(6));
+        return `
+          <div class="qa-composite-avatar ${className}">
+            <img class="qa-layer qa-face" src="${escapeHtml(style.face || "images/face/face.png")}" alt="">
+            <img class="qa-layer qa-hair" src="${escapeHtml(style.hair || "images/hair/hair01.png")}" alt="">
+            <img class="qa-layer qa-eyes" src="${escapeHtml(style.eyes || "images/face/eyes01.png")}" style="transform:translate(-50%, calc(-50% + ${Number(style.eyeOffset || 0)}px));" alt="">
+          </div>
+        `;
+      } catch {
+        return `<i class="fa-solid fa-circle-user"></i>`;
       }
     }
-  }
-  renderProfileAvatarGallery();
-
-  if (profileTitleSelect) {
-    const titles = Array.isArray(profile?.titles) ? profile.titles : [];
-    profileTitleSelect.innerHTML = titles.length
-      ? titles.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join("")
-      : '<option value="">尚無稱號</option>';
-    profileTitleSelect.value = profile?.selectedTitle || titles[0]?.name || "";
+    return avatar ? `<img class="${className}" src="${escapeHtml(avatar)}" alt="">` : `<i class="fa-solid fa-circle-user"></i>`;
   }
 
-  if (profileWrongStats) {
-    const rows = Array.isArray(profile?.wrongStats) ? profile.wrongStats : [];
-    profileWrongStats.innerHTML = rows.length
-      ? rows.map((item) => `
-          <div class="profile-wrong-item">
-            <strong>${escapeHtml(item.bankTitle)}</strong>
-            <div>${escapeHtml(item.questionTitle)}</div>
-            <span>${escapeHtml(item.category || "綜合")} · 錯 ${Number(item.wrongCount || 0)} 次</span>
-          </div>
-        `).join("")
-      : '<div class="profile-wrong-empty">目前還沒有錯題紀錄</div>';
-  }
-
-  if (profileAchievements && profileAchievementCount) {
-    const achievements = Array.isArray(profile?.achievements) ? profile.achievements : [];
-    profileAchievementCount.textContent = `${achievements.length} 項`;
-    profileAchievements.innerHTML = achievements.length
-      ? achievements.map((item, index) => `<div class="profile-achievement-item"><span class="achievement-medal">#${index + 1}</span><strong>${escapeHtml(item.name)}</strong></div>`).join("")
-      : '<div class="profile-wrong-empty">目前還沒有解鎖成就</div>';
-  }
-
-  if (!keepLocalState) hydrateProfileAppearance(profile || {});
-  renderProfileStatus(profile || {});
-  renderWrongBookScene(profile || {});
-  renderStoryModeScene(profile || {});
-  renderDailyMissionScene(profile || {});
-  renderReportOverview(profile || {});
-
-  updateAuthUI();
-}
-
-async function loadProfileSummary() {
-  const user = getCurrentUser();
-  if (!user) return;
-  if (state.isSavingProfile || Date.now() < state.profileSyncPausedUntil) return;
-  try {
-    const data = await api(`/profile_summary?username=${encodeURIComponent(user)}`);
-    renderProfileSummary(data.profile || null);
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-async function saveProfileSummary(options = {}) {
-  const user = getCurrentUser();
-  if (!user) return;
-  state.isSavingProfile = true;
-  try {
-    const profile = {
-      ...(state.profile || {}),
-      avatarImage: state.profileAvatarImage || "",
-      avatarGallery: state.profileAvatarGallery || [],
-      selectedTitle: profileTitleSelect?.value || "",
-      face: "images/face/face.png",
-      hair: HAIRS[state.hairIndex] || HAIRS[0],
-      eyes: EYES[state.eyeIndex] || EYES[0],
-      eyesOffsetY: state.eyesOffsetY || 0,
-    };
-    const data = await api("/save_profile", {
-      method: "POST",
-      body: JSON.stringify({ username: user, profile }),
+  async function api(url, options = {}) {
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
     });
-    renderProfileSummary(data.profile || profile);
-    state.profileSyncPausedUntil = Date.now() + 3000;
-    if (!options.keepModalOpen) profileModal.hide();
-    if (!options.silentSuccess) {
-      showToast(options.successMessage || data.message || "個人資料已更新");
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (error) {
+      data = { success: false, message: "伺服器沒有回傳 JSON，請確認 Flask 是否正在執行。" };
     }
-  } catch (error) {
-    showToast(error.message);
-  } finally {
-    state.isSavingProfile = false;
-  }
-}
 
-function updateAuthUI() {
-  const user = getCurrentUser();
-  if (user) {
-    loginStatus.textContent = state.profile?.selectedTitle
-      ? `${user} · ${state.profile.selectedTitle}`
-      : user;
-    loginBtn.classList.add("d-none");
-    logoutBtn.classList.remove("d-none");
-  } else {
-    loginStatus.textContent = "尚未登入";
-    loginBtn.classList.remove("d-none");
-    logoutBtn.classList.add("d-none");
-    if (loginStatusAvatar) loginStatusAvatar.style.display = "none";
-    loginStatusCard?.classList.remove("has-avatar");
+    if (!res.ok || data.success === false) {
+      throw new Error(data.message || "發生錯誤");
+    }
+    return data;
   }
 
-  if (friendsShell) friendsShell.style.display = user ? "flex" : "none";
-  if (friendsDockBtn) friendsDockBtn.style.display = user ? "flex" : "none";
-  if (openAddFriendBtn) openAddFriendBtn.style.display = user ? "inline-flex" : "none";
-  if (!user && friendsShell) friendsShell.classList.remove("open");
-}
-
-function buildFriendAvatar(record) {
-  if (record?.avatarImage) {
-    return `<img class="friends-avatar-image" src="${escapeHtml(record.avatarImage)}" alt="${escapeHtml(record.username)}">`;
-  }
-  return '<i class="fa-solid fa-circle-user"></i>';
-}
-
-function buildFriendTags(record, index) {
-  const tags = [];
-  tags.push(record?.isCurrentUser ? "好友同行" : "好友同行");
-  if (index === 0 && Number(record?.wins || 0) > 0) tags.push("第一榜");
-  if (record?.selectedTitle) tags.push(record.selectedTitle);
-  return tags.map((tag) => `<span class="friends-record-tag">${escapeHtml(tag)}</span>`).join("");
-}
-
-function renderFriendsOverview(data = {}) {
-  if (!friendsRecords || !friendsList) return;
-
-  const records = Array.isArray(data.records) ? data.records : [];
-  const hasWins = records.some((item) => Number(item.wins || 0) > 0);
-
-  if (!records.length) {
-    friendsRecords.innerHTML = `
-      <article class="friends-empty-card">
-        <i class="fa-solid fa-user-group"></i>
-        <strong>還沒有好友資料</strong>
-        <span>登入後送出好友申請，就可以開始累積排行。</span>
-      </article>
-    `;
-  } else if (!hasWins) {
-    friendsRecords.innerHTML = records
-      .map(
-        (item) => `
-          <article class="friends-record-card is-empty">
-            <div class="friends-empty-user">
-              <div class="friends-avatar-badge">${buildFriendAvatar(item)}</div>
-              <div>
-                <div class="friends-record-name">${escapeHtml(item.username)}</div>
-                <div class="friends-record-rank">${escapeHtml(item.selectedTitle || "無勝場紀錄")}</div>
-                <div class="friends-record-tags">${buildFriendTags(item, 99)}</div>
-              </div>
-            </div>
-          </article>
-        `
-      )
-      .join("");
-  } else {
-    friendsRecords.innerHTML = records
-      .map(
-        (item, index) => `
-          <article class="friends-record-card ${index === 0 ? "is-top" : ""}">
-            <div class="friends-record-top">
-              <div class="friends-record-left">
-                <div class="friends-avatar-badge ${index === 0 ? "is-top" : ""}">${buildFriendAvatar(item)}</div>
-                <div>
-                  <div class="friends-record-rank">${index === 0 ? "NO.1 WINNER" : `RANK ${index + 1}`}</div>
-                  <div class="friends-record-name">${escapeHtml(item.username)}</div>
-                  <div class="friends-record-title">${escapeHtml(item.selectedTitle || "尚無勝場紀錄")}</div>
-                  <div class="friends-record-tags">${buildFriendTags(item, index)}</div>
-                </div>
-              </div>
-              <div class="friends-record-wins"><strong>${Number(item.wins || 0)}</strong><span>勝場</span></div>
-            </div>
-          </article>
-        `
-      )
-      .join("");
+  function openLoginModal() {
+    if (memberModal) memberModal.show();
+    else showToast("找不到登入視窗，請檢查 memberModal 是否存在");
   }
 
-  const friends = Array.isArray(data.friends) ? data.friends : [];
-  friendsList.textContent = friends.length
-    ? `好友列表：${friends.join("、")}`
-    : "好友列表：目前還沒有好友，先送出第一個好友申請吧。";
-}
+  function updateAuthUI() {
+    const user = getCurrentUser();
+    const loginStatus = $("loginStatus");
+    const loginBtn = $("loginBtn");
+    const logoutBtn = $("logoutBtn");
+    const profileBtn = $("profileBtn");
+    const navMenuBtn = $("navMenuBtn");
+    const friendsShell = $("friendsShell");
+    const friendsDockBtn = $("friendsDockBtn");
+    const openAddFriendBtn = $("openAddFriendBtn");
 
-function renderFriendRequestBadge(count) {
-  state.pendingFriendCount = Number(count || 0);
-  if (!friendRequestBadge) return;
+    const profile = getCachedProfile();
+    if (loginStatus) {
+      delete loginStatus.dataset.i18n;
+      loginStatus.dataset.i18nSkip = "1";
+      loginStatus.textContent = user || "尚未登入";
+    }
+    const avatarWrap = $("loginStatusAvatar");
+    if (avatarWrap) avatarWrap.innerHTML = user ? avatarHtml(profile) : `<i class="fa-solid fa-circle-user"></i>`;
+    loginBtn?.classList.toggle("d-none", !!user);
+    logoutBtn?.classList.toggle("d-none", !user);
+    profileBtn?.classList.toggle("d-none", !user);
+    navMenuBtn?.classList.toggle("d-none", !user);
+    $("createQuizBtn")?.classList.toggle("d-none", !user);
+    $("wrongBookBtn")?.classList.toggle("d-none", !user);
+    $("storyModeBtn")?.classList.toggle("d-none", !user);
+    $("dailyMissionBtn")?.classList.toggle("d-none", !user);
+    $("teacherReportBtn")?.classList.toggle("d-none", !user);
+    if (!user) document.body.classList.remove("nav-drawer-open");
 
-  if (state.pendingFriendCount > 0) {
-    friendRequestBadge.textContent = String(state.pendingFriendCount);
-    friendRequestBadge.classList.remove("d-none");
-  } else {
-    friendRequestBadge.classList.add("d-none");
-  }
-}
-
-async function openProfileHub(scene = "profile") {
-  if (!getCurrentUser()) {
-    openLoginModal();
-    return;
-  }
-  await loadProfileSummary();
-  await loadRoomHistorySummary();
-  switchHubScene(scene);
-  profileModal.show();
-}
-
-function renderFriendRequestsModal() {
-  if (!friendRequestsContent) return;
-
-  const rows = Array.isArray(state.friendRequests) ? state.friendRequests : [];
-  if (!rows.length) {
-    friendRequestsContent.innerHTML = `
-      <div class="friend-request-empty">
-        <i class="fa-solid fa-inbox"></i>
-        <p>目前無申請紀錄</p>
-      </div>
-    `;
-    return;
+    if (friendsShell) {
+      friendsShell.style.display = user ? "block" : "none";
+      if (!user) friendsShell.classList.remove("open");
+    }
+    if (friendsDockBtn) friendsDockBtn.style.display = user ? "flex" : "none";
+    if (openAddFriendBtn) openAddFriendBtn.style.display = user ? "inline-flex" : "none";
   }
 
-  friendRequestsContent.innerHTML = rows
-    .map(
-      (row) => `
-        <article class="friend-request-card">
-          <div class="friend-request-top">
+  function renderFriendsOverview(data = {}) {
+    const friendsRecords = $("friendsRecords");
+    const friendsList = $("friendsList");
+    if (!friendsRecords || !friendsList) return;
+
+    const records = Array.isArray(data.records) ? data.records : [];
+    const hasWins = records.some((item) => Number(item.wins || 0) > 0);
+
+    if (!records.length) {
+      friendsRecords.innerHTML = `
+        <article class="friends-empty-card">
+          <i class="fa-solid fa-user-group"></i>
+          <strong>還沒有好友資料</strong>
+          <span>登入後送出好友申請，就可以開始累積排行。</span>
+        </article>
+      `;
+    } else if (!hasWins) {
+      friendsRecords.innerHTML = records.map((item) => `
+        <article class="friends-record-card is-empty friend-profile-trigger" data-friend-username="${escapeHtml(item.username)}">
+          <div class="friends-empty-user">
+            <div class="friends-avatar-badge">${avatarHtml(item, "qa-avatar-img")}</div>
             <div>
-              <div class="friend-request-name">${escapeHtml(row.requester)}</div>
-              <div class="friend-request-meta">${escapeHtml(row.createdAtText)} ・ ${escapeHtml(row.device)}</div>
-            </div>
-            <div class="friend-request-actions">
-              <button class="friend-request-btn accept" data-action="accept" data-request-id="${row.id}">接受</button>
-              <button class="friend-request-btn reject" data-action="reject" data-request-id="${row.id}">略過</button>
+              <div class="friends-record-name">${escapeHtml(item.username)}</div>
+              <div class="friends-record-rank">${escapeHtml(item.displayTitle || "新手挑戰者")} · 無勝場紀錄</div>
             </div>
           </div>
         </article>
-      `
-    )
-    .join("");
-
-  friendRequestsContent.querySelectorAll(".friend-request-btn").forEach((btn) => {
-    btn.addEventListener("click", () => respondFriendRequest(btn.dataset.requestId, btn.dataset.action));
-  });
-}
-
-function toggleFriendsDrawer(forceOpen = null) {
-  if (!friendsShell || friendsShell.style.display === "none") return;
-  const shouldOpen = forceOpen === null ? !friendsShell.classList.contains("open") : !!forceOpen;
-  friendsShell.classList.toggle("open", shouldOpen);
-}
-
-async function loadFriendsOverview() {
-  const user = getCurrentUser();
-  if (!user) return;
-
-  try {
-    const data = await api(`/friends_overview?username=${encodeURIComponent(user)}`);
-    renderFriendsOverview(data);
-  } catch (error) {
-    friendsRecords.innerHTML = `<div class="empty-lobby text-pink">${escapeHtml(error.message)}</div>`;
-  }
-}
-
-async function loadFriendRequestSummary() {
-  const user = getCurrentUser();
-  if (!user) {
-    state.friendRequests = [];
-    renderFriendRequestBadge(0);
-    return;
-  }
-
-  try {
-    const data = await api(`/friend_requests_summary?username=${encodeURIComponent(user)}`);
-    state.friendRequests = data.requests || [];
-    renderFriendRequestBadge(data.pendingCount || 0);
-    renderFriendRequestsModal();
-  } catch (error) {
-    renderFriendRequestBadge(0);
-    if (friendRequestsContent) {
-      friendRequestsContent.innerHTML = `<div class="friend-request-empty"><p>${escapeHtml(error.message)}</p></div>`;
+      `).join("");
+    } else {
+      friendsRecords.innerHTML = records.map((item, index) => `
+        <article class="friends-record-card ${index === 0 ? "is-top" : ""} friend-profile-trigger" data-friend-username="${escapeHtml(item.username)}">
+          <div class="friends-record-top">
+            <div class="friends-record-left">
+              <div class="friends-avatar-badge">${avatarHtml(item, "qa-avatar-img")}</div>
+              <div>
+                <div class="friends-record-rank">${index === 0 ? "NO.1 WINNER" : `RANK ${index + 1}`}</div>
+                <div class="friends-record-name">${escapeHtml(item.username)}</div>
+                <div class="friends-record-title">${escapeHtml(item.displayTitle || "新手挑戰者")}</div>
+              </div>
+            </div>
+            <div class="friends-record-wins">${Number(item.wins || 0)} 勝</div>
+          </div>
+        </article>
+      `).join("");
     }
-  }
-}
 
-async function handleAddFriend() {
-  const user = getCurrentUser();
-  const friendName = friendUsernameInput?.value.trim();
-
-  if (!user) {
-    showToast("請先登入再送出好友申請");
-    return;
-  }
-  if (!friendName) {
-    showToast("請輸入好友帳號");
-    return;
-  }
-
-  try {
-    const data = await api("/send_friend_request", {
-      method: "POST",
-      body: JSON.stringify({ username: user, friendName }),
+    friendsRecords.querySelectorAll("[data-friend-username]").forEach((card) => {
+      card.addEventListener("click", () => openFriendProfileModal(card.dataset.friendUsername || ""));
     });
-    if (friendUsernameInput) friendUsernameInput.value = "";
-    addFriendModal.hide();
-    showToast(data.message || "好友申請已送出");
-    await loadFriendRequestSummary();
-  } catch (error) {
-    showToast(error.message);
+
+    const friends = Array.isArray(data.friends) ? data.friends : [];
+    friendsList.textContent = friends.length
+      ? `好友列表：${friends.join("、")}`
+      : "好友列表：目前還沒有好友，先送出第一個好友申請吧。";
   }
-}
 
-async function respondFriendRequest(requestId, action) {
-  const user = getCurrentUser();
-  if (!user) return;
+  function renderFriendProfile(profile = {}) {
+    const content = $("friendProfileContent");
+    if (!content) return;
+    const summary = profile.achievements || {};
+    const unlocked = Number(summary.unlockedCount || 0);
+    const titles = Array.isArray(profile.titleOptions) ? profile.titleOptions : [];
+    const titleList = titles
+      .filter((item) => item && item.id !== "新手挑戰者")
+      .slice(0, 6)
+      .map((item) => `<span>${escapeHtml(item.label || item.id)}</span>`)
+      .join("");
 
-  try {
-    const data = await api("/respond_friend_request", {
-      method: "POST",
-      body: JSON.stringify({
-        username: user,
-        requestId: Number(requestId || 0),
-        action,
-      }),
-    });
-    showToast(data.message || "已處理好友申請");
-    renderFriendsOverview(data.overview || {});
-    state.friendRequests = (data.requestSummary && data.requestSummary.requests) || [];
-    renderFriendRequestBadge((data.requestSummary && data.requestSummary.pendingCount) || 0);
-    renderFriendRequestsModal();
-  } catch (error) {
-    showToast(error.message);
-  }
-}
-
-function saveJoinContext(room, roomKey = "", isHost = false) {
-  localStorage.setItem("pendingJoinContext", JSON.stringify({ room, roomKey, isHost: !!isHost }));
-}
-
-function redirectToJoin(room, roomKey = "", isHost = false) {
-  saveJoinContext(room, roomKey, isHost);
-  window.location.href = "player_join.html";
-}
-
-function buildRoomCard(room) {
-  const privacy = room.is_private
-    ? '<span class="badge-qa badge-private"><i class="fa-solid fa-lock"></i> 私人房</span>'
-    : '<span class="badge-qa badge-public"><i class="fa-solid fa-earth-asia"></i> 公開房</span>';
-  const mode = room.team_mode
-    ? '<span class="badge-qa badge-team"><i class="fa-solid fa-people-group"></i> 團隊模式</span>'
-    : '<span class="badge-qa"><i class="fa-solid fa-user"></i> 個人模式</span>';
-  const status = room.status === "playing"
-    ? '<span class="badge-qa badge-playing"><i class="fa-solid fa-gamepad"></i> 遊戲中</span>'
-    : '<span class="badge-qa"><i class="fa-regular fa-clock"></i> 等待中</span>';
-  const disabled = !room.joinable ? "disabled" : "";
-  const keyInfo = room.is_private && room.room_key_plain
-    ? `<div class="tiny-text">房間金鑰</div><div class="room-pin" style="font-size:1.15rem;">${room.room_key_plain}</div>`
-    : `<div class="tiny-text">房間 PIN</div><div class="room-pin">${room.pin}</div>`;
-
-  return `
-    <article class="room-card">
-      <div class="room-top">
-        <div>
-          <h3>${escapeHtml(room.display_name)}</h3>
-          <div class="small-text">題庫：${escapeHtml(room.bank_title || "未命名題庫")}</div>
+    content.innerHTML = `
+      <section class="friend-profile-card">
+        <div class="friend-profile-main">
+          <div class="friend-profile-avatar">${avatarHtml(profile, "qa-avatar-img")}</div>
+          <div>
+            <div class="friend-profile-kicker">PLAYER PROFILE</div>
+            <h3>${escapeHtml(profile.username || "玩家")}</h3>
+            <strong>${escapeHtml(profile.displayTitle || "新手挑戰者")}</strong>
+          </div>
         </div>
-        ${status}
-      </div>
-      <div class="room-meta">${privacy}${mode}</div>
-      <div>${keyInfo}</div>
-      <div class="room-footer-meta">
-        <span class="badge-qa"><i class="fa-solid fa-crown"></i>${escapeHtml(room.created_by || "Host")}</span>
-        <span class="badge-qa"><i class="fa-solid fa-users"></i>${room.player_count}/${room.max_players}</span>
-      </div>
-      <button class="custom-btn btn-create join-room-btn" data-pin="${room.pin}" ${disabled}>
-        ${room.joinable ? "加入房間" : "房間不可加入"}
-      </button>
-    </article>
-  `;
-}
-
-function renderLobby(rooms) {
-  const roomPlayers = rooms.reduce((sum, room) => sum + Number(room.player_count || 0), 0);
-  const browsing = 1;
-
-  waitingRoomCount.textContent = rooms.filter((room) => room.status === "waiting").length;
-  onlinePlayerCount.textContent = roomPlayers + browsing;
-  privateRoomCount.textContent = rooms.filter((room) => room.is_private).length;
-
-  if (!rooms.length) {
-    lobbyGrid.innerHTML = '<div class="empty-lobby text-pink">目前還沒有可加入的房間</div>';
-    return;
+        <div class="friend-profile-stats">
+          <span><b>${Number(profile.wins || 0)}</b> 總勝場</span>
+          <span><b>${unlocked}</b> 已獲得成就</span>
+        </div>
+        <div class="friend-profile-titles">
+          ${titleList || "<span>尚未解鎖其他稱號</span>"}
+        </div>
+      </section>
+    `;
   }
 
-  lobbyGrid.innerHTML = rooms.map(buildRoomCard).join("");
-  document.querySelectorAll(".join-room-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const room = state.rooms.find((item) => item.pin === btn.dataset.pin);
-      if (!room) return;
-
-      if (room.is_private) {
-        state.pendingJoinRoom = room;
-        roomKeyPrompt.textContent = `${room.display_name} 是私人房，請輸入金鑰加入。`;
-        roomKeyInput.value = "";
-        roomKeyModal.show();
-      } else {
-        redirectToJoin(room, "");
-      }
-    });
-  });
-}
-
-async function loadLobby() {
-  try {
-    const data = await api("/lobby_rooms");
-    state.rooms = data.rooms || [];
-    renderLobby(state.rooms);
-  } catch (error) {
-    if (lobbyGrid) {
-      lobbyGrid.innerHTML = `<div class="empty-lobby">載入大廳失敗：${escapeHtml(error.message)}</div>`;
+  async function openFriendProfileModal(username) {
+    const target = String(username || "").trim();
+    if (!target) return;
+    const content = $("friendProfileContent");
+    if (content) {
+      content.innerHTML = `<div class="friend-profile-loading"><i class="fa-solid fa-spinner fa-spin"></i> 載入中...</div>`;
+    }
+    friendProfileModal?.show();
+    try {
+      const data = await api(`/user_profile?username=${encodeURIComponent(target)}`);
+      renderFriendProfile(data.profile || data);
+    } catch (error) {
+      if (content) content.innerHTML = `<div class="friend-profile-loading">${escapeHtml(error.message)}</div>`;
     }
   }
-}
 
-async function handlePinJoin() {
-  const pin = pinInput.value.trim();
-  if (!/^\d{6}$/.test(pin)) {
-    showModalMessage("PIN 必須是 6 碼數字");
-    return;
+  function renderFriendRequestBadge(count) {
+    state.pendingFriendCount = Number(count || 0);
+    const badges = [$("friendRequestBadge"), $("friendDockBadge")].filter(Boolean);
+    if (!badges.length) return;
+
+    if (state.pendingFriendCount > 0) {
+      badges.forEach((badge) => {
+        badge.textContent = String(state.pendingFriendCount);
+        badge.classList.remove("d-none");
+      });
+    } else {
+      badges.forEach((badge) => {
+        badge.textContent = "0";
+        badge.classList.add("d-none");
+      });
+    }
   }
 
-  try {
-    const data = await api("/check_pin", {
-      method: "POST",
-      body: JSON.stringify({ pin }),
-    });
+  function renderFriendRequestsModal() {
+    const friendRequestsContent = $("friendRequestsContent");
+    if (!friendRequestsContent) return;
 
-    if (data.room.is_private) {
-      state.pendingJoinRoom = data.room;
-      roomKeyPrompt.textContent = `房間 ${data.room.room_name || data.room.bank_title || data.room.pin} 需要金鑰，請先驗證。`;
-      roomKeyInput.value = "";
-      roomKeyModal.show();
+    const rows = Array.isArray(state.friendRequests) ? state.friendRequests : [];
+    if (!rows.length) {
+      friendRequestsContent.innerHTML = `
+        <div class="friend-request-empty">
+          <i class="fa-solid fa-inbox"></i>
+          <p>目前無申請紀錄</p>
+        </div>
+      `;
       return;
     }
 
-    redirectToJoin(data.room, "");
-  } catch (error) {
-    showModalMessage(error.message);
-  }
-}
+    friendRequestsContent.innerHTML = rows.map((row) => `
+      <article class="friend-request-card">
+        <div class="friend-request-top">
+          <div>
+            <div class="friend-request-name">${escapeHtml(row.requester)}</div>
+            <div class="friend-request-meta">${escapeHtml(row.createdAtText)} ・ ${escapeHtml(row.device)}</div>
+          </div>
+          <div class="friend-request-actions">
+            <button class="friend-request-btn accept" type="button" data-action="accept" data-request-id="${row.id}">接受</button>
+            <button class="friend-request-btn reject" type="button" data-action="reject" data-request-id="${row.id}">略過</button>
+          </div>
+        </div>
+      </article>
+    `).join("");
 
-async function handleConfirmRoomKey() {
-  const room = state.pendingJoinRoom;
-  if (!room) return;
-
-  try {
-    await api("/verify_room_key", {
-      method: "POST",
-      body: JSON.stringify({
-        pin: room.pin,
-        roomKey: roomKeyInput.value.trim(),
-      }),
+    friendRequestsContent.querySelectorAll(".friend-request-btn").forEach((btn) => {
+      btn.addEventListener("click", () => respondFriendRequest(btn.dataset.requestId, btn.dataset.action));
     });
-    roomKeyModal.hide();
-    redirectToJoin(room, roomKeyInput.value.trim());
-  } catch (error) {
-    showToast(error.message);
   }
-}
 
-async function handleLogin(event) {
-  event.preventDefault();
+  function renderAchievementsSummary(data = {}) {
+    const achievementCount = $("achievementCount");
+    const achievementsList = $("achievementsList");
+    if (!achievementCount || !achievementsList) return;
 
-  try {
-    const data = await api("/login", {
-      method: "POST",
-      body: JSON.stringify({
-        username: loginUsername.value.trim(),
-        password: loginPassword.value.trim(),
-      }),
+    const achievements = Array.isArray(data.achievements) ? data.achievements : [];
+    state.achievements = achievements;
+    achievementCount.textContent = `${Number(data.unlockedCount || 0)}/${Number(data.totalCount || achievements.length || 0)}`;
+    const user = getCurrentUser();
+    const seenKey = user ? `seenAchievements:${user}` : "";
+    let seenItems = [];
+    try {
+      seenItems = seenKey ? JSON.parse(localStorage.getItem(seenKey) || "[]") : [];
+    } catch (error) {
+      seenItems = [];
+    }
+    const seen = new Set(Array.isArray(seenItems) ? seenItems : []);
+    const visibleAchievements = achievements.filter((item) => !item.unlocked || !seen.has(item.id));
+
+    if (!visibleAchievements.length) {
+      achievementsList.innerHTML = `
+        <article class="achievement-card is-empty">
+          <i class="fa-solid fa-award"></i>
+          <div>
+            <strong>目前沒有新的成就</strong>
+            <span>新的挑戰解鎖後會出現在這裡。</span>
+          </div>
+        </article>
+      `;
+      return;
+    }
+
+    const newlyUnlocked = [];
+    achievementsList.innerHTML = visibleAchievements.map((item) => {
+      const progress = Math.max(0, Math.min(100, Number(item.progress || 0)));
+      const current = Number(item.rawCurrent ?? item.current ?? 0);
+      const target = Number(item.target || 1);
+      const isNewUnlock = item.unlocked && !seen.has(item.id);
+      if (isNewUnlock) newlyUnlocked.push(item.id);
+      return `
+        <article class="achievement-card ${item.unlocked ? "is-unlocked" : ""} ${isNewUnlock ? "is-new-unlock" : ""}" data-achievement-id="${escapeHtml(item.id)}">
+          <div class="achievement-icon"><i class="fa-solid ${escapeHtml(item.icon || "fa-award")}"></i></div>
+          <div class="achievement-body">
+            <div class="achievement-title-row">
+              <strong>${escapeHtml(item.title)}</strong>
+              <span>${item.unlocked ? "已解鎖" : `${Math.min(current, target)}/${target}`}</span>
+            </div>
+            <p>${escapeHtml(item.description)}</p>
+            <div class="achievement-progress" aria-hidden="true">
+              <span style="width:${progress}%"></span>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join("");
+
+    if (newlyUnlocked.length && seenKey) {
+      setTimeout(() => {
+        newlyUnlocked.forEach((id) => seen.add(id));
+        localStorage.setItem(seenKey, JSON.stringify([...seen]));
+        achievementsList.querySelectorAll(".achievement-card.is-new-unlock").forEach((card) => {
+          card.classList.add("is-clearing");
+        });
+        setTimeout(() => renderAchievementsSummary(data), 620);
+      }, 1200);
+    }
+  }
+
+  async function loadAchievementsSummary() {
+    const user = getCurrentUser();
+    const achievementsList = $("achievementsList");
+    if (!user) {
+      state.achievements = [];
+      renderAchievementsSummary({ unlockedCount: 0, totalCount: 0, achievements: [] });
+      return;
+    }
+
+    try {
+      const data = await api(`/achievements_summary?username=${encodeURIComponent(user)}`);
+      renderAchievementsSummary(data);
+    } catch (error) {
+      if (achievementsList) {
+        achievementsList.innerHTML = `<article class="achievement-card is-empty"><div><strong>成就載入失敗</strong><span>${escapeHtml(error.message)}</span></div></article>`;
+      }
+    }
+  }
+
+  async function loadUserProfile() {
+    const user = getCurrentUser();
+    if (!user) {
+      setCachedProfile(null);
+      updateAuthUI();
+      return null;
+    }
+    try {
+      const data = await api(`/user_profile?username=${encodeURIComponent(user)}`);
+      setCachedProfile(data.profile);
+      updateAuthUI();
+      return data.profile;
+    } catch (error) {
+      return getCachedProfile();
+    }
+  }
+
+  function toggleFriendsDrawer(forceOpen = null) {
+    const friendsShell = $("friendsShell");
+    if (!friendsShell || friendsShell.style.display === "none") return;
+    const shouldOpen = forceOpen === null ? !friendsShell.classList.contains("open") : !!forceOpen;
+    friendsShell.classList.toggle("open", shouldOpen);
+  }
+
+  async function loadFriendsOverview() {
+    const user = getCurrentUser();
+    const friendsRecords = $("friendsRecords");
+    if (!user) return;
+
+    try {
+      const data = await api(`/friends_overview?username=${encodeURIComponent(user)}`);
+      renderFriendsOverview(data);
+    } catch (error) {
+      if (friendsRecords) friendsRecords.innerHTML = `<div class="empty-lobby text-pink">${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function loadFriendRequestSummary() {
+    const user = getCurrentUser();
+    const friendRequestsContent = $("friendRequestsContent");
+    if (!user) {
+      state.friendRequests = [];
+      renderFriendRequestBadge(0);
+      return;
+    }
+
+    try {
+      const data = await api(`/friend_requests_summary?username=${encodeURIComponent(user)}`);
+      state.friendRequests = data.requests || [];
+      renderFriendRequestBadge(data.pendingCount || 0);
+      renderFriendRequestsModal();
+    } catch (error) {
+      renderFriendRequestBadge(0);
+      if (friendRequestsContent) {
+        friendRequestsContent.innerHTML = `<div class="friend-request-empty"><p>${escapeHtml(error.message)}</p></div>`;
+      }
+    }
+  }
+
+  function renderFriendRecommendations(items = []) {
+    const list = $("friendRecommendationList");
+    if (!list) return;
+    if (!items.length) {
+      list.innerHTML = `<div class="friend-recommend-empty">目前沒有推薦名單，先設定縣市或多玩幾場會更準。</div>`;
+      return;
+    }
+    list.innerHTML = items.map((item) => `
+      <article class="friend-recommend-card">
+        <div class="friend-recommend-user">
+          <div class="friend-recommend-avatar">${avatarHtml(item, "qa-avatar-img")}</div>
+          <div>
+            <strong>${escapeHtml(item.username)}</strong>
+            <span>${escapeHtml(item.reason || item.displayTitle || "推薦好友")}</span>
+          </div>
+        </div>
+        <button class="friend-request-btn accept" type="button" data-recommend-username="${escapeHtml(item.username)}">加好友</button>
+      </article>
+    `).join("");
+    list.querySelectorAll("[data-recommend-username]").forEach((btn) => {
+      btn.addEventListener("click", () => sendFriendRequest(btn.dataset.recommendUsername || ""));
     });
+  }
 
-    setCurrentUser(data.username);
-    renderProfileSummary(data.profile || null);
-    memberModal.hide();
+  async function loadFriendRecommendations() {
+    const user = getCurrentUser();
+    const list = $("friendRecommendationList");
+    if (!user || !list) return;
+    list.innerHTML = `<div class="friend-recommend-empty">載入推薦中...</div>`;
+    try {
+      const data = await api(`/friend_recommendations?username=${encodeURIComponent(user)}`);
+      renderFriendRecommendations(data.recommendations || []);
+    } catch (error) {
+      list.innerHTML = `<div class="friend-recommend-empty">${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function sendFriendRequest(friendName) {
+    const user = getCurrentUser();
+    const friendUsernameInput = $("friendUsernameInput");
+    friendName = String(friendName || friendUsernameInput?.value.trim() || "").trim();
+
+    if (!user) {
+      showToast("請先登入再送出好友申請");
+      openLoginModal();
+      return;
+    }
+    if (!friendName) {
+      showToast("請輸入好友帳號");
+      return;
+    }
+
+    try {
+      const data = await api("/send_friend_request", {
+        method: "POST",
+        body: JSON.stringify({ username: user, friendName }),
+      });
+      if (friendUsernameInput) friendUsernameInput.value = "";
+      addFriendModal?.hide();
+      showToast(data.message || "好友申請已送出");
+      await loadFriendRequestSummary();
+      await loadFriendRecommendations();
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  async function handleAddFriend() {
+    await sendFriendRequest();
+  }
+
+  async function respondFriendRequest(requestId, action) {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    try {
+      const data = await api("/respond_friend_request", {
+        method: "POST",
+        body: JSON.stringify({
+          username: user,
+          requestId: Number(requestId || 0),
+          action,
+        }),
+      });
+      showToast(data.message || "已處理好友申請");
+      renderFriendsOverview(data.overview || {});
+      state.friendRequests = (data.requestSummary && data.requestSummary.requests) || [];
+      renderFriendRequestBadge((data.requestSummary && data.requestSummary.pendingCount) || 0);
+      renderFriendRequestsModal();
+      loadAchievementsSummary();
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  function saveJoinContext(room, roomKey = "", isHost = false) {
+    localStorage.setItem("pendingJoinContext", JSON.stringify({ room, roomKey, isHost: !!isHost }));
+  }
+
+  function redirectToJoin(room, roomKey = "", isHost = false) {
+    saveJoinContext(room, roomKey, isHost);
+    window.location.href = "player_join.html";
+  }
+
+  function buildRoomCard(room) {
+    const privacy = room.is_private
+      ? '<span class="badge-qa badge-private"><i class="fa-solid fa-lock"></i> 私人房</span>'
+      : '<span class="badge-qa badge-public"><i class="fa-solid fa-earth-asia"></i> 公開房</span>';
+    const mode = room.team_mode
+      ? '<span class="badge-qa badge-team"><i class="fa-solid fa-people-group"></i> 團隊模式</span>'
+      : '<span class="badge-qa"><i class="fa-solid fa-user"></i> 個人模式</span>';
+    const status = room.status === "playing"
+      ? '<span class="badge-qa badge-playing"><i class="fa-solid fa-gamepad"></i> 遊戲中</span>'
+      : '<span class="badge-qa"><i class="fa-regular fa-clock"></i> 等待中</span>';
+    const disabled = !room.joinable ? "disabled" : "";
+    const keyInfo = room.is_private && room.room_key_plain
+      ? `<div class="tiny-text">房間金鑰</div><div class="room-pin" style="font-size:1.15rem;">${escapeHtml(room.room_key_plain)}</div>`
+      : `<div class="tiny-text">房間 PIN</div><div class="room-pin">${escapeHtml(room.pin)}</div>`;
+
+    return `
+      <article class="room-card">
+        <div class="room-top">
+          <div>
+            <h3>${escapeHtml(room.display_name)}</h3>
+            <div class="small-text">題庫：${escapeHtml(room.bank_title || "未命名題庫")}</div>
+          </div>
+          ${status}
+        </div>
+        <div class="room-meta">${privacy}${mode}</div>
+        <div>${keyInfo}</div>
+        <div class="room-footer-meta">
+          <span class="badge-qa"><i class="fa-solid fa-crown"></i>${escapeHtml(room.created_by || "Host")}</span>
+          <span class="badge-qa"><i class="fa-solid fa-users"></i>${Number(room.player_count || 0)}/${Number(room.max_players || 0)}</span>
+        </div>
+        <button class="custom-btn btn-create join-room-btn" type="button" data-pin="${escapeHtml(room.pin)}" ${disabled}>
+          ${room.joinable ? "加入房間" : "房間不可加入"}
+        </button>
+      </article>
+    `;
+  }
+
+  function renderLobby(rooms) {
+    const lobbyGrid = $("lobbyGrid");
+    const waitingRoomCount = $("waitingRoomCount");
+    const onlinePlayerCount = $("onlinePlayerCount");
+    const privateRoomCount = $("privateRoomCount");
+    if (!lobbyGrid) return;
+
+    const safeRooms = Array.isArray(rooms) ? rooms : [];
+    const roomPlayers = safeRooms.reduce((sum, room) => sum + Number(room.player_count || 0), 0);
+    if (waitingRoomCount) waitingRoomCount.textContent = safeRooms.filter((room) => room.status === "waiting").length;
+    if (onlinePlayerCount) onlinePlayerCount.textContent = roomPlayers + 1;
+    if (privateRoomCount) privateRoomCount.textContent = safeRooms.filter((room) => room.is_private).length;
+
+    if (!safeRooms.length) {
+      lobbyGrid.innerHTML = '<div class="empty-lobby text-pink">目前還沒有可加入的房間</div>';
+      return;
+    }
+
+    lobbyGrid.innerHTML = safeRooms.map(buildRoomCard).join("");
+    document.querySelectorAll(".join-room-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const room = state.rooms.find((item) => item.pin === btn.dataset.pin);
+        if (!room) return;
+
+        if (room.is_private) {
+          state.pendingJoinRoom = room;
+          const roomKeyPrompt = $("roomKeyPrompt");
+          const roomKeyInput = $("roomKeyInput");
+          if (roomKeyPrompt) roomKeyPrompt.textContent = `${room.display_name} 是私人房，請輸入金鑰加入。`;
+          if (roomKeyInput) roomKeyInput.value = "";
+          roomKeyModal?.show();
+        } else {
+          redirectToJoin(room, "");
+        }
+      });
+    });
+  }
+
+  async function loadLobby() {
+    const lobbyGrid = $("lobbyGrid");
+    try {
+      const data = await api("/lobby_rooms");
+      state.rooms = data.rooms || [];
+      renderLobby(state.rooms);
+    } catch (error) {
+      if (lobbyGrid) lobbyGrid.innerHTML = `<div class="empty-lobby">載入大廳失敗：${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function handlePinJoin() {
+    const pinInput = $("pinInput");
+    const pin = pinInput?.value.trim() || "";
+    if (!/^\d{6}$/.test(pin)) {
+      showModalMessage("PIN 必須是 6 碼數字");
+      return;
+    }
+
+    try {
+      const data = await api("/check_pin", {
+        method: "POST",
+        body: JSON.stringify({ pin }),
+      });
+
+      if (data.room.is_private) {
+        state.pendingJoinRoom = data.room;
+        const roomKeyPrompt = $("roomKeyPrompt");
+        const roomKeyInput = $("roomKeyInput");
+        if (roomKeyPrompt) roomKeyPrompt.textContent = `房間 ${data.room.room_name || data.room.bank_title || data.room.pin} 需要金鑰，請先驗證。`;
+        if (roomKeyInput) roomKeyInput.value = "";
+        roomKeyModal?.show();
+        return;
+      }
+
+      redirectToJoin(data.room, "");
+    } catch (error) {
+      showModalMessage(error.message);
+    }
+  }
+
+  async function handleConfirmRoomKey() {
+    const room = state.pendingJoinRoom;
+    const roomKeyInput = $("roomKeyInput");
+    if (!room) return;
+
+    try {
+      await api("/verify_room_key", {
+        method: "POST",
+        body: JSON.stringify({ pin: room.pin, roomKey: roomKeyInput?.value.trim() || "" }),
+      });
+      roomKeyModal?.hide();
+      redirectToJoin(room, roomKeyInput?.value.trim() || "");
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    const loginUsername = $("loginUsername");
+    const loginPassword = $("loginPassword");
+
+    try {
+      const data = await api("/login", {
+        method: "POST",
+        body: JSON.stringify({
+          username: loginUsername?.value.trim() || "",
+          password: loginPassword?.value.trim() || "",
+        }),
+      });
+
+      setCurrentUser(data.username);
+      setCachedProfile({
+        username: data.username,
+        avatar: data.avatar || "",
+        displayTitle: data.displayTitle || "新手挑戰者",
+        language: data.language || "zh",
+      });
+      memberModal?.hide();
+      updateAuthUI();
+      await loadUserProfile();
+      await loadFriendsOverview();
+      await loadFriendRequestSummary();
+      await loadAchievementsSummary();
+      showToast(`歡迎回來，${data.username}`);
+
+      if (state.pendingAfterLogin === "create_home") {
+        state.pendingAfterLogin = null;
+        window.location.href = "create_home.html";
+      }
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  async function handleRegister(event) {
+    event.preventDefault();
+    const registerUsername = $("registerUsername");
+    const registerEmail = $("registerEmail");
+    const registerPassword = $("registerPassword");
+    const email = registerEmail?.value.trim() || "";
+
+    if (!email.includes("@")) {
+      showToast("Email 格式不正確，至少要包含 @");
+      return;
+    }
+
+    try {
+      await api("/register", {
+        method: "POST",
+        body: JSON.stringify({
+          username: registerUsername?.value.trim() || "",
+          email,
+          password: registerPassword?.value.trim() || "",
+        }),
+      });
+
+      showToast("註冊成功，現在可以直接登入");
+      switchMemberTab("login");
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  function handleCreateQuizClick() {
+    if (!getCurrentUser()) {
+      state.pendingAfterLogin = "create_home";
+      showToast("請先登入，才能建立自己的題庫");
+      openLoginModal();
+      return;
+    }
+    window.location.href = `create_home.html?username=${encodeURIComponent(getCurrentUser())}`;
+  }
+
+  function handleWrongBookClick() {
+    if (!getCurrentUser()) {
+      showToast("請先登入，才能查看錯題本");
+      openLoginModal();
+      return;
+    }
+    window.location.href = "wrong_book.html";
+  }
+
+  function handleStoryModeClick() {
+    if (!getCurrentUser()) {
+      showToast("請先登入，才能保存故事模式進度");
+      openLoginModal();
+      return;
+    }
+    window.location.href = "story_mode.html";
+  }
+
+  function handleDailyMissionClick() {
+    if (!getCurrentUser()) {
+      showToast("請先登入，才能保存每日任務");
+      openLoginModal();
+      return;
+    }
+    window.location.href = "daily_mission.html";
+  }
+
+  function handleProfileClick() {
+    if (!getCurrentUser()) {
+      showToast("請先登入");
+      openLoginModal();
+      return;
+    }
+    window.location.href = "profile.html";
+  }
+
+  function handleTeacherReportClick() {
+    window.location.href = "teacher_report.html";
+  }
+
+  function handleBusinessDashboardClick() {
+    window.location.href = "business_dashboard.html";
+  }
+
+  function handleLogout() {
+    clearCurrentUser();
+    state.friendRequests = [];
+    state.achievements = [];
+    state.profile = null;
+    renderFriendRequestBadge(0);
+    renderAchievementsSummary({ unlockedCount: 0, totalCount: 0, achievements: [] });
     updateAuthUI();
-    await loadProfileSummary();
-    await loadFriendsOverview();
-    await loadFriendRequestSummary();
-    showToast(`歡迎回來，${data.username}`);
-
-    if (state.pendingAfterLogin === "create_home") {
-      state.pendingAfterLogin = null;
-      window.location.href = "create_home.html";
-    }
-  } catch (error) {
-    showToast(error.message);
+    const friendsRecords = $("friendsRecords");
+    const friendsList = $("friendsList");
+    if (friendsRecords) friendsRecords.innerHTML = "";
+    if (friendsList) friendsList.textContent = "";
+    showToast("已登出");
   }
-}
 
-async function handleRegister(event) {
-  event.preventDefault();
+  function switchMemberTab(type) {
+    const showLoginBtn = $("showLoginBtn");
+    const showRegisterBtn = $("showRegisterBtn");
+    const loginFormBox = $("loginForm");
+    const registerFormBox = $("registerForm");
+    const isLogin = type === "login";
 
-  try {
-    await api("/register", {
-      method: "POST",
-      body: JSON.stringify({
-        username: registerUsername.value.trim(),
-        email: registerEmail.value.trim(),
-        password: registerPassword.value.trim(),
-      }),
+    showLoginBtn?.classList.toggle("active", isLogin);
+    showRegisterBtn?.classList.toggle("active", !isLogin);
+    if (loginFormBox) loginFormBox.style.display = isLogin ? "block" : "none";
+    if (registerFormBox) registerFormBox.style.display = isLogin ? "none" : "block";
+  }
+
+  function bindEvents() {
+    $("startBtn")?.addEventListener("click", handlePinJoin);
+    $("pinInput")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") handlePinJoin();
+    });
+    $("refreshLobbyBtn")?.addEventListener("click", loadLobby);
+    $("confirmRoomKeyBtn")?.addEventListener("click", handleConfirmRoomKey);
+
+    $("loginBtn")?.addEventListener("click", openLoginModal);
+    $("logoutBtn")?.addEventListener("click", handleLogout);
+    $("profileBtn")?.addEventListener("click", handleProfileClick);
+    $("createQuizBtn")?.addEventListener("click", handleCreateQuizClick);
+    $("wrongBookBtn")?.addEventListener("click", handleWrongBookClick);
+    $("storyModeBtn")?.addEventListener("click", handleStoryModeClick);
+    $("dailyMissionBtn")?.addEventListener("click", handleDailyMissionClick);
+    $("teacherReportBtn")?.addEventListener("click", handleTeacherReportClick);
+    $("businessDashboardBtn")?.addEventListener("click", handleBusinessDashboardClick);
+
+    $("loginForm")?.addEventListener("submit", handleLogin);
+    $("registerForm")?.addEventListener("submit", handleRegister);
+    $("addFriendBtn")?.addEventListener("click", handleAddFriend);
+
+    $("friendsDockBtn")?.addEventListener("click", () => {
+      toggleFriendsDrawer(true);
+      loadFriendsOverview();
+      loadFriendRequestSummary();
+      loadAchievementsSummary();
     });
 
-    showToast("註冊成功，現在可以直接登入");
-    showLoginBtn.classList.add("active");
-    showRegisterBtn.classList.remove("active");
-    loginFormBox.style.display = "block";
-    registerFormBox.style.display = "none";
-  } catch (error) {
-    showToast(error.message);
-  }
-}
+    $("closeFriendsDrawerBtn")?.addEventListener("click", () => toggleFriendsDrawer(false));
 
-function openLoginModal() {
-  memberModal.show();
-}
-
-function handleCreateQuizClick() {
-  if (!getCurrentUser()) {
-    state.pendingAfterLogin = "create_home";
-    showToast("請先登入，才能建立自己的題庫");
-    openLoginModal();
-    return;
-  }
-  window.location.href = "create_home.html";
-}
-
-function handleLogout() {
-  clearCurrentUser();
-  clearLocalProfile();
-  state.profile = null;
-  state.friendRequests = [];
-  renderFriendRequestBadge(0);
-  updateAuthUI();
-  if (friendsRecords) friendsRecords.innerHTML = "";
-  if (friendsList) friendsList.textContent = "";
-  showToast("已登出");
-}
-
-startBtn?.addEventListener("click", handlePinJoin);
-pinInput?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") handlePinJoin();
-});
-refreshLobbyBtn?.addEventListener("click", loadLobby);
-confirmRoomKeyBtn?.addEventListener("click", handleConfirmRoomKey);
-
-loginBtn?.addEventListener("click", openLoginModal);
-logoutBtn?.addEventListener("click", handleLogout);
-createQuizBtn?.addEventListener("click", handleCreateQuizClick);
-
-loginForm?.addEventListener("submit", handleLogin);
-registerForm?.addEventListener("submit", handleRegister);
-addFriendBtn?.addEventListener("click", handleAddFriend);
-friendsDockBtn?.addEventListener("click", () => toggleFriendsDrawer(true));
-closeFriendsDrawerBtn?.addEventListener("click", () => toggleFriendsDrawer(false));
-openAddFriendBtn?.addEventListener("click", () => {
-  if (!getCurrentUser()) {
-    showToast("請先登入");
-    openLoginModal();
-    return;
-  }
-  addFriendModal.show();
-});
-openFriendRequestsBtn?.addEventListener("click", async () => {
-  await loadFriendRequestSummary();
-  friendRequestsModal.show();
-});
-loginStatusCard?.addEventListener("click", async () => {
-  await openProfileHub(state.activeHubScene || "profile");
-});
-gameHubNav?.querySelectorAll(".hub-nav-btn").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const scene = btn.dataset.scene || "profile";
-    switchHubScene(scene);
-    if (scene === "report" && getCurrentUser()) {
-      await loadRoomHistorySummary();
-    }
-  });
-});
-profileAvatarInput?.addEventListener("change", (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  if (!/^image\/(png|jpeg)$/.test(file.type)) {
-    showToast("只支援 JPG / PNG");
-    return;
-  }
-  state.profileSyncPausedUntil = Date.now() + 15000;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    state.profileAvatarImage = String(reader.result || "");
-    state.profileAvatarGallery = [
-      state.profileAvatarImage,
-      ...state.profileAvatarGallery.filter((item) => item && item !== state.profileAvatarImage),
-    ];
-    renderProfileSummary({
-      ...(state.profile || {}),
-      username: getCurrentUser(),
-      avatarImage: state.profileAvatarImage,
-      avatarGallery: state.profileAvatarGallery,
-      selectedTitle: profileTitleSelect?.value || state.profile?.selectedTitle || "",
-      titles: state.profile?.titles || [],
-      achievements: state.profile?.achievements || [],
-      wrongStats: state.profile?.wrongStats || [],
-      hair: HAIRS[state.hairIndex] || HAIRS[0],
-      eyes: EYES[state.eyeIndex] || EYES[0],
-      eyesOffsetY: state.eyesOffsetY || 0,
-    }, true);
-    await saveProfileSummary({
-      keepModalOpen: true,
-      successMessage: "頭像已更新",
+    $("openAddFriendBtn")?.addEventListener("click", () => {
+      if (!getCurrentUser()) {
+        showToast("請先登入");
+        openLoginModal();
+        return;
+      }
+      addFriendModal?.show();
+      loadFriendRecommendations();
     });
-  };
-  reader.readAsDataURL(file);
-});
-saveProfileBtn?.addEventListener("click", saveProfileSummary);
-profileHairTabBtn?.addEventListener("click", () => {
-  state.currentAppearancePart = "hair";
-  syncProfileAppearanceLayers();
-});
-profileEyeTabBtn?.addEventListener("click", () => {
-  state.currentAppearancePart = "eye";
-  syncProfileAppearanceLayers();
-});
-profilePrevPartBtn?.addEventListener("click", () => {
-  if (state.currentAppearancePart === "hair") state.hairIndex = (state.hairIndex - 1 + HAIRS.length) % HAIRS.length;
-  else state.eyeIndex = (state.eyeIndex - 1 + EYES.length) % EYES.length;
-  syncProfileAppearanceLayers();
-});
-profileNextPartBtn?.addEventListener("click", () => {
-  if (state.currentAppearancePart === "hair") state.hairIndex = (state.hairIndex + 1) % HAIRS.length;
-  else state.eyeIndex = (state.eyeIndex + 1) % EYES.length;
-  syncProfileAppearanceLayers();
-});
-profileEyeSlider?.addEventListener("input", () => {
-  state.eyesOffsetY = Number(profileEyeSlider.value || 0);
-  syncProfileAppearanceLayers();
-});
-profileRandomBtn?.addEventListener("click", () => {
-  state.hairIndex = Math.floor(Math.random() * HAIRS.length);
-  state.eyeIndex = Math.floor(Math.random() * EYES.length);
-  state.eyesOffsetY = Math.floor(Math.random() * 25) - 12;
-  syncProfileAppearanceLayers();
-});
-profileResetBtn?.addEventListener("click", () => {
-  if (!window.confirm("確定要把外貌重設為預設值嗎？")) return;
-  state.hairIndex = 0;
-  state.eyeIndex = 0;
-  state.eyesOffsetY = 0;
-  state.currentAppearancePart = "hair";
-  syncProfileAppearanceLayers();
-});
-reloadRoomHistoryBtn?.addEventListener("click", loadRoomHistorySummary);
-exportRoomHistoryBtn?.addEventListener("click", exportRoomHistoryCsv);
-[historyPlayerFilter, historyBankFilter, historyModeFilter, historyStartDate, historyEndDate].forEach((el) => {
-  el?.addEventListener("change", loadRoomHistorySummary);
-});
-historyPlayerFilter?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") loadRoomHistorySummary();
-});
-historyBankFilter?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") loadRoomHistorySummary();
-});
-darkModeBtn?.addEventListener("click", () => {
-  const next = !document.body.classList.contains("dark-mode");
-  applyTheme(next);
-  localStorage.setItem("quizTheme", next ? "dark" : "light");
-});
-friendUsernameInput?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") handleAddFriend();
-});
 
-showLoginBtn?.addEventListener("click", () => {
-  showLoginBtn.classList.add("active");
-  showRegisterBtn.classList.remove("active");
-  loginFormBox.style.display = "block";
-  registerFormBox.style.display = "none";
-});
+    $("openFriendRequestsBtn")?.addEventListener("click", async () => {
+      if (!getCurrentUser()) {
+        showToast("請先登入");
+        openLoginModal();
+        return;
+      }
+      await loadFriendRequestSummary();
+      friendRequestsModal?.show();
+    });
 
-showRegisterBtn?.addEventListener("click", () => {
-  showRegisterBtn.classList.add("active");
-  showLoginBtn.classList.remove("active");
-  loginFormBox.style.display = "none";
-  registerFormBox.style.display = "block";
-});
+    $("friendUsernameInput")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") handleAddFriend();
+    });
 
-switchHubScene(state.activeHubScene);
-applyTheme(localStorage.getItem("quizTheme") === "dark");
-updateAuthUI();
-loadLobby();
-loadProfileSummary();
-loadFriendsOverview();
-loadFriendRequestSummary();
-setInterval(loadLobby, 8000);
-setInterval(loadProfileSummary, 30000);
-setInterval(loadFriendsOverview, 15000);
-setInterval(loadFriendRequestSummary, 15000);
+    $("showLoginBtn")?.addEventListener("click", () => switchMemberTab("login"));
+    $("showRegisterBtn")?.addEventListener("click", () => switchMemberTab("register"));
+
+    $("navMenuBtn")?.addEventListener("click", () => document.body.classList.add("nav-drawer-open"));
+    $("navDrawerOverlay")?.addEventListener("click", () => document.body.classList.remove("nav-drawer-open"));
+    $("navActionsDrawer")?.querySelectorAll("button, a").forEach((el) => {
+      el.addEventListener("click", () => {
+        document.body.classList.remove("nav-drawer-open");
+      });
+    });
+  }
+
+  function initModals() {
+    pinModal = getModal("pinModal");
+    roomKeyModal = getModal("roomKeyModal");
+    memberModal = getModal("memberModal");
+    addFriendModal = getModal("addFriendModal");
+    friendRequestsModal = getModal("friendRequestsModal");
+    friendProfileModal = getModal("friendProfileModal");
+  }
+
+  function init() {
+    initModals();
+    bindEvents();
+    updateAuthUI();
+    loadUserProfile();
+    loadLobby();
+    loadFriendsOverview();
+    loadFriendRequestSummary();
+    loadAchievementsSummary();
+    setInterval(loadLobby, 8000);
+    setInterval(loadFriendsOverview, 15000);
+    setInterval(loadFriendRequestSummary, 15000);
+    setInterval(loadAchievementsSummary, 15000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
