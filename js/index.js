@@ -955,13 +955,9 @@
     $("showLoginBtn")?.addEventListener("click", () => switchMemberTab("login"));
     $("showRegisterBtn")?.addEventListener("click", () => switchMemberTab("register"));
 
-    $("navMenuBtn")?.addEventListener("click", () => document.body.classList.add("nav-drawer-open"));
-    $("navDrawerOverlay")?.addEventListener("click", () => document.body.classList.remove("nav-drawer-open"));
-    $("navActionsDrawer")?.querySelectorAll("button, a").forEach((el) => {
-      el.addEventListener("click", () => {
-        document.body.classList.remove("nav-drawer-open");
-      });
-    });
+    // nav drawer now handled by nav_drawer.js (pink universal hamburger)
+    $("navMenuBtn")?.addEventListener("click", () => window.NavDrawer?.open?.());
+    $("navDrawerOverlay")?.addEventListener("click", () => window.NavDrawer?.close?.());
   }
 
   function initModals() {

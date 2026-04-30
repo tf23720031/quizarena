@@ -28,10 +28,6 @@
           </div>
         </div>
 
-        <button class="custom-btn btn-auth nav-menu-btn d-none" id="navMenuBtn" type="button" aria-label="開啟選單">
-          <i class="fa-solid fa-bars"></i>
-        </button>
-
         <button class="custom-btn btn-auth" id="loginBtn">
           <i class="fa fa-user"></i> 登入 / 註冊
         </button>
@@ -40,50 +36,23 @@
           <i class="fa-solid fa-right-from-bracket"></i> 登出
         </button>
 
-        <div class="nav-actions-drawer" id="navActionsDrawer">
-          <button class="custom-btn btn-auth d-none" id="profileBtn">
-            <i class="fa-solid fa-id-card"></i> 個人資料
-          </button>
-
-          <button class="custom-btn btn-create d-none" id="createQuizBtn">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫
-          </button>
-
-          <button class="custom-btn btn-join d-none" id="wrongBookBtn">
-            <i class="fa-solid fa-book-open-reader"></i> 錯題本
-          </button>
-
-          <button class="custom-btn btn-story d-none" id="storyModeBtn">
-            <i class="fa-solid fa-map-location-dot"></i> 故事模式
-          </button>
-
-          <button class="custom-btn btn-daily d-none" id="dailyMissionBtn">
-            <i class="fa-solid fa-calendar-check"></i> 每日任務
-          </button>
-
-          <button class="custom-btn btn-auth d-none" id="teacherReportBtn">
-            <i class="fa-solid fa-chart-line"></i> 老師模式
-          </button>
-
-          <hr style="border-color:rgba(255,255,255,.1);margin:6px 0;">
-
-          <button class="custom-btn btn-join" id="navMusicBtn" type="button" onclick="MusicDrawer?.open?.(); document.body.classList.remove('nav-drawer-open');">
-            <i class="fa-solid fa-music"></i> 背景音樂
-          </button>
-        </div>
-
-        <span class="lang-switcher-slot"></span>
+        <!-- Hidden login-gated buttons (still exist for JS compat, but hidden in UI) -->
+        <span style="display:none;">
+          <button class="custom-btn btn-auth d-none" id="profileBtn"><i class="fa-solid fa-id-card"></i> 個人資料</button>
+          <button class="custom-btn btn-create d-none" id="createQuizBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> 建立題庫</button>
+          <button class="custom-btn btn-join d-none" id="wrongBookBtn"><i class="fa-solid fa-book-open-reader"></i> 錯題本</button>
+          <button class="custom-btn btn-story d-none" id="storyModeBtn"><i class="fa-solid fa-map-location-dot"></i> 故事模式</button>
+          <button class="custom-btn btn-daily d-none" id="dailyMissionBtn"><i class="fa-solid fa-calendar-check"></i> 每日任務</button>
+          <button class="custom-btn btn-auth d-none" id="teacherReportBtn"><i class="fa-solid fa-chart-line"></i> 老師模式</button>
+          <button class="custom-btn btn-auth d-none" id="navMenuBtn" type="button" aria-label="開啟選單"><i class="fa-solid fa-bars"></i></button>
+        </span>
 
         <button class="custom-btn btn-join" id="refreshLobbyBtn">
           <i class="fa-solid fa-rotate"></i> 重新整理大廳
         </button>
-
-        <button class="custom-btn btn-auth" id="darkModeBtn" style="min-width:48px;padding:12px 14px;" title="切換深色模式">
-          <i class="fa-solid fa-moon" id="darkModeIcon"></i>
-        </button>
       </div>
     </header>
-    <div class="nav-drawer-overlay" id="navDrawerOverlay"></div>
+
 
     <section class="main-section text-center container">
       <div class="decor decor-q1">?</div>
@@ -317,6 +286,7 @@
   <script src="js/i18n.js"></script>
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/Audio_manager.js"></script>
+  <script src="js/nav_drawer.js"></script>
   <script src="js/music_drawer.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/index.js"></script>

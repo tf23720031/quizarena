@@ -28,6 +28,8 @@ const MusicDrawer = (() => {
   .music-fab:hover { transform: scale(1.08); }
   /* hide fab when a page already has its own topbar mute btn */
   .has-topbar-mute .music-fab { display: none !important; }
+  /* Always hide the standalone music fab — access via the pink nav drawer instead */
+  .music-fab { display: none !important; }
 
   /* ══ Overlay ══ */
   .music-drawer-overlay {
