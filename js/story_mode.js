@@ -187,6 +187,72 @@ expandStorySubjects();
 
 const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false };
 
+function customStoryBanksKey() {
+  return `quizarena_story_custom_banks_${userKey()}`;
+}
+
+function normalizeStoryStageFromQuestion(question, index, subjectTitle) {
+  return makeStoryStageFromQuestion(question, index, subjectTitle);
+}
+
+function addCustomStorySubject(title, questions, options = {}) {
+  const safeTitle = String(title || "自訂故事題庫").trim();
+  const stages = questions.map((question, index) => normalizeStoryStageFromQuestion(question, index, safeTitle));
+  const subject = {
+    id: options.id || `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    title: safeTitle,
+    icon: options.icon || "fa-book-open",
+    summary: options.summary || "玩家新增的故事題庫，會以支線形式逐題推進。",
+    custom: true,
+    branches: [{ id: "main", title: `${safeTitle}故事線`, stages }],
+  };
+  SUBJECTS.push(subject);
+  state.subjectId = subject.id;
+  state.branchId = "main";
+  state.stageIndex = 0;
+  state.selected = null;
+  state.checked = false;
+  return subject;
+}
+
+function loadCustomStorySubjects() {
+  let banks = [];
+  try { banks = JSON.parse(localStorage.getItem(customStoryBanksKey()) || "[]"); } catch { banks = []; }
+  banks.filter((bank) => Array.isArray(bank.questions) && bank.questions.length >= 5).forEach((bank) => {
+    if (!SUBJECTS.some((subject) => subject.id === bank.id)) {
+      addCustomStorySubject(bank.title, bank.questions, {
+        id: bank.id,
+        icon: bank.icon || "fa-book-open",
+        summary: bank.summary || "玩家新增的故事題庫，會以支線形式逐題推進。",
+      });
+    }
+  });
+}
+
+function saveCustomStorySubject(subject) {
+  let banks = [];
+  try { banks = JSON.parse(localStorage.getItem(customStoryBanksKey()) || "[]"); } catch { banks = []; }
+  const bank = {
+    id: subject.id,
+    title: subject.title,
+    icon: subject.icon,
+    summary: subject.summary,
+    questions: subject.branches[0].stages.map((stage) => ({
+      id: `${subject.id}_${stage.level}`,
+      title: `${subject.title} 第 ${stage.level} 題`,
+      content: stage.q,
+      difficulty: stage.difficulty,
+      explanation: stage.scene,
+      options: stage.options.map((text, index) => ({ text, correct: index === stage.answer })),
+    })),
+  };
+  banks = banks.filter((item) => item.id !== bank.id);
+  banks.unshift(bank);
+  localStorage.setItem(customStoryBanksKey(), JSON.stringify(banks.slice(0, 20)));
+}
+
+loadCustomStorySubjects();
+
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
@@ -277,7 +343,8 @@ function makeStoryStageFromQuestion(question, index, subjectTitle) {
       { text: "選項 C", correct: false },
       { text: "選項 D", correct: false },
     ];
-  const answer = Math.max(0, options.findIndex((option) => option.correct));
+  const explicitAnswer = Number.isInteger(Number(question.answer)) ? Number(question.answer) : -1;
+  const answer = Math.max(0, explicitAnswer >= 0 ? explicitAnswer : options.findIndex((option) => option.correct));
   return {
     level: index + 1,
     difficulty: question.difficulty || (index < 2 ? "easy" : index < 4 ? "medium" : "hard"),
@@ -321,6 +388,94 @@ async function generateAiStoryQuestions() {
       button.disabled = false;
       button.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> AI生成更多題目';
     }
+  }
+}
+
+function uniqueQuestions(questions) {
+  const seenQuestions = new Set();
+  return (Array.isArray(questions) ? questions : []).filter((question) => {
+    const content = String(question.content || question.q || question.title || "").trim();
+    if (!content || seenQuestions.has(content)) return false;
+    seenQuestions.add(content);
+    const options = Array.isArray(question.options) ? question.options : [];
+    const optionTexts = options.map((option) => String(option?.text || option || "").trim()).filter(Boolean);
+    return optionTexts.length >= 2 && new Set(optionTexts).size === optionTexts.length;
+  });
+}
+
+async function generateTopicStoryBank() {
+  const input = $("aiStoryTopicInput");
+  const button = $("generateTopicBankBtn");
+  const topic = String(input?.value || "").trim();
+  if (!topic) {
+    showToast("請先輸入要生成的主題");
+    return;
+  }
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 生成中';
+  }
+  try {
+    const data = await api("/generate_quiz_bank", {
+      method: "POST",
+      body: JSON.stringify({
+        topic,
+        category: topic,
+        difficulty: "medium",
+        language: "zh",
+        count: 20,
+        sourceMode: "ai",
+        storyMode: true,
+      }),
+    });
+    const questions = uniqueQuestions(data.quizBank?.questions || []).slice(0, 20);
+    if (questions.length < 20) throw new Error("AI 題庫需要至少 20 題，且題目與選項不能重複");
+    const subject = addCustomStorySubject(topic, questions, {
+      icon: "fa-wand-magic-sparkles",
+      summary: `AI 生成的「${topic}」故事線，共 20 題。`,
+    });
+    saveCustomStorySubject(subject);
+    showToast(`已生成「${topic}」故事題庫`);
+    renderAll();
+  } catch (error) {
+    showToast(error.message || "AI生成失敗，請稍後再試", 3200);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 生成題庫';
+    }
+  }
+}
+
+function extractQuestionsFromUpload(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.questions)) return raw.questions;
+  if (Array.isArray(raw?.quizBank?.questions)) return raw.quizBank.questions;
+  if (Array.isArray(raw?.banks?.[0]?.questions)) return raw.banks[0].questions;
+  return [];
+}
+
+async function uploadStoryBank() {
+  const input = $("uploadStoryBankInput");
+  const file = input?.files?.[0];
+  if (!file) {
+    showToast("請先選擇 JSON 題庫檔");
+    return;
+  }
+  try {
+    const raw = JSON.parse(await file.text());
+    const title = String(raw.title || raw.quizBank?.title || file.name.replace(/\.json$/i, "") || "自訂故事題庫").trim();
+    const questions = uniqueQuestions(extractQuestionsFromUpload(raw));
+    if (questions.length < 5) throw new Error("上傳題庫必須有 5 題或以上，且題目與選項不可重複");
+    const subject = addCustomStorySubject(title, questions, {
+      icon: "fa-upload",
+      summary: `玩家上傳的「${title}」故事線，共 ${questions.length} 題。`,
+    });
+    saveCustomStorySubject(subject);
+    showToast(`已匯入「${title}」`);
+    renderAll();
+  } catch (error) {
+    showToast(error.message || "題庫 JSON 格式錯誤", 3200);
   }
 }
 
@@ -458,6 +613,8 @@ function renderAll() {
 
 $("resetStoryBtn")?.addEventListener("click", resetCurrentProgress);
 $("generateStoryBtn")?.addEventListener("click", generateAiStoryQuestions);
+$("generateTopicBankBtn")?.addEventListener("click", generateTopicStoryBank);
+$("uploadStoryBankBtn")?.addEventListener("click", uploadStoryBank);
 $("storyModalCloseBtn")?.addEventListener("click", () => $("storyModalBackdrop").classList.remove("show"));
 renderAll();
 
@@ -492,6 +649,13 @@ function addToWrongBook(stage, subjectTitle) {
   } catch (e) {
     console.warn("[WrongBook] 寫入失敗", e);
   }
+  const username = userKey();
+  if (username && username !== "guest") {
+    api("/story_wrong_question", {
+      method: "POST",
+      body: JSON.stringify({ username, sourceTitle: `故事模式 · ${subjectTitle}`, question: stage }),
+    }).catch((error) => console.warn("[WrongBook] 伺服器寫入失敗", error));
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -507,7 +671,7 @@ window._patchedStoryAnswer = function checkStoryAnswerPatched() {
 };
 // 重新綁定
 document.addEventListener("click", (e) => {
-  if (e.target && e.target.id === "checkStoryBtn") {
+  if (e.target?.closest?.("#checkStoryBtn")) {
     e.stopImmediatePropagation();
     window._patchedStoryAnswer();
   }
@@ -554,11 +718,9 @@ document.querySelectorAll(".story-mode-tab").forEach((btn) => {
 });
 
 // ═══════════════════════════════════════════════════════
-//  挑戰連結系統
+//  雙人邀請系統：題庫選定後，等第二位玩家加入才開始
 // ═══════════════════════════════════════════════════════
-function generateChallengeToken() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
+let storyMatchPoll = null;
 
 function buildChallengeLink(token, mode, subjectId, branchId) {
   const base = location.href.split("?")[0];
@@ -579,29 +741,69 @@ function parseChallengeLink(url) {
   }
 }
 
-$("createChallengeBtn")?.addEventListener("click", () => {
-  const token = generateChallengeToken();
-  const link = buildChallengeLink(token, currentStoryMode, state.subjectId, state.branchId);
+function clearStoryMatchPoll() {
+  if (storyMatchPoll) clearInterval(storyMatchPoll);
+  storyMatchPoll = null;
+}
+
+function startMatchWhenReady(match, roleName = userKey()) {
+  if (!match || match.status !== "ready" || !Array.isArray(match.players) || match.players.length < 2) return false;
+  clearStoryMatchPoll();
+  const waitingMsg = $("storyWaitingMsg");
+  if (waitingMsg) waitingMsg.style.display = "none";
+  const names = match.players.slice(0, 2).map((player) => player.name);
+  const me = String(roleName || userKey() || names[0]).trim();
+  const other = names.find((name) => name !== me) || names[1] || "玩家 2";
+  currentStoryMode = match.mode || currentStoryMode;
+  startDuelGame(me, other, currentStoryMode, match.stages || activeBranch().stages);
+  return true;
+}
+
+function pollStoryMatch(token, roleName = userKey()) {
+  clearStoryMatchPoll();
+  storyMatchPoll = setInterval(async () => {
+    try {
+      const data = await api(`/story_match_state/${encodeURIComponent(token)}`);
+      startMatchWhenReady(data.match, roleName);
+    } catch (error) {
+      clearStoryMatchPoll();
+      showToast(error.message || "邀請狀態讀取失敗");
+    }
+  }, 1200);
+}
+
+$("createChallengeBtn")?.addEventListener("click", async () => {
+  const subject = activeSubject();
+  const branch = activeBranch();
   const linkDisplay = $("storyLinkDisplay");
   const linkText = $("storyLinkText");
   const waitingMsg = $("storyWaitingMsg");
-  if (linkText) linkText.textContent = link;
-  if (linkDisplay) linkDisplay.style.display = "";
-  if (waitingMsg) waitingMsg.style.display = "";
-  // 存入 sessionStorage 等待對手
-  sessionStorage.setItem("pendingChallengeToken", token);
-  sessionStorage.setItem("pendingChallengeMode", currentStoryMode);
-  showToast("連結已建立，等待對手加入");
-  // 模擬：3 秒後啟動（實際應透過 WebSocket）
-  setTimeout(() => {
-    if (waitingMsg) waitingMsg.style.display = "none";
-    startDuelGame(
-      userKey(),
-      "對手",
-      currentStoryMode,
-      activeBranch().stages
-    );
-  }, 3000);
+  const hostName = userKey() === "guest" ? "玩家 1" : userKey();
+  try {
+    const data = await api("/story_match_create", {
+      method: "POST",
+      body: JSON.stringify({
+        mode: currentStoryMode,
+        hostName,
+        subjectId: state.subjectId,
+        branchId: state.branchId,
+        subjectTitle: subject.title,
+        stages: branch.stages.slice(0, 20),
+      }),
+    });
+    const token = data.match.token;
+    const link = buildChallengeLink(token, currentStoryMode, state.subjectId, state.branchId);
+    if (linkText) linkText.textContent = link;
+    if (linkDisplay) linkDisplay.style.display = "";
+    if (waitingMsg) {
+      waitingMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 題庫已選定，等待另一位玩家加入...';
+      waitingMsg.style.display = "";
+    }
+    showToast("邀請連結已建立，另一位玩家加入後才會開始");
+    pollStoryMatch(token, hostName);
+  } catch (error) {
+    showToast(error.message || "建立邀請失敗");
+  }
 });
 
 $("copyLinkBtn")?.addEventListener("click", () => {
@@ -619,25 +821,26 @@ $("copyLinkBtn")?.addEventListener("click", () => {
   });
 });
 
-$("joinChallengeBtn")?.addEventListener("click", () => {
+$("joinChallengeBtn")?.addEventListener("click", async () => {
   const raw = $("challengeLinkInput")?.value?.trim() || "";
-  if (!raw) { showToast("請先貼上挑戰連結"); return; }
+  if (!raw) { showToast("請先貼上邀請連結"); return; }
   const parsed = parseChallengeLink(raw);
   if (!parsed?.token) { showToast("連結格式不正確"); return; }
-  // 切換科目/支線
   if (parsed.subjectId) state.subjectId = parsed.subjectId;
   if (parsed.branchId) state.branchId = parsed.branchId;
   const mode = parsed.mode || "pvp";
   currentStoryMode = mode;
-  showToast("正在加入挑戰...");
-  setTimeout(() => {
-    startDuelGame(
-      userKey(),
-      "挑戰者",
-      mode,
-      activeBranch().stages
-    );
-  }, 800);
+  const playerName = userKey() === "guest" ? "玩家 2" : userKey();
+  try {
+    const data = await api("/story_match_join", {
+      method: "POST",
+      body: JSON.stringify({ token: parsed.token, playerName }),
+    });
+    showToast("已加入，雙方到齊後開始");
+    if (!startMatchWhenReady(data.match, playerName)) pollStoryMatch(parsed.token, playerName);
+  } catch (error) {
+    showToast(error.message || "加入邀請失敗");
+  }
 });
 
 // 頁面載入時自動判斷 URL 參數（被貼入連結後跳轉）
@@ -651,13 +854,19 @@ $("joinChallengeBtn")?.addEventListener("click", () => {
   if (subjectId) state.subjectId = subjectId;
   if (branchId) state.branchId = branchId;
   if (mode) currentStoryMode = mode;
-  // 小延遲等 DOM/資料就緒
-  setTimeout(() => {
+  setTimeout(async () => {
     setStoryMode(mode || "pvp");
-    showToast("偵測到挑戰邀請，即將開始！");
-    setTimeout(() => {
-      startDuelGame(userKey(), "邀請者", mode || "pvp", activeBranch().stages);
-    }, 1200);
+    const playerName = userKey() === "guest" ? "玩家 2" : userKey();
+    try {
+      const data = await api("/story_match_join", {
+        method: "POST",
+        body: JSON.stringify({ token, playerName }),
+      });
+      showToast("已加入故事邀請，準備開始");
+      if (!startMatchWhenReady(data.match, playerName)) pollStoryMatch(token, playerName);
+    } catch (error) {
+      showToast(error.message || "加入邀請失敗");
+    }
   }, 600);
 })();
 

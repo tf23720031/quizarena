@@ -15,7 +15,6 @@
     { href: 'story_mode.html',    icon: 'fa-map-location-dot',   label: '故事模式' },
     { href: 'wrong_book.html',    icon: 'fa-book-open-reader',   label: '錯題本' },
     { href: 'daily_mission.html', icon: 'fa-calendar-check',     label: '每日任務' },
-    { href: 'challenge.html',     icon: 'fa-sword',              label: '挑戰好友' },
     { href: 'marketplace.html',   icon: 'fa-store',              label: '題庫市集' },
     { href: 'profile.html',       icon: 'fa-id-card',            label: '個人資料' },
   ];

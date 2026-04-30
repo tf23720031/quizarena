@@ -49,7 +49,7 @@
         <button class="story-mode-tab" data-mode="pvp">
           <i class="fa-solid fa-sword"></i>
           <strong>挑戰模式</strong>
-          <span>與好友即時對決 20 題</span>
+          <span>雙人即時對決 20 題</span>
         </button>
         <button class="story-mode-tab" data-mode="coop">
           <i class="fa-solid fa-handshake"></i>
@@ -62,11 +62,11 @@
       <div id="storyMultiPanel" style="display:none;" class="story-multi-panel">
         <div class="story-link-row">
           <button id="createChallengeBtn" class="tool-btn">
-            <i class="fa-solid fa-link"></i> 建立挑戰連結
+            <i class="fa-solid fa-link"></i> 建立邀請連結
           </button>
           <div class="story-link-divider">或</div>
           <div class="story-paste-row">
-            <input id="challengeLinkInput" class="story-link-input" type="text" placeholder="貼上挑戰連結後加入" />
+            <input id="challengeLinkInput" class="story-link-input" type="text" placeholder="貼上邀請連結後加入" />
             <button id="joinChallengeBtn" class="tool-btn secondary">
               <i class="fa-solid fa-right-to-bracket"></i> 加入
             </button>
@@ -79,8 +79,35 @@
           </button>
         </div>
         <p id="storyWaitingMsg" class="story-waiting-msg" style="display:none;">
-          <i class="fa-solid fa-spinner fa-spin"></i> 等待對手加入...
+          <i class="fa-solid fa-spinner fa-spin"></i> 題庫已選定，等待另一位玩家加入...
         </p>
+      </div>
+    </section>
+
+    <section class="tool-card story-bank-tools-card">
+      <div class="tool-card-head">
+        <h2>新增故事題庫</h2>
+        <span class="tool-note">AI 題庫至少 20 題，上傳題庫至少 5 題</span>
+      </div>
+      <div class="story-bank-tools">
+        <div class="story-tool-panel">
+          <label for="aiStoryTopicInput">AI 生成主題</label>
+          <div class="story-inline-form">
+            <input id="aiStoryTopicInput" class="story-link-input" type="text" placeholder="例如：台灣地理、Python 基礎、世界史" />
+            <button id="generateTopicBankBtn" class="tool-btn" type="button">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> 生成題庫
+            </button>
+          </div>
+        </div>
+        <div class="story-tool-panel">
+          <label for="uploadStoryBankInput">上傳自己的題庫 JSON</label>
+          <div class="story-inline-form">
+            <input id="uploadStoryBankInput" class="story-link-input" type="file" accept="application/json,.json" />
+            <button id="uploadStoryBankBtn" class="tool-btn secondary" type="button">
+              <i class="fa-solid fa-upload"></i> 匯入題庫
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 

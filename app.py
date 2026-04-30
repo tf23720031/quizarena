@@ -27,6 +27,8 @@ DEFAULT_HAIR = 'images/hair/hair01.png'
 DEFAULT_EYES = 'images/face/eyes01.png'
 
 _quiz_lock = threading.Lock()
+_story_match_lock = threading.Lock()
+STORY_MATCHES = {}
 
 
 def resolve_data_dir():
@@ -2532,7 +2534,7 @@ def generate_quiz_bank_api():
         difficulty = normalize_difficulty(data.get('difficulty'))
         language = normalize_language(data.get('language'))
         requested_count = int(data.get('count', 5) or 5)
-        count = max(1, min(requested_count, 20))
+        count = max(20 if data.get('storyMode') else 1, min(requested_count, 20))
         source_mode = str(data.get('sourceMode', 'ai')).strip()
         api_key = str(data.get('apiKey', '')).strip()
         if data.get('storyMode'):
@@ -2594,6 +2596,111 @@ def wrong_book_summary_api():
     if not username:
         return jsonify(success=False, message='缺少使用者帳號'), 400
     return jsonify(success=True, **build_wrong_book_detail(username))
+
+
+@app.route('/story_wrong_question', methods=['POST'])
+def story_wrong_question_api():
+    try:
+        data = request.get_json() or {}
+        username = str(data.get('username', '')).strip()
+        question = data.get('question') if isinstance(data.get('question'), dict) else {}
+        if not username:
+            return jsonify(success=False, message='缺少使用者帳號'), 400
+        if not question:
+            return jsonify(success=False, message='缺少題目資料'), 400
+
+        options = question.get('options', [])
+        if isinstance(options, list):
+            normalized_options = []
+            answer = int(question.get('answer', 0) or 0)
+            for idx, option in enumerate(options):
+                text = option.get('text') if isinstance(option, dict) else option
+                normalized_options.append({
+                    'text': str(text or '').strip(),
+                    'correct': idx == answer,
+                })
+        else:
+            normalized_options = []
+
+        source_title = str(data.get('sourceTitle') or '故事模式').strip()
+        qid_seed = str(question.get('id') or question.get('q') or question.get('content') or '')
+        row = {
+            'id': str(question.get('id') or f"story_{hash_text(qid_seed)[:16]}"),
+            'title': str(question.get('title') or source_title or '故事模式題目'),
+            'content': str(question.get('q') or question.get('content') or '').strip(),
+            'type': 'single',
+            'options_json': json.dumps(normalized_options, ensure_ascii=False),
+            'explanation': str(question.get('explanation') or question.get('scene') or '').strip(),
+            'image': '',
+            'category': source_title,
+            'difficulty': normalize_difficulty(question.get('difficulty')),
+        }
+        save_wrong_question(username, 'story_mode', source_title, row)
+        return jsonify(success=True, message='已加入錯題本')
+    except Exception as e:
+        return jsonify(success=False, message=f'故事錯題儲存失敗：{e}'), 500
+
+
+@app.route('/story_match_create', methods=['POST'])
+def story_match_create_api():
+    try:
+        data = request.get_json() or {}
+        mode = str(data.get('mode') or 'pvp').strip().lower()
+        if mode not in {'pvp', 'coop'}:
+            mode = 'pvp'
+        host_name = str(data.get('hostName') or '玩家 1').strip() or '玩家 1'
+        stages = data.get('stages', [])
+        if not isinstance(stages, list) or len(stages) < 1:
+            return jsonify(success=False, message='缺少故事題目'), 400
+        token = uid('story').replace('story_', '').upper()
+        match = {
+            'token': token,
+            'mode': mode,
+            'subjectId': str(data.get('subjectId') or '').strip(),
+            'branchId': str(data.get('branchId') or '').strip(),
+            'subjectTitle': str(data.get('subjectTitle') or '故事題庫').strip(),
+            'stages': stages[:20],
+            'players': [{'name': host_name, 'role': 'host', 'joinedAt': now_ts()}],
+            'status': 'waiting',
+            'createdAt': now_ts(),
+            'startedAt': 0,
+        }
+        with _story_match_lock:
+            STORY_MATCHES[token] = match
+        return jsonify(success=True, match=match)
+    except Exception as e:
+        return jsonify(success=False, message=f'建立故事邀請失敗：{e}'), 500
+
+
+@app.route('/story_match_join', methods=['POST'])
+def story_match_join_api():
+    try:
+        data = request.get_json() or {}
+        token = str(data.get('token') or '').strip().upper()
+        player_name = str(data.get('playerName') or '玩家 2').strip() or '玩家 2'
+        with _story_match_lock:
+            match = STORY_MATCHES.get(token)
+            if not match:
+                return jsonify(success=False, message='找不到故事邀請，請重新建立連結'), 404
+            if not any(p.get('name') == player_name for p in match['players']):
+                role = 'guest' if not any(p.get('role') == 'guest' for p in match['players']) else 'viewer'
+                match['players'].append({'name': player_name, 'role': role, 'joinedAt': now_ts()})
+            if len(match['players']) >= 2 and match['status'] == 'waiting':
+                match['status'] = 'ready'
+                match['startedAt'] = now_ts()
+        return jsonify(success=True, match=match)
+    except Exception as e:
+        return jsonify(success=False, message=f'加入故事邀請失敗：{e}'), 500
+
+
+@app.route('/story_match_state/<token>')
+def story_match_state_api(token):
+    token = str(token or '').strip().upper()
+    with _story_match_lock:
+        match = STORY_MATCHES.get(token)
+    if not match:
+        return jsonify(success=False, message='找不到故事邀請'), 404
+    return jsonify(success=True, match=match)
 
 
 @app.route('/ai_tutor', methods=['POST'])
