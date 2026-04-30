@@ -25,9 +25,9 @@
 
     <section class="tool-card story-hero-card">
       <div>
-        <span class="answer-pill">單人闖關</span>
+        <span class="answer-pill">單人 / 合作</span>
         <h2>選一條學習支線，完成越來越難的關卡。</h2>
-        <p>不用房主、不用 PIN，答題會保存進度，之後可以繼續挑戰。</p>
+        <p>支援單人闖關或邀請好友合作挑戰，答題會保存進度，之後可以繼續。</p>
       </div>
       <div class="story-progress-card">
         <span>目前玩家</span>
@@ -54,10 +54,28 @@
       <div id="storyBranchList" class="story-branch-list"></div>
     </section>
 
+    <!-- 單人挑戰好友 / 合作模式 -->
     <section class="tool-card">
       <div class="tool-card-head">
-        <h2>挑戰好友</h2>
-        <button id="copyStoryChallengeBtn" class="tool-btn secondary" type="button"><i class="fa-solid fa-link"></i> 複製挑戰連結</button>
+        <h2><i class="fa-solid fa-people-arrows"></i> 挑戰 & 合作</h2>
+      </div>
+      <div class="story-coop-row">
+        <div class="story-coop-card">
+          <i class="fa-solid fa-swords story-coop-icon" style="color:#f59e0b;"></i>
+          <div>
+            <strong>挑戰好友（競爭）</strong>
+            <p>各自作答同一支線，比較誰得分更高。</p>
+          </div>
+          <button id="copyStoryChallengeBtn" class="tool-btn secondary" type="button"><i class="fa-solid fa-link"></i> 複製挑戰連結</button>
+        </div>
+        <div class="story-coop-card">
+          <i class="fa-solid fa-handshake story-coop-icon" style="color:#10b981;"></i>
+          <div>
+            <strong>合作闖關（協力）</strong>
+            <p>兩人一起作答，共享生命值，互相補位。</p>
+          </div>
+          <button id="copyStoryCoopBtn" class="tool-btn secondary" type="button"><i class="fa-solid fa-link"></i> 複製合作連結</button>
+        </div>
       </div>
       <div id="storyFriendChallengeList" class="story-branch-list"></div>
     </section>

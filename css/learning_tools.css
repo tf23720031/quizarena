@@ -1891,3 +1891,70 @@ body:has(#dailyMissionList) .level-track span {
     border-radius: 24px !important;
   }
 }
+
+/* ── 成就展示牆 ── */
+.achievement-showcase-title {
+  font-size: .8rem; font-weight: 700; color: #f59e0b; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.achievement-showcase-row {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; min-height: 48px;
+  padding: 10px; background: rgba(245,158,11,.06); border: 1.5px dashed rgba(245,158,11,.35);
+  border-radius: 16px;
+}
+.showcase-empty {
+  color: #aaa; font-size: .83rem; display: flex; align-items: center; gap: 6px;
+}
+.showcase-badge {
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 10px;
+  border-radius: 99px; color: #fff; font-size: .82rem; font-weight: 700;
+  position: relative; box-shadow: 0 2px 8px rgba(0,0,0,.18);
+}
+.showcase-badge-icon { font-size: 1rem; }
+.showcase-badge-label { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.showcase-remove {
+  background: rgba(0,0,0,.25); border: none; color: #fff; border-radius: 50%;
+  width: 18px; height: 18px; font-size: .65rem; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ── 成就卡片徽章圖示 ── */
+.achievement-badge-icon {
+  width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; font-size: 1.2rem; color: #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,.18);
+}
+.profile-achievement-card {
+  display: flex; align-items: center; gap: 14px;
+}
+.showcase-toggle-btn {
+  margin-left: auto; background: none; border: 1.5px solid rgba(245,158,11,.4);
+  border-radius: 99px; width: 34px; height: 34px; cursor: pointer; flex-shrink: 0;
+  font-size: .9rem; color: #f59e0b; transition: all .15s; display: flex;
+  align-items: center; justify-content: center;
+}
+.showcase-toggle-btn.active { background: rgba(245,158,11,.15); border-color: #f59e0b; }
+.showcase-toggle-btn:hover { background: rgba(245,158,11,.12); }
+
+body.dark-mode .achievement-showcase-row { background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.25); }
+body.dark-mode .showcase-empty { color: #666; }
+
+/* ── 故事模式合作行 ── */
+.story-coop-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;
+}
+.story-coop-card {
+  display: flex; flex-direction: column; gap: 8px;
+  background: rgba(255,255,255,.55); border: 1.5px solid rgba(255,255,255,.7);
+  border-radius: 18px; padding: 14px; transition: transform .15s;
+}
+.story-coop-card:hover { transform: translateY(-2px); }
+.story-coop-icon { font-size: 1.6rem; margin-bottom: 2px; }
+.story-coop-card strong { font-size: .95rem; color: #293150; }
+.story-coop-card p { font-size: .82rem; color: #666; margin: 0; }
+@media (max-width: 580px) {
+  .story-coop-row { grid-template-columns: 1fr; }
+}
+body.dark-mode .story-coop-card { background: rgba(40,35,60,.6); border-color: rgba(255,255,255,.1); }
+body.dark-mode .story-coop-card strong { color: #e8eaf6; }
+body.dark-mode .story-coop-card p { color: #aaa; }

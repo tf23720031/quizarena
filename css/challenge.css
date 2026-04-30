@@ -1,0 +1,73 @@
+/* ── 1v1 挑戰好友 ── */
+.challenge-create-body { display: flex; flex-direction: column; gap: 16px; padding: 8px 0; }
+.challenge-field { display: flex; flex-direction: column; gap: 6px; }
+.challenge-field label { font-size: .82rem; font-weight: 700; color: #7c5a73; }
+.challenge-input {
+  padding: 12px 16px; border-radius: 14px; font-size: .95rem;
+  border: 1.5px solid rgba(255,255,255,.6); background: rgba(255,255,255,.7);
+  color: #293150; outline: none; font-family: inherit;
+  transition: border-color .2s, box-shadow .2s;
+}
+.challenge-input:focus { border-color: #a855f7; box-shadow: 0 0 0 3px rgba(168,85,247,.18); }
+.challenge-main-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-radius: 16px; font-size: 1rem; font-weight: 700; cursor: pointer;
+  background: linear-gradient(135deg, #7c3aed, #a855f7); color: #fff; border: none;
+  transition: opacity .2s, transform .15s; align-self: flex-start;
+}
+.challenge-main-btn:hover { opacity: .88; transform: translateY(-1px); }
+.challenge-link-body { display: flex; flex-direction: column; gap: 14px; }
+.challenge-link-box {
+  padding: 14px 16px; background: rgba(168,85,247,.08); border: 1.5px dashed #a855f7;
+  border-radius: 14px; font-family: monospace; font-size: .85rem; word-break: break-all; color: #5b21b6;
+}
+.challenge-hint { font-size: .82rem; color: #888; margin: 0; }
+.challenge-invite-banner {
+  padding: 14px; background: linear-gradient(135deg, rgba(124,58,237,.12), rgba(168,85,247,.08));
+  border-radius: 14px; text-align: center; font-weight: 700; color: #5b21b6; font-size: 1rem;
+}
+
+/* ── 遊戲區 ── */
+.challenge-game-area { }
+.challenge-question-card { }
+.challenge-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.challenge-opt-btn {
+  padding: 12px 16px; border-radius: 14px; border: 1.5px solid rgba(255,255,255,.5);
+  background: rgba(255,255,255,.6); font-size: .9rem; font-weight: 600; cursor: pointer;
+  transition: all .15s; text-align: left; color: #293150;
+}
+.challenge-opt-btn:hover { background: rgba(168,85,247,.15); border-color: #a855f7; }
+.challenge-opt-btn.selected { background: rgba(168,85,247,.25); border-color: #7c3aed; color: #5b21b6; }
+.challenge-opt-btn.correct { background: rgba(81,207,102,.25); border-color: #51cf66; color: #1a6630; }
+.challenge-opt-btn.wrong   { background: rgba(255,107,107,.2); border-color: #ff6b6b; color: #a00; }
+
+.challenge-score-row {
+  display: flex; gap: 16px; justify-content: center; margin-bottom: 12px;
+}
+.challenge-score-pill {
+  padding: 6px 18px; border-radius: 99px; font-weight: 700; font-size: .9rem;
+  background: rgba(168,85,247,.12); color: #5b21b6;
+}
+.challenge-score-pill.opponent { background: rgba(239,68,68,.1); color: #b91c1c; }
+
+/* ── 結果 ── */
+.challenge-result-area { text-align: center; padding: 16px 0; }
+.challenge-result-vs {
+  display: flex; gap: 24px; justify-content: center; align-items: center; margin-bottom: 16px;
+}
+.challenge-result-player { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.challenge-result-player .score { font-size: 2.2rem; font-weight: 900; color: #5b21b6; }
+.challenge-result-player .name { font-size: .9rem; color: #666; }
+.challenge-result-winner {
+  font-size: 1.2rem; font-weight: 700; color: #f59e0b;
+  background: rgba(245,158,11,.1); padding: 10px 24px; border-radius: 14px; display: inline-block;
+}
+
+body.dark-mode .challenge-input { background: rgba(40,35,60,.7); color: #e8eaf6; border-color: rgba(168,85,247,.3); }
+body.dark-mode .challenge-link-box { color: #c084fc; }
+body.dark-mode .challenge-invite-banner { color: #c084fc; }
+body.dark-mode .challenge-opt-btn { background: rgba(40,35,60,.7); color: #e8eaf6; }
+
+@media (max-width: 576px) {
+  .challenge-options { grid-template-columns: 1fr; }
+}

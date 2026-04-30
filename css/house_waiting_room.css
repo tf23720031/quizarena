@@ -859,3 +859,33 @@ body::before{
     font-size: 0.82rem;
   }
 }
+
+/* ── 房間主題皮膚 ── */
+.theme-picker-wrap {
+  margin: 14px 0;
+}
+.theme-picker-title {
+  font-size: .82rem; font-weight: 700; color: var(--text-soft); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.theme-picker-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+@media (max-width: 480px) {
+  .theme-picker-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.theme-opt-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 10px 6px; border-radius: 14px;
+  border: 2px solid transparent; cursor: pointer; position: relative;
+  transition: transform .15s, border-color .15s;
+  min-width: 0;
+}
+.theme-opt-btn:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.6); }
+.theme-opt-btn.active { border-color: #fff; box-shadow: 0 0 0 2px #ff9fc4; }
+.theme-emoji { font-size: 1.3rem; }
+.theme-label { font-size: .7rem; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); text-align: center; }
+.theme-check {
+  position: absolute; top: 4px; right: 6px; font-size: .7rem; color: #fff;
+  background: rgba(0,0,0,.4); border-radius: 50%; padding: 2px 3px;
+}

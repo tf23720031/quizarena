@@ -1,0 +1,80 @@
+/* ── 知識地圖 ── */
+.knowledge-map-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 4px 0;
+}
+.km-empty { color: #aaa; font-style: italic; }
+.km-node {
+  background: rgba(255,255,255,.6);
+  border: 1.5px solid rgba(255,255,255,.75);
+  border-radius: 18px;
+  padding: 14px 16px;
+  transition: transform .15s;
+}
+.km-node:hover { transform: translateY(-2px); }
+.km-node-top {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.km-node-top strong { flex: 1; font-size: .95rem; color: #293150; }
+.km-badge {
+  font-size: .72rem; font-weight: 700; padding: 2px 8px;
+  border-radius: 20px; background: rgba(0,0,0,.07);
+}
+.km-bar-track {
+  background: rgba(0,0,0,.1); border-radius: 99px; height: 7px; margin-bottom: 6px; overflow: hidden;
+}
+.km-bar-fill { height: 100%; border-radius: 99px; transition: width .4s; }
+.km-meta { font-size: .75rem; color: #888; }
+.mastery-low { border-color: rgba(255,107,107,.3); }
+.mastery-mid { border-color: rgba(255,179,71,.3); }
+.mastery-high { border-color: rgba(81,207,102,.3); }
+
+body.dark-mode .km-node { background: rgba(40,40,60,.6); border-color: rgba(255,255,255,.12); }
+body.dark-mode .km-node-top strong { color: #e8eaf6; }
+body.dark-mode .km-badge { background: rgba(255,255,255,.12); color: #ccc; }
+
+/* ── 筆記欄 ── */
+.wrong-note-wrap {
+  margin-top: 12px;
+  background: rgba(255,245,200,.5);
+  border: 1.5px dashed #f0c060;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.wrong-note-label {
+  display: block; font-size: .8rem; font-weight: 700; color: #b37a00; margin-bottom: 6px;
+}
+.wrong-note-input {
+  width: 100%; min-height: 72px; resize: vertical;
+  background: rgba(255,255,255,.85); border: 1.5px solid rgba(255,200,50,.4);
+  border-radius: 10px; padding: 8px 12px; font-size: .9rem; color: #3a3030;
+  font-family: inherit; outline: none; transition: border-color .2s;
+}
+.wrong-note-input:focus { border-color: #f0c060; }
+
+body.dark-mode .wrong-note-wrap { background: rgba(60,50,20,.4); border-color: #8a6a00; }
+body.dark-mode .wrong-note-label { color: #ffd77a; }
+body.dark-mode .wrong-note-input { background: rgba(50,45,20,.7); color: #f5e8c0; border-color: rgba(200,160,0,.3); }
+
+/* ── AI inline btn ── */
+.ai-inline-btn {
+  background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
+  color: #fff !important;
+}
+.ai-inline-btn:hover { opacity: .85; }
+
+/* ── 配對題練習 ── */
+.matching-practice-wrap {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0;
+}
+.matching-col { display: flex; flex-direction: column; gap: 8px; }
+.match-left-item, .match-right-item {
+  padding: 10px 14px; border-radius: 12px; font-size: .9rem; text-align: center;
+  border: 1.5px solid rgba(255,255,255,.5);
+}
+.match-left-item { background: rgba(99,102,241,.12); color: #4338ca; }
+.match-right-item { background: rgba(255,255,255,.6); color: #293150; cursor: pointer; }
+.match-right-item.correct { background: rgba(81,207,102,.25); border-color: #51cf66; }
+.match-right-item.wrong   { background: rgba(255,107,107,.2); border-color: #ff6b6b; }

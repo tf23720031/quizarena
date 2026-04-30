@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1v1 挑戰好友 - QuizArena</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/learning_tools.css">
+  <link rel="stylesheet" href="css/dark_mode.css">
+  <link rel="stylesheet" href="css/challenge.css">
+</head>
+<body>
+  <script>document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');</script>
+
+  <main class="tool-shell">
+    <header class="tool-topbar">
+      <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
+      <div>
+        <p class="tool-kicker">1v1 Battle</p>
+        <h1>挑戰好友</h1>
+      </div>
+      <span class="lang-switcher-slot"></span>
+    </header>
+
+    <!-- 建立挑戰 / 等待畫面 -->
+    <section class="tool-card" id="createSection">
+      <div class="tool-card-head">
+        <h2><i class="fa-solid fa-swords"></i> 發起 1v1 挑戰</h2>
+      </div>
+      <div class="challenge-create-body">
+        <div class="challenge-field">
+          <label>你的名稱</label>
+          <input type="text" id="challengerName" class="challenge-input" placeholder="輸入你的暱稱">
+        </div>
+        <div class="challenge-field">
+          <label>選擇題庫</label>
+          <select id="challengeBankSelect" class="challenge-input"></select>
+        </div>
+        <div class="challenge-field">
+          <label>題目數量</label>
+          <select id="challengeQuestionCount" class="challenge-input">
+            <option value="5">5 題</option>
+            <option value="10" selected>10 題</option>
+            <option value="15">15 題</option>
+          </select>
+        </div>
+        <button id="createChallengeBtn" class="challenge-main-btn">
+          <i class="fa-solid fa-link"></i> 產生挑戰連結
+        </button>
+      </div>
+    </section>
+
+    <!-- 挑戰連結產生後 -->
+    <section class="tool-card" id="linkSection" style="display:none">
+      <div class="tool-card-head"><h2><i class="fa-solid fa-share-nodes"></i> 分享給好友</h2></div>
+      <div class="challenge-link-body">
+        <div class="challenge-link-box" id="challengeLinkBox"></div>
+        <button id="copyChallengeBtn" class="challenge-main-btn">
+          <i class="fa-solid fa-copy"></i> 複製連結
+        </button>
+        <p class="challenge-hint">好友開啟連結後直接加入，雙方同步答題，最後比較得分！</p>
+      </div>
+    </section>
+
+    <!-- 對手加入 -->
+    <section class="tool-card" id="joinSection" style="display:none">
+      <div class="tool-card-head"><h2><i class="fa-solid fa-user-plus"></i> 加入挑戰</h2></div>
+      <div class="challenge-create-body">
+        <div class="challenge-invite-banner" id="challengeInviteBanner"></div>
+        <div class="challenge-field">
+          <label>你的名稱</label>
+          <input type="text" id="opponentName" class="challenge-input" placeholder="輸入你的暱稱">
+        </div>
+        <button id="joinChallengeBtn" class="challenge-main-btn">
+          <i class="fa-solid fa-play"></i> 加入開始作答
+        </button>
+      </div>
+    </section>
+
+    <!-- 遊戲區 -->
+    <section class="tool-card" id="gameSection" style="display:none">
+      <div class="tool-card-head">
+        <h2 id="gameTitle">挑戰中</h2>
+        <span class="answer-pill" id="gameProgress">0/0</span>
+      </div>
+      <div id="challengeGameArea" class="challenge-game-area"></div>
+    </section>
+
+    <!-- 結果區 -->
+    <section class="tool-card" id="resultSection" style="display:none">
+      <div class="tool-card-head"><h2><i class="fa-solid fa-trophy"></i> 挑戰結果</h2></div>
+      <div id="challengeResultArea" class="challenge-result-area"></div>
+      <button id="restartChallengeBtn" class="challenge-main-btn" style="margin-top:16px">
+        <i class="fa-solid fa-rotate-left"></i> 再來一場
+      </button>
+    </section>
+  </main>
+
+  <div class="toast-qa" id="toast"></div>
+  <script src="js/i18n.js"></script>
+  <script src="js/challenge.js"></script>
+</body>
+</html>
