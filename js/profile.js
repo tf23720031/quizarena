@@ -103,14 +103,12 @@ function renderProfile(profile) {
   $("profileUsername").textContent = profile.username || "-";
   $("profileWins").textContent = String(profile.wins || 0);
   const level = profile.level || {};
-  let dailyReward = {};
-  try { dailyReward = JSON.parse(localStorage.getItem(`quizarena_daily_reward_${profile.username}`) || "{}"); } catch {}
-  const dailyExp = Number(dailyReward.exp || 0);
-  const totalXp = Number(level.xp || 0) + dailyExp;
+  const totalXp = Number(level.xp || 0);
   const computedLevel = Math.max(Number(level.level || 1), Math.floor(totalXp / 180) + 1);
   const currentLevelXp = totalXp % 180;
   $("profileLevel").textContent = `Lv.${computedLevel}`;
-  $("profileDailyExp").textContent = `${dailyExp} EXP`;
+  const winRate = profile.winRate || {};
+  $("profileDailyExp").textContent = `${winRate.label || "0%"} (${Number(winRate.wins || 0)}/${Number(winRate.total || 0)})`;
   $("profileXpText").textContent = `${currentLevelXp} / 180 XP`;
   $("profileLevelBar").style.width = `${Math.min(100, Math.round((currentLevelXp / 180) * 100))}%`;
   $("profileLanguageSelect").value = profile.language || "zh";
@@ -126,7 +124,10 @@ function renderProfile(profile) {
 
   // ── 成就展示牆 ──
   const SHOWCASE_KEY = `quizarena_achievement_showcase_${profile.username || ''}`;
-  let showcaseIds = (() => { try { return JSON.parse(localStorage.getItem(SHOWCASE_KEY) || '[]'); } catch { return []; } })();
+  let showcaseIds = Array.isArray(profile.showcaseIds) && profile.showcaseIds.length
+    ? profile.showcaseIds.slice(0, 5)
+    : (() => { try { return JSON.parse(localStorage.getItem(SHOWCASE_KEY) || '[]'); } catch { return []; } })();
+  localStorage.setItem(SHOWCASE_KEY, JSON.stringify(showcaseIds));
 
   function getBadgeGradient(icon) {
     const m = { 'fa-trophy':'linear-gradient(135deg,#f59e0b,#d97706)', 'fa-crown':'linear-gradient(135deg,#fbbf24,#f59e0b)', 'fa-gem':'linear-gradient(135deg,#06b6d4,#0891b2)', 'fa-bolt':'linear-gradient(135deg,#a855f7,#7c3aed)', 'fa-medal':'linear-gradient(135deg,#9ca3af,#6b7280)', 'fa-users':'linear-gradient(135deg,#10b981,#059669)', 'fa-seedling':'linear-gradient(135deg,#6ee7b7,#10b981)', 'fa-route':'linear-gradient(135deg,#f472b6,#ec4899)', 'fa-people-arrows':'linear-gradient(135deg,#34d399,#10b981)' };
@@ -246,6 +247,7 @@ async function saveProfile() {
         displayTitle: activeTitle,
         language: $("profileLanguageSelect").value,
         county: $("profileCountySelect").value,
+        showcaseIds: (() => { try { return JSON.parse(localStorage.getItem(`quizarena_achievement_showcase_${profileState.username || ''}`) || "[]"); } catch { return []; } })(),
       }),
     });
     localStorage.setItem("currentUserProfile", JSON.stringify(data.profile));

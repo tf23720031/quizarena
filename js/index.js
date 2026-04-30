@@ -271,11 +271,11 @@
     const badgesSection = $("friendBadgesSection");
     const badgesList = $("friendBadgesList");
     const achievementList = Array.isArray(summary.achievements) ? summary.achievements : [];
-    const equippedBadges = achievementList.filter((a) => a.unlocked && a.equipped);
-    // 若沒有 equipped 欄位，改顯示前 3 個已解鎖成就
-    const displayBadges = equippedBadges.length
-      ? equippedBadges
-      : achievementList.filter((a) => a.unlocked).slice(0, 3);
+    const showcasedBadges = Array.isArray(profile.showcasedAchievements) ? profile.showcasedAchievements : [];
+    const showcaseIds = Array.isArray(profile.showcaseIds) ? profile.showcaseIds : [];
+    const displayBadges = showcasedBadges.length
+      ? showcasedBadges
+      : showcaseIds.map((id) => achievementList.find((a) => a.id === id && a.unlocked)).filter(Boolean);
 
     if (badgesSection && badgesList) {
       if (displayBadges.length) {

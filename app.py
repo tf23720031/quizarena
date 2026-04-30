@@ -952,14 +952,14 @@ def get_user_profile_map(usernames):
     if not names:
         return {}
     default = {
-        name: {'username': name, 'avatar': '', 'displayTitle': '新手挑戰者', 'language': 'zh', 'county': ''}
+        name: {'username': name, 'avatar': '', 'displayTitle': '新手挑戰者', 'language': 'zh', 'county': '', 'showcaseIds': []}
         for name in names
     }
     if use_postgres_user_store():
         with closing(get_pg_conn()) as conn:
             with conn.cursor() as cur:
                 cur.execute('''
-                    SELECT username, avatar, display_title, preferred_language, county
+                    SELECT username, avatar, display_title, preferred_language, county, showcase_ids
                     FROM users
                     WHERE username = ANY(%s)
                 ''', (names,))
@@ -968,7 +968,7 @@ def get_user_profile_map(usernames):
         placeholders = ','.join(['?'] * len(names))
         with closing(get_conn(USERS_DB_PATH)) as conn:
             rows = conn.execute(f'''
-                SELECT username, avatar, display_title, preferred_language, county
+                SELECT username, avatar, display_title, preferred_language, county, showcase_ids
                 FROM users
                 WHERE username IN ({placeholders})
             ''', names).fetchall()
@@ -980,8 +980,40 @@ def get_user_profile_map(usernames):
                 'displayTitle': row.get('display_title') or '新手挑戰者',
                 'language': normalize_profile_language(row.get('preferred_language')),
                 'county': normalize_profile_county(row.get('county')),
+                'showcaseIds': parse_showcase_ids(row.get('showcase_ids')),
             })
     return default
+
+
+def parse_showcase_ids(value):
+    try:
+        data = json.loads(value or '[]')
+    except Exception:
+        data = []
+    if not isinstance(data, list):
+        return []
+    result = []
+    for item in data:
+        text = str(item or '').strip()
+        if text and text not in result:
+            result.append(text)
+    return result[:5]
+
+
+def normalize_showcase_ids(value, achievement_summary):
+    ids = parse_showcase_ids(json.dumps(value, ensure_ascii=False) if isinstance(value, list) else value)
+    unlocked = {
+        str(item.get('id') or '').strip()
+        for item in achievement_summary.get('achievements', [])
+        if item.get('unlocked')
+    }
+    return [item for item in ids if item in unlocked][:5]
+
+
+def build_showcased_achievements(achievement_summary, showcase_ids):
+    achievements = achievement_summary.get('achievements', [])
+    by_id = {item.get('id'): item for item in achievements if item.get('unlocked')}
+    return [by_id[item] for item in showcase_ids if item in by_id]
 
 
 def build_title_options(achievement_summary):
@@ -1048,8 +1080,10 @@ def build_user_profile(username):
         return None
     wins = get_user_wins_map([username]).get(username, 0)
     achievements = build_achievement_summary(username)
+    win_rate = build_user_win_rate(username)
     level_info = build_player_level(username, achievements)
     title_options = build_title_options(achievements)
+    showcase_ids = normalize_showcase_ids(profile.get('showcaseIds') or [], achievements)
     selected = profile.get('displayTitle') or '新手挑戰者'
     if selected not in {opt['id'] for opt in title_options}:
         selected = '新手挑戰者'
@@ -1060,13 +1094,16 @@ def build_user_profile(username):
         'language': normalize_profile_language(profile.get('language')),
         'county': normalize_profile_county(profile.get('county')),
         'wins': int(wins or 0),
+        'winRate': win_rate,
         'level': level_info,
         'achievements': achievements,
+        'showcaseIds': showcase_ids,
+        'showcasedAchievements': build_showcased_achievements(achievements, showcase_ids),
         'titleOptions': title_options,
     }
 
 
-def update_user_profile(username, avatar=None, display_title=None, preferred_language=None, county=None):
+def update_user_profile(username, avatar=None, display_title=None, preferred_language=None, county=None, showcase_ids=None):
     username = str(username or '').strip()
     if not username or not get_user_exists(username):
         raise ValueError('找不到使用者')
@@ -1075,6 +1112,7 @@ def update_user_profile(username, avatar=None, display_title=None, preferred_lan
     current_language = profile.get('language') if profile else 'zh'
     current_avatar = profile.get('avatar') if profile else ''
     current_county = profile.get('county') if profile else ''
+    current_showcase_ids = profile.get('showcaseIds') if profile else []
 
     next_avatar = current_avatar if avatar is None else clean_avatar_data(avatar)
     title_options = build_title_options(build_achievement_summary(username))
@@ -1084,23 +1122,28 @@ def update_user_profile(username, avatar=None, display_title=None, preferred_lan
         next_title = '新手挑戰者'
     next_language = normalize_profile_language(preferred_language if preferred_language is not None else current_language)
     next_county = normalize_profile_county(county if county is not None else current_county)
+    next_showcase_ids = normalize_showcase_ids(
+        showcase_ids if showcase_ids is not None else current_showcase_ids,
+        build_achievement_summary(username)
+    )
+    next_showcase_json = json.dumps(next_showcase_ids, ensure_ascii=False)
 
     if use_postgres_user_store():
         with closing(get_pg_conn()) as conn:
             with conn.cursor() as cur:
                 cur.execute('''
                     UPDATE users
-                    SET avatar=%s, display_title=%s, preferred_language=%s, county=%s
+                    SET avatar=%s, display_title=%s, preferred_language=%s, county=%s, showcase_ids=%s
                     WHERE username=%s
-                ''', (next_avatar, next_title, next_language, next_county, username))
+                ''', (next_avatar, next_title, next_language, next_county, next_showcase_json, username))
             conn.commit()
     else:
         with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
             conn.execute('''
                 UPDATE users
-                SET avatar=?, display_title=?, preferred_language=?, county=?
+                SET avatar=?, display_title=?, preferred_language=?, county=?, showcase_ids=?
                 WHERE username=?
-            ''', (next_avatar, next_title, next_language, next_county, username))
+            ''', (next_avatar, next_title, next_language, next_county, next_showcase_json, username))
             conn.commit()
     return build_user_profile(username)
 
@@ -1389,6 +1432,74 @@ def build_friend_request_summary(username):
     }
 
 
+def build_user_win_rate(username):
+    username = str(username or '').strip()
+    if not username:
+        return {'wins': 0, 'total': 0, 'rate': 0, 'label': '0%'}
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    SELECT COUNT(*) AS total,
+                           COALESCE(SUM(CASE WHEN is_winner=1 THEN 1 ELSE 0 END), 0) AS wins
+                    FROM user_match_players
+                    WHERE LOWER(username)=LOWER(%s)
+                ''', (username,))
+                row = cur.fetchone() or {}
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            row = conn.execute('''
+                SELECT COUNT(*) AS total,
+                       COALESCE(SUM(CASE WHEN is_winner=1 THEN 1 ELSE 0 END), 0) AS wins
+                FROM user_match_players
+                WHERE LOWER(username)=LOWER(?)
+            ''', (username,)).fetchone() or {}
+    total = int(row.get('total') or 0)
+    wins = int(row.get('wins') or 0)
+    if total <= 0:
+        wins = int(get_user_wins_map([username]).get(username, 0) or 0)
+        total = wins
+    rate = round((wins / total) * 100, 1) if total else 0
+    label = f'{int(rate)}%' if float(rate).is_integer() else f'{rate}%'
+    return {'wins': wins, 'total': total, 'rate': rate, 'label': label}
+
+
+def record_match_participants(room, player_rows, winner_name):
+    room_pin = str(room.get('pin') or '').strip()
+    if not room_pin:
+        return
+    ts = now_ts()
+    names = []
+    for row in player_rows or []:
+        name = str(row.get('player_name') or '').strip()
+        if name and get_user_exists(name) and name not in names:
+            names.append(name)
+    if not names:
+        return
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as user_conn:
+            with user_conn.cursor() as cur:
+                for name in names:
+                    cur.execute('''
+                        INSERT INTO user_match_players (room_pin, username, is_winner, recorded_at)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT(room_pin, username)
+                        DO UPDATE SET is_winner=EXCLUDED.is_winner, recorded_at=EXCLUDED.recorded_at
+                    ''', (room_pin, name, 1 if name == winner_name else 0, ts))
+            user_conn.commit()
+        return
+    with closing(sqlite3.connect(USERS_DB_PATH)) as user_conn:
+        for name in names:
+            user_conn.execute('''
+                INSERT INTO user_match_players (room_pin, username, is_winner, recorded_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(room_pin, username)
+                DO UPDATE SET is_winner=excluded.is_winner, recorded_at=excluded.recorded_at
+            ''', (room_pin, name, 1 if name == winner_name else 0, ts))
+        user_conn.commit()
+
+
 def record_user_win(room, winner_name, winner_score):
     ts = now_ts()
     if use_postgres_user_store():
@@ -1452,6 +1563,14 @@ def record_room_winner(conn, pin):
     room = conn.execute('SELECT pin, room_name, bank_id, bank_title, created_by FROM rooms WHERE pin=?', (pin,)).fetchone()
     if not room:
         return
+    participant_rows = conn.execute('''
+        SELECT player_name
+        FROM room_players
+        WHERE room_pin = ?
+          AND COALESCE(is_host, 0) = 0
+          AND LOWER(player_name) != LOWER(?)
+        ORDER BY joined_at ASC, id ASC
+    ''', (pin, str(room.get('created_by') or '').strip())).fetchall()
     rankings = conn.execute('''
         SELECT rr.player_name, COALESCE(SUM(rr.points_earned), 0) AS total_score
         FROM room_results rr
@@ -1463,10 +1582,14 @@ def record_room_winner(conn, pin):
         ORDER BY total_score DESC, rr.player_name ASC
     ''', (pin, str(room.get('created_by') or '').strip())).fetchall()
     if not rankings:
+        record_match_participants(room, participant_rows, '')
+        save_teacher_report_snapshot_for_pin(conn, pin)
         return
     winner = rankings[0]
     winner_name = str(winner.get('player_name') or '').strip()
+    record_match_participants(room, participant_rows, winner_name)
     if not get_user_exists(winner_name):
+        save_teacher_report_snapshot_for_pin(conn, pin)
         return
 
     record_user_win(room, winner_name, int(winner.get('total_score') or 0))
@@ -2052,6 +2175,7 @@ def init_postgres_users_db():
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_title TEXT DEFAULT '新手挑戰者'")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'zh'")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS county TEXT DEFAULT ''")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS showcase_ids TEXT DEFAULT '[]'")
             c.execute('''
                 CREATE TABLE IF NOT EXISTS user_friendships (
                     id SERIAL PRIMARY KEY,
@@ -2114,6 +2238,17 @@ def init_postgres_users_db():
                 )
             ''')
             c.execute('''
+                CREATE TABLE IF NOT EXISTS user_match_players (
+                    id SERIAL PRIMARY KEY,
+                    room_pin TEXT NOT NULL,
+                    username TEXT NOT NULL,
+                    is_winner INTEGER DEFAULT 0,
+                    recorded_at BIGINT,
+                    UNIQUE(room_pin, username)
+                )
+            ''')
+            c.execute('CREATE INDEX IF NOT EXISTS idx_user_match_players_username ON user_match_players(username)')
+            c.execute('''
                 CREATE TABLE IF NOT EXISTS teacher_report_history (
                     id SERIAL PRIMARY KEY,
                     pin TEXT UNIQUE NOT NULL,
@@ -2153,6 +2288,7 @@ def init_users_db():
             ('display_title', "TEXT DEFAULT '新手挑戰者'"),
             ('preferred_language', "TEXT DEFAULT 'zh'"),
             ('county', "TEXT DEFAULT ''"),
+            ('showcase_ids', "TEXT DEFAULT '[]'"),
         ]:
             if col not in existing:
                 c.execute(f'ALTER TABLE users ADD COLUMN {col} {typ}')
@@ -2238,6 +2374,16 @@ def init_users_db():
                 winner_username TEXT,
                 winner_score INTEGER DEFAULT 0,
                 recorded_at INTEGER
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS user_match_players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_pin TEXT NOT NULL,
+                username TEXT NOT NULL,
+                is_winner INTEGER DEFAULT 0,
+                recorded_at INTEGER,
+                UNIQUE(room_pin, username)
             )
         ''')
         c.execute('''
@@ -2490,6 +2636,7 @@ def update_user_profile_api():
             display_title=data.get('displayTitle') if 'displayTitle' in data else None,
             preferred_language=data.get('language') if 'language' in data else None,
             county=data.get('county') if 'county' in data else None,
+            showcase_ids=data.get('showcaseIds') if 'showcaseIds' in data else None,
         )
         return jsonify(success=True, profile=profile, message='個人資料已更新')
     except ValueError as e:

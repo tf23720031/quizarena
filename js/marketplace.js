@@ -17,10 +17,74 @@ const MKT_KEY = "quizarena_marketplace_v1";
 let currentFilter = "all";
 let searchQuery = "";
 
+const AI_MARKET_TOPICS = [
+  ["ai_science", "AI設計：自然科學探索", "自然科學", "從光合作用、力學到生態系的 20 題基礎挑戰。"],
+  ["ai_history", "AI設計：世界歷史冒險", "歷史", "用事件因果、文明交流與時代脈絡串成 20 題歷史題。"],
+  ["ai_english", "AI設計：英文閱讀文法", "英文", "單字、時態、閱讀推論與語境判斷混合的 20 題。"],
+  ["ai_math", "AI設計：數學推理塔", "數學", "運算、比例、數列、幾何與資料判讀的 20 題。"],
+  ["ai_programming", "AI設計：程式邏輯入門", "程式語言", "變數、條件、迴圈、資料結構與除錯觀念的 20 題。"],
+  ["ai_design", "AI設計：設計與遊戲企劃", "設計概論", "視覺層級、使用者流程、遊戲回饋與平衡的 20 題。"],
+];
+
+function buildAiQuestions(topicId, category) {
+  const concepts = {
+    "自然科學": ["光合作用", "力與運動", "生態系", "水循環", "物質狀態", "電路", "聲音", "光影", "天氣", "地震", "細胞", "消化", "能量轉換", "磁力", "酸鹼", "月相", "岩石", "分類", "實驗變因", "科學推論"],
+    "歷史": ["文明起源", "農業革命", "城邦", "帝國", "貿易路線", "宗教改革", "文藝復興", "工業革命", "殖民", "民主制度", "戰爭原因", "條約", "文化交流", "科技傳播", "民族國家", "冷戰", "全球化", "史料判讀", "因果關係", "時序排列"],
+    "英文": ["現在式", "過去式", "未來式", "比較級", "最高級", "介系詞", "連接詞", "代名詞", "被動語態", "完成式", "片語動詞", "閱讀主旨", "細節定位", "推論", "語氣", "同義詞", "上下文", "段落排序", "條件句", "摘要"],
+    "數學": ["四則運算", "分數", "比例", "百分率", "一次方程", "面積", "周長", "角度", "座標", "平均數", "中位數", "機率", "倍數", "因數", "質數", "平方根", "數列", "速率", "圖表", "邏輯"],
+    "程式語言": ["變數", "資料型別", "if 條件", "for 迴圈", "while 迴圈", "函式", "陣列", "物件", "布林值", "字串", "事件", "JSON", "API", "非同步", "錯誤處理", "搜尋", "排序", "測試", "重構", "註解"],
+    "設計概論": ["視覺層級", "對比", "留白", "對齊", "重複", "親密性", "色彩", "字體", "品牌", "按鈕狀態", "表單", "資訊架構", "使用者流程", "無障礙", "原型", "回饋", "難度曲線", "獎勵", "社交互動", "留存"],
+  }[category] || [];
+  return concepts.map((concept, index) => ({
+    id: `${topicId}_${index + 1}`,
+    title: `${category}第 ${index + 1} 題`,
+    content: `關於「${concept}」，哪一個做法最符合${category}的學習重點？`,
+    type: "single",
+    category,
+    difficulty: index < 7 ? "easy" : index < 14 ? "medium" : "hard",
+    time: "20 秒",
+    score: 1000,
+    explanation: `這題檢查「${concept}」的核心概念，先抓關鍵條件再判斷答案。`,
+    options: [
+      { text: `先理解${concept}的核心條件再作答`, correct: true },
+      { text: `只看最短的選項就作答`, correct: false },
+      { text: `忽略題目情境直接猜測`, correct: false },
+      { text: `把熟悉的字都當成正解`, correct: false },
+    ],
+  }));
+}
+
 function loadMarket() {
   try { return JSON.parse(localStorage.getItem(MKT_KEY) || "[]"); } catch { return []; }
 }
 function saveMarket(data) { localStorage.setItem(MKT_KEY, JSON.stringify(data)); }
+function normalizeUploadedBank(raw, fallbackTitle = "上傳題庫") {
+  if (!raw || typeof raw !== "object") return { title: fallbackTitle, questions: [] };
+  const questions = Array.isArray(raw) ? raw : (raw.questions || raw.quizBank?.questions || raw.banks?.[0]?.questions || []);
+  const title = raw.title || raw.quizBank?.title || raw.banks?.[0]?.title || fallbackTitle;
+  return { title, questions: Array.isArray(questions) ? questions : [] };
+}
+function ensureAiMarketBanks() {
+  const market = loadMarket();
+  let changed = false;
+  AI_MARKET_TOPICS.forEach(([id, title, category, description]) => {
+    if (market.some((bank) => bank.id === id)) return;
+    market.push({
+      id,
+      title,
+      author: "QuizArena AI",
+      description,
+      questions: buildAiQuestions(id, category),
+      categories: [category, "AI設計"],
+      source: "ai",
+      copyCount: 0,
+      ratings: [],
+      publishedAt: Date.now() - (AI_MARKET_TOPICS.findIndex((item) => item[0] === id) + 1) * 3600 * 1000,
+    });
+    changed = true;
+  });
+  if (changed) saveMarket(market);
+}
 
 function getCurrentUser() { return localStorage.getItem("currentUser") || "匿名玩家"; }
 function loadMyBanks() {
@@ -95,7 +159,7 @@ function renderBankList(market) {
     return `
       <div class="mkt-bank-card">
         <div class="mkt-bank-card-title">${escapeHtml(b.title)}</div>
-        <div class="mkt-bank-card-author"><i class="fa-solid fa-user"></i> ${escapeHtml(b.author)} ・ ${b.questions?.length || 0} 題</div>
+        <div class="mkt-bank-card-author"><i class="fa-solid ${b.source === "ai" ? "fa-wand-magic-sparkles" : "fa-user"}"></i> ${escapeHtml(b.author)} ・ ${b.questions?.length || 0} 題</div>
         ${b.description ? `<div class="mkt-bank-card-desc">${escapeHtml(b.description)}</div>` : ''}
         <div class="mkt-bank-card-meta">
           ${cats.map(c => `<span class="mkt-tag">${escapeHtml(c)}</span>`).join('')}
@@ -159,16 +223,31 @@ function renderAll() {
 function openPublishModal() {
   const sel = $("publishBankSelect"); if (!sel) return;
   const banks = loadMyBanks().filter(b => !b.isSystem && !b.isWrongBook);
-  if (!banks.length) { showToast("你還沒有可上架的題庫"); return; }
-  sel.innerHTML = banks.map((b, i) => `<option value="${i}">${escapeHtml(b.title || `題庫 ${i+1}`)}</option>`).join('');
+  sel.innerHTML = banks.length
+    ? banks.map((b, i) => `<option value="${i}">${escapeHtml(b.title || `題庫 ${i+1}`)}</option>`).join('')
+    : `<option value="">沒有本機題庫，可改用下方 JSON 上傳</option>`;
+  $("publishUploadInput").value = "";
   $("publishModal").style.display = "flex";
 }
 
-function doPublish() {
+async function doPublish() {
   const sel = $("publishBankSelect"); const desc = $("publishDescription");
+  const uploadFile = $("publishUploadInput")?.files?.[0];
   const banks = loadMyBanks().filter(b => !b.isSystem && !b.isWrongBook);
-  const bank = banks[parseInt(sel?.value ?? 0)];
-  if (!bank) return;
+  let bank = banks[parseInt(sel?.value ?? 0)];
+  if (uploadFile) {
+    try {
+      bank = normalizeUploadedBank(JSON.parse(await uploadFile.text()), uploadFile.name.replace(/\.json$/i, ""));
+    } catch {
+      showToast("題庫 JSON 格式錯誤");
+      return;
+    }
+  }
+  if (!bank) { showToast("請選擇或上傳題庫"); return; }
+  if (!Array.isArray(bank.questions) || bank.questions.length < 5) {
+    showToast("玩家上架題庫至少需要 5 題");
+    return;
+  }
   const market = loadMarket();
   // Check duplicate
   if (market.find(m => m.title === bank.title && m.author === getCurrentUser())) {
@@ -182,6 +261,7 @@ function doPublish() {
     description: desc?.value.trim() || "",
     questions: bank.questions || [],
     categories: cats,
+    source: "player",
     copyCount: 0,
     ratings: [],
     publishedAt: Date.now(),
@@ -211,4 +291,5 @@ $("mktFilterRow")?.querySelectorAll(".mkt-filter-btn").forEach(btn => {
   });
 });
 
+ensureAiMarketBanks();
 renderAll();
