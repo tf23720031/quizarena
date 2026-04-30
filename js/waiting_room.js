@@ -278,8 +278,8 @@ async function sendHeartbeat() {
   } catch (_) {}
 }
 
-document.getElementById('chatForm').addEventListener('submit', sendMessage);
-document.getElementById('leaveRoomBtn').addEventListener('click', leaveRoom);
+document.getElementById('chatForm')?.addEventListener('submit', sendMessage);
+document.getElementById('leaveRoomBtn')?.addEventListener('click', leaveRoom);
 document.getElementById('inviteRoomBtn')?.addEventListener('click', copyInvite);
 window.addEventListener('beforeunload', leaveRoomOnUnload);
 
