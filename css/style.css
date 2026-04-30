@@ -327,6 +327,13 @@ body.dark-mode .btn-close {
   order: 98;
 }
 
+/* On mobile the pink FAB cluster in nav_drawer.js replaces this button */
+@media (max-width: 991.98px) {
+  #darkModeBtn {
+    display: none !important;
+  }
+}
+
 .btn-story {
   background: linear-gradient(135deg, #5bb8ff, #33d0b8) !important;
   color: #fff !important;

@@ -2,36 +2,7 @@
   const getAudioManager = () => window.AudioManager || null;
 
   function ensureToggle() {
-    if (document.getElementById('audioToggleBtn')) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'audioToggleBtn';
-    btn.className = 'audio-toggle';
-    btn.type = 'button';
-    btn.setAttribute('aria-label', '切換音效');
-    btn.title = '切換音效';
-
-    function render() {
-      const audioManager = getAudioManager();
-      const muted = audioManager?.isMuted?.() ?? false;
-      btn.innerHTML = muted
-        ? '<i class="fa-solid fa-volume-xmark"></i>'
-        : '<i class="fa-solid fa-volume-high"></i>';
-    }
-
-    btn.addEventListener('click', () => {
-      const audioManager = getAudioManager();
-      if (!audioManager) return;
-      audioManager.toggleMute?.();
-      if (!audioManager.isMuted?.()) {
-        audioManager.pop?.();
-        audioManager.startBgMusic?.();
-      }
-      render();
-    });
-
-    document.body.appendChild(btn);
-    render();
+    // Speaker button removed — mute is now inside the music drawer (nav_drawer.js → MusicDrawer)
   }
 
   document.addEventListener('DOMContentLoaded', () => {

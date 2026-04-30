@@ -11,31 +11,38 @@
   const PAGE = location.pathname.split('/').pop() || 'index.html';
 
   const NAV_LINKS = [
-    { href: 'index.html',         icon: 'fa-house',              label: '🏠 首頁大廳' },
-    { href: 'story_mode.html',    icon: 'fa-map-location-dot',   label: '🗺️ 故事模式' },
-    { href: 'wrong_book.html',    icon: 'fa-book-open-reader',   label: '📖 錯題本' },
-    { href: 'daily_mission.html', icon: 'fa-calendar-check',     label: '📅 每日任務' },
-    { href: 'challenge.html',     icon: 'fa-sword',              label: '⚔️ 挑戰好友' },
-    { href: 'marketplace.html',   icon: 'fa-store',              label: '🛒 題庫市集' },
-    { href: 'profile.html',       icon: 'fa-id-card',            label: '👤 個人資料' },
+    { href: 'index.html',         icon: 'fa-house',              label: '首頁大廳' },
+    { href: 'story_mode.html',    icon: 'fa-map-location-dot',   label: '故事模式' },
+    { href: 'wrong_book.html',    icon: 'fa-book-open-reader',   label: '錯題本' },
+    { href: 'daily_mission.html', icon: 'fa-calendar-check',     label: '每日任務' },
+    { href: 'challenge.html',     icon: 'fa-sword',              label: '挑戰好友' },
+    { href: 'marketplace.html',   icon: 'fa-store',              label: '題庫市集' },
+    { href: 'profile.html',       icon: 'fa-id-card',            label: '個人資料' },
   ];
 
   const LANGS = [
-    { value: 'zh', label: '🌐 中文' },
-    { value: 'en', label: '🌐 English' },
-    { value: 'ja', label: '🌐 日本語' },
-    { value: 'ko', label: '🌐 한국어' },
-    { value: 'es', label: '🌐 Español' },
+    { value: 'zh', label: '中文' },
+    { value: 'en', label: 'English' },
+    { value: 'ja', label: '日本語' },
+    { value: 'ko', label: '한국어' },
+    { value: 'es', label: 'Español' },
   ];
 
   /* ── CSS ── */
   const CSS = `
   /* Pink FAB hamburger */
-  .unav-fab {
+  /* FAB cluster — two pink buttons side by side, fixed top-right */
+  .unav-fab-cluster {
     position: fixed;
     top: 14px;
     right: 14px;
     z-index: 8500;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .unav-fab {
     width: 46px; height: 46px;
     border-radius: 14px;
     border: none;
@@ -46,14 +53,41 @@
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 6px 20px rgba(255, 79, 139, 0.45);
     transition: transform .15s, box-shadow .2s;
-    backdrop-filter: blur(4px);
   }
   .unav-fab:hover {
     transform: scale(1.07);
     box-shadow: 0 8px 28px rgba(255, 79, 139, 0.6);
   }
-  /* hide on index.html — it already has its own nav-menu-btn */
-  .unav-hide-fab .unav-fab { display: none !important; }
+
+  /* Dark mode toggle button — same shape as hamburger */
+  .unav-dark-fab {
+    width: 46px; height: 46px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #ff7eb3 0%, #ff4f8b 100%);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(255, 79, 139, 0.45);
+    transition: transform .15s, box-shadow .2s;
+  }
+  .unav-dark-fab:hover {
+    transform: scale(1.07);
+    box-shadow: 0 8px 28px rgba(255, 79, 139, 0.6);
+  }
+
+  /* Inline variant — sits in the normal flow (index.html header) */
+  .unav-fab-cluster--inline {
+    position: static;
+    display: flex;
+  }
+  /* On index.html hide the fixed cluster, show inline only */
+  body.unav-index-page .unav-fab-cluster:not(.unav-fab-cluster--inline) {
+    display: none !important;
+  }
+
+  .unav-hide-fab .unav-fab-cluster { display: none !important; }
 
   /* Overlay */
   .unav-overlay {
@@ -239,9 +273,14 @@
 
     const wrap = document.createElement('div');
     wrap.innerHTML = `
-      <button class="unav-fab" id="unavFab" aria-label="開啟選單">
-        <i class="fa-solid fa-bars"></i>
-      </button>
+      <div class="unav-fab-cluster" id="unavFabClusterFixed">
+        <button class="unav-dark-fab" id="unavDarkFab" aria-label="切換深色模式">
+          <i class="fa-solid fa-moon" id="unavDarkFabIcon"></i>
+        </button>
+        <button class="unav-fab" id="unavFab" aria-label="開啟選單">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
 
       <div class="unav-overlay" id="unavOverlay"></div>
 
@@ -253,12 +292,12 @@
         </div>
 
         <div class="unav-body">
-          <div class="unav-section">📄 頁面</div>
+          <div class="unav-section"><i class="fa-solid fa-grid-2" style="margin-right:5px;font-size:10px;"></i>頁面</div>
           ${navItems}
 
           <div class="unav-divider"></div>
 
-          <div class="unav-section">⚙️ 設定</div>
+          <div class="unav-section"><i class="fa-solid fa-gear" style="margin-right:5px;font-size:10px;"></i>設定</div>
 
           <!-- Language -->
           <div class="unav-lang-wrap">
@@ -275,7 +314,7 @@
 
           <div class="unav-divider"></div>
 
-          <div class="unav-section">🎵 音樂</div>
+          <div class="unav-section"><i class="fa-solid fa-music" style="margin-right:5px;font-size:10px;"></i>音樂</div>
 
           <!-- Music shortcut -->
           <button class="unav-btn unav-music-btn" id="unavMusicBtn" type="button">
@@ -298,10 +337,42 @@
     document.getElementById('unavOverlay')?.classList.remove('open');
   }
 
+  function _syncDarkIcons(isDark) {
+    const cls = `fa-solid ${isDark ? 'fa-sun' : 'fa-moon'}`;
+    // Fixed FAB icon
+    const fabIcon = document.getElementById('unavDarkFabIcon');
+    if (fabIcon) fabIcon.className = cls;
+    // Inline index FAB icon
+    const fabIconIndex = document.getElementById('unavDarkFabIndexIcon');
+    if (fabIconIndex) fabIconIndex.className = cls;
+    // Drawer row icon + label
+    const drawerIcon  = document.getElementById('unavDarkIcon');
+    const drawerLabel = document.getElementById('unavDarkLabel');
+    if (drawerIcon)  drawerIcon.className  = cls;
+    if (drawerLabel) drawerLabel.textContent = isDark ? '切換淺色模式' : '切換深色模式';
+    // Legacy page icon (if any page still has one)
+    const pageIcon = document.getElementById('darkModeIcon');
+    if (pageIcon) pageIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  }
+
   function bindEvents() {
     document.getElementById('unavFab')?.addEventListener('click', openDrawer);
     document.getElementById('unavClose')?.addEventListener('click', closeDrawer);
     document.getElementById('unavOverlay')?.addEventListener('click', closeDrawer);
+
+    // Dark mode FAB (top-right cluster)
+    document.getElementById('unavDarkFab')?.addEventListener('click', function () {
+      const isDark = document.body.classList.toggle('dark-mode');
+      localStorage.setItem('quizDarkMode', isDark ? '1' : '0');
+      _syncDarkIcons(isDark);
+    });
+
+    // Dark mode toggle inside drawer
+    document.getElementById('unavDarkBtn')?.addEventListener('click', function () {
+      const isDark = document.body.classList.toggle('dark-mode');
+      localStorage.setItem('quizDarkMode', isDark ? '1' : '0');
+      _syncDarkIcons(isDark);
+    });
 
     // Language
     document.getElementById('unavLangSel')?.addEventListener('change', function () {
@@ -313,19 +384,6 @@
         s.value = lang;
         s.dispatchEvent(new Event('change'));
       });
-    });
-
-    // Dark mode
-    document.getElementById('unavDarkBtn')?.addEventListener('click', function () {
-      const isDark = document.body.classList.toggle('dark-mode');
-      localStorage.setItem('quizDarkMode', isDark ? '1' : '0');
-      const icon = document.getElementById('unavDarkIcon');
-      const label = document.getElementById('unavDarkLabel');
-      if (icon) icon.className = `fa-solid ${isDark ? 'fa-sun' : 'fa-moon'}`;
-      if (label) label.textContent = isDark ? '切換淺色模式' : '切換深色模式';
-      // also sync existing darkMode icons on page
-      const pageIcon = document.getElementById('darkModeIcon');
-      if (pageIcon) pageIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
     });
 
     // Music shortcut → open MusicDrawer
@@ -345,8 +403,19 @@
   }
 
   function hideIndexFab() {
-    // FAB shows on ALL pages including index.html
-    // (The old navMenuBtn is now hidden inside a display:none span)
+    if (PAGE === 'index.html') {
+      // Hide the fixed cluster; inline one in the header takes over
+      const fixed = document.getElementById('unavFabClusterFixed');
+      if (fixed) fixed.style.display = 'none';
+
+      // Wire inline buttons
+      document.getElementById('unavFabIndex')?.addEventListener('click', openDrawer);
+      document.getElementById('unavDarkFabIndex')?.addEventListener('click', function () {
+        const isDark = document.body.classList.toggle('dark-mode');
+        localStorage.setItem('quizDarkMode', isDark ? '1' : '0');
+        _syncDarkIcons(isDark);
+      });
+    }
   }
 
   function init() {
@@ -355,6 +424,8 @@
     buildDrawer();
     bindEvents();
     hideIndexFab();
+    // Sync icon to current dark state
+    _syncDarkIcons(document.body.classList.contains('dark-mode'));
   }
 
   if (document.readyState === 'loading') {

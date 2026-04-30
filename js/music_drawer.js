@@ -182,7 +182,7 @@ const MusicDrawer = (() => {
     const themes = (window.AudioManager && window.AudioManager.getThemes) ? window.AudioManager.getThemes() : [];
     const currentTheme = window.AudioManager ? window.AudioManager.getTheme() : 'spark';
     const isMuted = window.AudioManager ? window.AudioManager.isMuted() : false;
-    const currentLabel = themes.find(t => t.id === currentTheme)?.label || '⚡ Spark';
+    const currentLabel = themes.find(t => t.id === currentTheme)?.label || 'Spark';
 
     const themeButtons = themes.map(t => `
       <button class="md-theme-btn${t.id===currentTheme?' active':''}" data-theme="${t.id}">
@@ -204,12 +204,12 @@ const MusicDrawer = (() => {
       <aside class="music-drawer" id="musicDrawer" aria-label="音樂選單">
         <div class="md-header">
           <i class="fa-solid fa-music" style="color:#9c6dff;font-size:16px;"></i>
-          <h3>🎵 背景音樂</h3>
+          <h3><i class="fa-solid fa-music" style="margin-right:6px;"></i>背景音樂</h3>
           <button class="md-close" id="musicDrawerClose" aria-label="關閉">✕</button>
         </div>
 
         <div class="md-now-playing${isMuted?' paused':''}" id="mdNowPlaying">
-          <span class="md-disc">💿</span>
+          <i class="fa-solid fa-compact-disc md-disc" style="font-size:22px;"></i>
           <div>
             <div class="md-now-label">正在播放</div>
             <div class="md-now-title" id="mdNowTitle">${currentLabel}</div>
