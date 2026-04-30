@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/quiz_game.css">
-  <link rel="stylesheet" href="css/dark_mode.css">
-  <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.toggle('dark-mode',localStorage.getItem('quizDarkMode')==='1');});</script>
 </head>
 <body>
   <main class="game-shell">
@@ -72,9 +70,6 @@
 
         <div id="playerView" style="display:none;">
           <div id="questionWrap">
-            <div id="teamQuestionSelectWrap" style="display:none; margin-bottom:10px;">
-              <select id="teamQuestionSelect" class="form-select"></select>
-            </div>
             <div class="question-kicker" id="questionKicker">Question</div>
             <h1 class="question-title" id="questionTitle">題目載入中...</h1>
             <p class="question-content" id="questionContent"></p>
@@ -93,12 +88,6 @@
             <h2>你目前是觀戰模式</h2>
             <p>你仍然可以看到題目、解析與排行榜，但不能再繼續作答。</p>
             <p class="spectator-hint">你可以先觀察其他玩家的表現，等待本局結束。</p>
-            <!-- 彈幕發送 -->
-            <div class="danmaku-input-wrap" id="danmakuInputWrap">
-              <i class="fa-solid fa-comments"></i>
-              <input type="text" id="danmakuInput" class="danmaku-input" placeholder="發送彈幕給在場玩家…" maxlength="30">
-              <button id="sendDanmakuBtn" class="danmaku-send-btn" type="button">發送</button>
-            </div>
           </div>
           <div class="spectator-question-box" id="spectatorQuestionBox" style="display:none;">
             <div class="question-kicker" id="spectatorKicker">Question</div>
@@ -197,14 +186,8 @@
   </div>
 
   <div class="toast-qa" id="toast"></div>
-  <!-- 彈幕覆蓋層 -->
-  <div id="danmakuOverlay" class="danmaku-overlay"></div>
-  <div id="danmakuToggleWrap" style="position:fixed;top:12px;right:12px;z-index:9990;display:none;">
-    <button id="danmakuToggleBtn" class="danmaku-toggle-btn" type="button"><i class="fa-solid fa-comment-dots"></i> 彈幕 <span id="danmakuToggleLabel">開</span></button>
-  </div>
   <script src="js/Audio_manager.js"></script>
   <script src="js/quiz_game.js"></script>
-  <script src="js/danmaku.js"></script>
   <script src="js/i18n.js"></script>
 </body>
 </html>

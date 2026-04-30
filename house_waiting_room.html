@@ -7,8 +7,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/house_waiting_room.css">
-  <link rel="stylesheet" href="css/dark_mode.css">
-  <script>document.addEventListener('DOMContentLoaded',function(){document.body.classList.toggle('dark-mode',localStorage.getItem('quizDarkMode')==='1');});</script>
 </head>
 <body>
   <div class="cloud-layer"></div>
@@ -70,12 +68,6 @@
 
           <div class="player-list" id="playerList"></div>
           <div class="waiting-text" id="waitingHint">你是房主，可以確認玩家都進來後再開始。</div>
-          <!-- 房間主題皮膚 -->
-          <div class="theme-picker-wrap" id="themePickerWrap" style="display:none;">
-            <div class="theme-picker-title"><i class="fa-solid fa-palette"></i> 房間主題皮膚</div>
-            <div class="theme-picker-grid" id="themePickerGrid"></div>
-          </div>
-
           <button class="start-wide-btn" id="startGameBtn" type="button">開始遊戲</button>
         </div>
       </section>
@@ -89,6 +81,5 @@
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/Audio_manager.js"></script>
   <script src="js/house_waiting_room.js"></script>
-  <script src="js/room_theme.js"></script>
 </body>
 </html>

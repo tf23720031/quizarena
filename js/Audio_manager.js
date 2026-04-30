@@ -5,7 +5,6 @@ const AudioManager = (() => {
   let musicTimer = null;
   let musicStep = 0;
   let muted = localStorage.getItem('quizMuted') === '1';
-  let theme = localStorage.getItem('quizMusicTheme') || 'spark';
   let musicStarted = false;
 
   function ensureCtx() {
@@ -95,23 +94,20 @@ const AudioManager = (() => {
     source.stop(when + duration + 0.02);
   }
 
-  const musicThemes = {
-    spark: { tempo: 520, wave: 'triangle', pattern: [[262, 392, 523], [294, 440, 587], [330, 494, 659], [392, 523, 784]] },
-    lofi: { tempo: 740, wave: 'sine', pattern: [[220, 330, 392], [196, 294, 370], [247, 330, 415], [175, 262, 349]] },
-    arcade: { tempo: 360, wave: 'square', pattern: [[523, 659, 784], [587, 740, 880], [659, 784, 988], [784, 988, 1175]] },
-    focus: { tempo: 900, wave: 'sine', pattern: [[262, 330, 392], [247, 330, 392], [220, 294, 370], [196, 262, 330]] },
-    adventure: { tempo: 580, wave: 'triangle', pattern: [[196, 392, 523], [220, 440, 587], [247, 494, 659], [262, 523, 784]] },
-    dream: { tempo: 820, wave: 'sine', pattern: [[330, 494, 740], [294, 440, 659], [262, 392, 587], [349, 523, 784]] }
-  };
+  const bgPattern = [
+    [262, 392, 523],
+    [294, 440, 587],
+    [330, 494, 659],
+    [392, 523, 784]
+  ];
 
   function playBgStep() {
     if (muted || !musicStarted) return;
-    const activeTheme = musicThemes[theme] || musicThemes.spark;
-    const chord = activeTheme.pattern[musicStep % activeTheme.pattern.length];
+    const chord = bgPattern[musicStep % bgPattern.length];
     chord.forEach((freq, index) => {
       tone({
         freq,
-        type: index === 0 ? activeTheme.wave : 'sine',
+        type: index === 0 ? 'triangle' : 'sine',
         volume: index === 0 ? 0.085 : 0.055,
         duration: 0.48,
         attack: 0.02,
@@ -134,8 +130,7 @@ const AudioManager = (() => {
     if (!ensureCtx()) return;
     musicStarted = true;
     playBgStep();
-    const activeTheme = musicThemes[theme] || musicThemes.spark;
-    musicTimer = window.setInterval(playBgStep, activeTheme.tempo);
+    musicTimer = window.setInterval(playBgStep, 520);
   }
 
   function stopBgMusic() {
@@ -258,19 +253,6 @@ const AudioManager = (() => {
     return muted;
   }
 
-  function setTheme(nextTheme) {
-    theme = musicThemes[nextTheme] ? nextTheme : 'spark';
-    localStorage.setItem('quizMusicTheme', theme);
-    if (musicStarted) {
-      stopBgMusic();
-      startBgMusic();
-    }
-  }
-
-  function getTheme() {
-    return theme;
-  }
-
   function resume() {
     ensureCtx();
   }
@@ -305,8 +287,6 @@ const AudioManager = (() => {
     toggleMute,
     setMute,
     isMuted,
-    setTheme,
-    getTheme,
     resume
   };
 })();
