@@ -21,9 +21,6 @@
             <span id="currentUserText">未登入</span>
           </div>
           <span class="lang-switcher-slot"></span>
-          <button class="top-action btn-create" id="darkModeBtn" type="button" title="toggle dark mode">
-            <i class="fa-solid fa-moon" id="darkModeIcon"></i>
-          </button>
           <a class="top-action btn-join text-decoration-none" href="index.html">
             <i class="fa-solid fa-house"></i> 回首頁
           </a>
@@ -98,6 +95,16 @@
                           <option value="team">團體賽</option>
                         </select>
                       </div>
+                      <div class="col-12">
+                        <div class="setting-label">題庫語言</div>
+                        <select id="bankLanguage" class="form-select cute-select">
+                          <option value="zh">中文</option>
+                          <option value="en">English</option>
+                          <option value="ja">日本語</option>
+                          <option value="ko">한국어</option>
+                          <option value="es">Español</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
@@ -120,6 +127,7 @@
                         <option value="multiple">多選題</option>
                         <option value="tf">是非題</option>
                         <option value="fill">填充題</option>
+                        <option value="matching">配對題（左右連連看）</option>
                       </select>
                     </div>
                     <div class="col-md-4">
@@ -239,12 +247,16 @@
                           <option value="3">3 題</option>
                           <option value="5" selected>5 題</option>
                           <option value="7">7 題</option>
+                          <option value="10">10 題</option>
+                          <option value="20">20 題</option>
                         </select>
                       </div>
                       <div class="col-md-3">
                         <select id="aiSourceModeInput" class="form-select cute-select">
                           <option value="ai">AI 生成</option>
                           <option value="web_ai">網路參考</option>
+                          <option value="story">故事模式題庫</option>
+                          <option value="kahoot_share">Kahoot 分享題庫</option>
                         </select>
                       </div>
                     </div>
@@ -325,6 +337,13 @@
                 <input type="number" id="teamSizeInput" class="form-control cute-input"
                        value="4" min="1" max="20">
               </div>
+              <div class="col-sm-4">
+                <div class="setting-label">團體賽作答模式</div>
+                <select id="teamPlayModeSelect" class="form-select cute-select">
+                  <option value="classic">普通模式（跟個人賽流程）</option>
+                  <option value="free_assign">自由分題（不限秒數）</option>
+                </select>
+              </div>
             </div>
             <div class="setting-label mb-2">隊名設定（選填）</div>
             <div id="teamNamesWrap" class="d-flex flex-wrap gap-2 mb-2"></div>
@@ -332,6 +351,33 @@
           </div>
 
           <!-- 房間進階設定 -->
+          <div class="soft-box mb-3">
+            <div class="section-label mb-3">房間主題皮膚</div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="setting-label">背景主題</div>
+                <select id="roomThemeSelect" class="form-select cute-select">
+                  <option value="classic">Classic Arena</option>
+                  <option value="ocean">Ocean Blue</option>
+                  <option value="forest">Forest Quest</option>
+                  <option value="cyber">Cyber Night</option>
+                  <option value="sunset">Sunset Pop</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <div class="setting-label">房間音樂</div>
+                <select id="roomMusicThemeSelect" class="form-select cute-select">
+                  <option value="spark">Spark Pop</option>
+                  <option value="lofi">Lo-fi Study</option>
+                  <option value="arcade">Arcade Rush</option>
+                  <option value="focus">Focus Piano</option>
+                  <option value="adventure">Adventure Brass</option>
+                  <option value="dream">Dream Synth</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div class="soft-box mb-3">
             <div class="d-flex justify-content-between align-items-center">
               <span>私人房（需要密鑰）</span>
@@ -368,6 +414,6 @@
   <script src="js/bootstrap.bundle.min.js"></script>
   <script src="js/Audio_manager.js"></script>
   <script src="js/audio.js"></script>
-<script src="js/create_home.js"></script>
+  <script src="js/create_htme.js"></script>
 </body>
 </html>

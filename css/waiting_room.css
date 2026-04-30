@@ -770,3 +770,11 @@ body::before{
   .team-join-btn { min-width: 76px; padding: 9px 12px; }
   .team-btn-name { font-size: 0.82rem; }
 }
+
+/* kick-btn 與一般 leave-soft 區分 */
+.kick-btn {
+  background: linear-gradient(45deg, #ff6b6b, #ffa07a) !important;
+  font-size: .8rem !important;
+  padding: 6px 12px !important;
+  min-height: auto !important;
+}

@@ -194,9 +194,6 @@ async function loadRoomState() {
 
     renderPlayerList(players);
     renderMessages(messages);
-    if (room.status !== 'playing') {
-      document.getElementById('waitingHint').textContent = room.start_requirements_message || 'Waiting for another real player to join...';
-    }
 
     if (room.status === 'playing') {
       document.getElementById('waitingHint').textContent = '房主已開始遊戲，正在進入答題頁面...';
@@ -281,8 +278,8 @@ async function sendHeartbeat() {
   } catch (_) {}
 }
 
-document.getElementById('chatForm').addEventListener('submit', sendMessage);
-document.getElementById('leaveRoomBtn').addEventListener('click', leaveRoom);
+document.getElementById('chatForm')?.addEventListener('submit', sendMessage);
+document.getElementById('leaveRoomBtn')?.addEventListener('click', leaveRoom);
 document.getElementById('inviteRoomBtn')?.addEventListener('click', copyInvite);
 window.addEventListener('beforeunload', leaveRoomOnUnload);
 

@@ -159,7 +159,7 @@ body.dark-mode::before {
 .leader-item.mine { outline: 3px solid rgba(255,143,188,.5); }
 
 /* ── right player panel ── */
-.player-side-panel { padding: 16px; }
+.player-side-panel { padding: 16px; min-width: 0; overflow: hidden; }
 .psp-title { font-weight: 900; color: var(--text-title); margin-bottom: 12px; }
 .player-side-list { display: flex; flex-direction: column; gap: 10px; }
 .psl-item {
@@ -173,10 +173,16 @@ body.dark-mode::before {
 .psl-item.eliminated { opacity: .4; }
 .psl-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .psl-icon { flex-shrink: 0; }
-.team-chat-box { margin-top: 12px; border-top: 1px dashed rgba(200,120,160,.35); padding-top: 10px; }
+.team-chat-box {
+  width: 100%;
+  min-width: 0;
+  margin-top: 22px;
+  border-top: 1px dashed rgba(200,120,160,.35);
+  padding-top: 14px;
+}
 .team-chat-title { font-weight: 900; color: var(--text-title); margin-bottom: 8px; }
 .team-chat-list {
-  max-height: 180px; overflow-y: auto;
+  width: 100%; min-width: 0; max-height: 180px; overflow-y: auto;
   display: grid; gap: 6px; margin-bottom: 8px;
 }
 .team-chat-item {
@@ -189,13 +195,20 @@ body.dark-mode::before {
   font-weight: 800; color: var(--text-title);
 }
 .team-chat-msg { margin-top: 4px; color: var(--text-main); word-break: break-word; }
-.team-chat-form { display: flex; gap: 6px; }
+.team-chat-form {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .team-chat-form input {
-  flex: 1; border: 1px solid rgba(200,120,160,.3); border-radius: 999px;
+  flex: 1 1 auto; min-width: 0; border: 1px solid rgba(200,120,160,.3); border-radius: 999px;
   padding: 8px 10px; background: rgba(255,255,255,.85); color: var(--text-main);
 }
 .team-chat-form button {
-  border: none; border-radius: 999px; padding: 0 12px;
+  width: 42px; height: 42px; flex: 0 0 42px;
+  border: none; border-radius: 999px; padding: 0;
   background: linear-gradient(135deg,#ff8fb9,#ff6cae); color: #fff;
 }
 /* ── mini avatar ── */
@@ -767,4 +780,83 @@ body.dark-mode .lang-select {
   background: rgba(255,255,255,.1);
   color: #ffffff;
   border: 1px solid rgba(255,255,255,.15);
+}
+.matching-play-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.matching-play-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.8fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.matching-play-row span {
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .matching-play-row {
+    grid-template-columns: 1fr;
+  }
+}
+body[data-room-theme="ocean"] {
+  background: linear-gradient(135deg, #e8fbff 0%, #d8ebff 45%, #f3f8ff 100%);
+}
+
+body[data-room-theme="forest"] {
+  background: linear-gradient(135deg, #eefbea 0%, #dff5e9 45%, #fff9e8 100%);
+}
+
+body[data-room-theme="cyber"] {
+  background: linear-gradient(135deg, #120f2d 0%, #20225f 48%, #0c4651 100%);
+}
+
+body[data-room-theme="sunset"] {
+  background: linear-gradient(135deg, #fff0e7 0%, #ffe1ed 45%, #edf3ff 100%);
+}
+
+body[data-room-theme="cyber"] .glass-card {
+  border-color: rgba(88, 238, 255, 0.28);
+  background: rgba(15, 18, 50, 0.82);
+  color: #eef8ff;
+}
+
+/* ── 彈幕系統 ── */
+.danmaku-overlay {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 9900;
+}
+.danmaku-item {
+  position: absolute; right: -100%; white-space: nowrap;
+  font-size: 1.1rem; font-weight: 700;
+  text-shadow: 0 0 6px rgba(0,0,0,.35), 1px 1px 0 rgba(0,0,0,.25);
+  animation: danmakuFly 6s linear forwards;
+  pointer-events: none;
+}
+@keyframes danmakuFly {
+  from { transform: translateX(110vw); }
+  to   { transform: translateX(-120vw); }
+}
+.danmaku-input-wrap {
+  display: none; align-items: center; gap: 8px; margin-top: 14px;
+  background: rgba(255,255,255,.2); border-radius: 14px; padding: 8px 12px;
+}
+.danmaku-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: inherit; font-size: .9rem; font-family: inherit;
+}
+.danmaku-input::placeholder { opacity: .6; }
+.danmaku-send-btn {
+  padding: 5px 14px; border-radius: 10px; font-size: .82rem; font-weight: 700;
+  background: rgba(168,85,247,.5); color: #fff; border: none; cursor: pointer;
+}
+.danmaku-toggle-btn {
+  padding: 6px 14px; border-radius: 99px; font-size: .8rem; font-weight: 700;
+  background: rgba(0,0,0,.45); color: #fff; border: 1px solid rgba(255,255,255,.25); cursor: pointer;
+  backdrop-filter: blur(6px);
 }

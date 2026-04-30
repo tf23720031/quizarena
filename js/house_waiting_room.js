@@ -175,11 +175,6 @@ async function loadRoomState() {
     }
 
     renderMessages(messages);
-    const startGameBtn = document.getElementById('startGameBtn');
-    if (room.status !== 'playing') {
-      document.getElementById('waitingHint').textContent = room.start_requirements_message || 'Waiting for another real player to join...';
-      if (startGameBtn) startGameBtn.disabled = !room.ready_to_start;
-    }
 
     if (room.status === 'playing') {
       document.getElementById('waitingHint').textContent = '遊戲已開始，正在進入答題頁面...';
@@ -272,7 +267,7 @@ document.getElementById('shuffleTeamsBtn')?.addEventListener('click', async () =
 });
 
 // ── 開始遊戲 ─────────────────────────────────────
-document.getElementById('startGameBtn').addEventListener('click', async () => {
+document.getElementById('startGameBtn')?.addEventListener('click', async () => {
   try {
     await api('/start_game', {
       method: 'POST',
@@ -288,8 +283,8 @@ document.getElementById('startGameBtn').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('chatForm').addEventListener('submit', sendMessage);
-document.getElementById('leaveRoomBtn').addEventListener('click', leaveRoom);
+document.getElementById('chatForm')?.addEventListener('submit', sendMessage);
+document.getElementById('leaveRoomBtn')?.addEventListener('click', leaveRoom);
 window.addEventListener('beforeunload', leaveRoomOnUnload);
 
 // ── 初始化 ───────────────────────────────────────

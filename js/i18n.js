@@ -22,7 +22,26 @@ const I18N = (() => {
     '確認':           { en:'Confirm',             ja:'確認',                ko:'확인',               es:'Confirmar' },
     // 首頁
     '目前帳號':       { en:'Account',             ja:'アカウント',          ko:'계정',               es:'Cuenta' },
+    '目前登入帳號':   { en:'Current account',     ja:'現在のアカウント',    ko:'현재 로그인 계정',     es:'Cuenta actual' },
     '尚未登入':       { en:'Not logged in',       ja:'未ログイン',          ko:'미로그인',           es:'Sin sesión' },
+    '個人資料':       { en:'Profile',             ja:'プロフィール',        ko:'프로필',             es:'Perfil' },
+    '建立題庫':       { en:'Create Bank',         ja:'問題集を作成',        ko:'문제 은행 만들기',     es:'Crear banco' },
+    '錯題本':         { en:'Wrong Book',          ja:'復習ノート',          ko:'오답 노트',           es:'Cuaderno de errores' },
+    '故事模式':       { en:'Story Mode',          ja:'ストーリーモード',    ko:'스토리 모드',         es:'Modo historia' },
+    '每日任務':       { en:'Daily Quest',         ja:'デイリー任務',        ko:'일일 미션',           es:'Misión diaria' },
+    '老師模式':       { en:'Teacher Mode',        ja:'先生モード',          ko:'교사 모드',           es:'Modo profesor' },
+    '重新整理大廳':   { en:'Refresh Lobby',       ja:'ロビー更新',          ko:'로비 새로고침',       es:'Actualizar sala' },
+    '好友排行':       { en:'Friend Ranking',      ja:'友達ランキング',      ko:'친구 랭킹',           es:'Ranking amigos' },
+    '好友戰績榜':     { en:'Friend Records',      ja:'友達成績表',          ko:'친구 전적',           es:'Historial amigos' },
+    '好友申請':       { en:'Friend Requests',     ja:'友達申請',            ko:'친구 요청',           es:'Solicitudes' },
+    '加入好友':       { en:'Add Friend',          ja:'友達を追加',          ko:'친구 추가',           es:'Agregar amigo' },
+    '好友申請紀錄':   { en:'Friend Requests',     ja:'友達申請履歴',        ko:'친구 요청 기록',      es:'Solicitudes' },
+    '好友個人資料':   { en:'Friend Profile',      ja:'友達プロフィール',    ko:'친구 프로필',         es:'Perfil amigo' },
+    '送出申請':       { en:'Send Request',        ja:'申請を送信',          ko:'요청 보내기',         es:'Enviar solicitud' },
+    '輸入玩家帳號':   { en:'Enter player account',ja:'プレイヤーIDを入力',  ko:'플레이어 계정 입력',   es:'Cuenta del jugador' },
+    '成就':           { en:'Achievements',        ja:'実績',                ko:'업적',               es:'Logros' },
+    '已解鎖':         { en:'Unlocked',            ja:'解除済み',            ko:'잠금 해제',           es:'Desbloqueado' },
+    '已獲得':         { en:'Unlocked',            ja:'獲得済み',            ko:'획득',               es:'Obtenidos' },
     '題庫中心':       { en:'Question Bank',       ja:'問題バンク',          ko:'문제 은행',           es:'Banco de preguntas' },
     '重新整理':       { en:'Refresh',             ja:'更新',                ko:'새로고침',           es:'Actualizar' },
     'Game Lobby':     { en:'Game Lobby',          ja:'ゲームロビー',        ko:'게임 로비',           es:'Sala de juegos' },
@@ -139,7 +158,39 @@ const I18N = (() => {
     '清空表單':       { en:'Clear form',          ja:'クリア',              ko:'초기화',             es:'Limpiar' },
     '刪除題目':       { en:'Delete',              ja:'削除',                ko:'삭제',               es:'Eliminar' },
     '目前題目清單':   { en:'Questions',           ja:'問題一覧',            ko:'문제 목록',           es:'Lista' },
+    // 個人資料 / 報表
+    '解鎖的成就':     { en:'Unlocked Achievements', ja:'獲得した実績',      ko:'획득한 업적',         es:'Logros obtenidos' },
+    '我的稱號':       { en:'My Titles',           ja:'称号',                ko:'내 칭호',             es:'Mis títulos' },
+    '更換造型':       { en:'Avatar Studio',       ja:'アバター編集',        ko:'아바타 꾸미기',       es:'Editar avatar' },
+    '上傳頭像':       { en:'Upload Avatar',       ja:'画像をアップロード',  ko:'아바타 업로드',       es:'Subir avatar' },
+    '眼睛上下微調':   { en:'Eye vertical adjust', ja:'目の上下調整',        ko:'눈 위치 조정',        es:'Ajustar ojos' },
+    '確認更改':       { en:'Save Changes',        ja:'変更を保存',          ko:'변경 저장',           es:'Guardar cambios' },
+    '偏好語言':       { en:'Preferred Language',  ja:'優先言語',            ko:'선호 언어',           es:'Idioma preferido' },
+    '所在縣市':       { en:'County / City',       ja:'地域',                ko:'지역',               es:'Ciudad / condado' },
+    '尚未設定':       { en:'Not set',             ja:'未設定',              ko:'미설정',             es:'Sin configurar' },
+    '尚未設定所在地': { en:'Location not set',    ja:'地域未設定',          ko:'지역 미설정',         es:'Ubicación sin definir' },
+    '總勝場':         { en:'Total wins',          ja:'合計勝利',            ko:'총 승리',             es:'Victorias totales' },
+    '學生表現':       { en:'Student Performance', ja:'学生の成績',          ko:'학생 성과',           es:'Rendimiento' },
+    '學生分數排行':   { en:'Student Ranking',     ja:'学生ランキング',      ko:'학생 점수 순위',      es:'Ranking' },
+    '最需要複習的題目': { en:'Review Priority',   ja:'復習優先問題',        ko:'복습 우선 문제',      es:'Prioridad de repaso' },
+    '隊伍表現':       { en:'Team Performance',    ja:'チーム成績',          ko:'팀 성과',             es:'Rendimiento equipo' },
+    '查看報表':       { en:'View Report',         ja:'レポートを見る',      ko:'보고서 보기',         es:'Ver reporte' },
+    '匯出 CSV':       { en:'Export CSV',          ja:'CSV出力',             ko:'CSV 내보내기',        es:'Exportar CSV' },
+    '匯出 Excel 報表': { en:'Export Excel Report', ja:'Excelレポート出力',  ko:'Excel 보고서 내보내기', es:'Exportar Excel' },
+    '匯出分析報告':   { en:'Export Analysis',     ja:'分析レポート出力',    ko:'분석 보고서 내보내기', es:'Exportar análisis' },
   };
+
+  const ZH_BY_TRANSLATION = {};
+  Object.entries(D).forEach(([zh, translations]) => {
+    Object.values(translations || {}).forEach((value) => {
+      if (value) ZH_BY_TRANSLATION[String(value).trim()] = zh;
+    });
+  });
+
+  function normalizeKey(text) {
+    const key = String(text || '').trim();
+    return ZH_BY_TRANSLATION[key] || key;
+  }
 
   /* 動態內容區域（遊戲執行中不翻）*/
   const SKIP_IDS = new Set([
@@ -148,13 +199,28 @@ const I18N = (() => {
     'scoreboardWrap','podiumInner','hostDetailWrap','teamColumnsWrap','teamJoinButtons',
     'hostEliminatedNames','quizBankList','questionList','roomQuestionPicker',
     'lobbyGrid','memberMessage','toast','teamNamesWrap',
+    'friendsRecords','friendsList','friendRequestsContent','friendProfileContent',
+    'achievementsList','profileAchievementsList','profileTitleList','profileAvatarPreview',
+    'profileHeroAvatar','studentTableBody','scoreRankingList','questionReviewList','teamPerformanceList',
+    'loginStatus','currentUserText','wrongUserName','storyUserName','profileUsername',
   ]);
 
   let lang = localStorage.getItem('quizLang') || 'zh';
+  const aiCache = new Map();
+  let aiTimer = null;
 
   function tr(key) {
+    key = normalizeKey(key);
     if (!key || lang === 'zh') return key;
     return (D[key] && D[key][lang]) || key;
+  }
+
+  function shouldAiTranslate(txt) {
+    if (!txt || D[txt]) return false;
+    if (/^[\d\s\-_:/.#%]+$/.test(txt)) return false;
+    if (txt.length > 120) return false;
+    if (/^[A-Za-z0-9_]{2,24}$/.test(txt)) return false;
+    return /[\u4e00-\u9fff]/.test(txt);
   }
 
   /* 判斷元素是否在跳過區域內 */
@@ -172,7 +238,11 @@ const I18N = (() => {
   function translateEl(el, targetLang) {
     const key = el.dataset.i18n;
     if (!key) return;
-    const translated = targetLang === 'zh' ? key : (tr(key) || key);
+    const sourceKey = normalizeKey(key);
+    if (sourceKey !== key) el.dataset.i18n = sourceKey;
+    const translated = targetLang === 'zh' ? sourceKey : (tr(sourceKey) || sourceKey);
+    const aiKey = `${targetLang}:${sourceKey}`;
+    const finalText = targetLang === 'zh' ? sourceKey : (D[sourceKey]?.[targetLang] || aiCache.get(aiKey) || translated);
     // 找並替換直接子 TextNode
     let found = false;
     for (const node of el.childNodes) {
@@ -181,14 +251,14 @@ const I18N = (() => {
         // 保留前後空白結構
         const leading  = orig.match(/^\s*/)[0];
         const trailing = orig.match(/\s*$/)[0];
-        node.textContent = leading + translated + trailing;
+        node.textContent = leading + finalText + trailing;
         found = true;
         break;
       }
     }
     // fallback：整個 textContent 是 key（純文字元素）
     if (!found && el.textContent.trim() === key) {
-      el.textContent = translated;
+      el.textContent = finalText;
     }
   }
 
@@ -196,7 +266,45 @@ const I18N = (() => {
   function translatePh(el, targetLang) {
     const key = el.dataset.i18nPh;
     if (!key) return;
-    el.placeholder = targetLang === 'zh' ? key : (tr(key) || key);
+    const sourceKey = normalizeKey(key);
+    if (sourceKey !== key) el.dataset.i18nPh = sourceKey;
+    const aiKey = `${targetLang}:${sourceKey}`;
+    el.placeholder = targetLang === 'zh' ? sourceKey : (D[sourceKey]?.[targetLang] || aiCache.get(aiKey) || tr(sourceKey) || sourceKey);
+  }
+
+  async function translateMissing(targetLang) {
+    if (targetLang === 'zh') return;
+    const keys = [
+      ...new Set([
+        ...[...document.querySelectorAll('[data-i18n]')].map(el => el.dataset.i18n),
+        ...[...document.querySelectorAll('[data-i18n-ph]')].map(el => el.dataset.i18nPh),
+      ].filter(shouldAiTranslate))
+    ].filter(key => !aiCache.has(`${targetLang}:${key}`)).slice(0, 80);
+    if (!keys.length) return;
+    try {
+      const res = await fetch('/translate_texts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetLang, texts: keys })
+      });
+      const data = await res.json();
+      if (targetLang !== lang) return;
+      const translations = data.translations || {};
+      Object.entries(translations).forEach(([key, value]) => {
+        if (value) aiCache.set(`${targetLang}:${key}`, String(value));
+      });
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        if (!inSkipZone(el)) translateEl(el, targetLang);
+      });
+      document.querySelectorAll('[data-i18n-ph]').forEach(el => translatePh(el, targetLang));
+    } catch (_) {
+      // Keep dictionary/original text if online translation is unavailable.
+    }
+  }
+
+  function scheduleAiTranslate(targetLang) {
+    clearTimeout(aiTimer);
+    aiTimer = setTimeout(() => translateMissing(targetLang), 180);
   }
 
   /* 首次掃描：標記所有匹配的元素 */
@@ -209,9 +317,10 @@ const I18N = (() => {
     // placeholder
     if ((tag === 'INPUT' || tag === 'TEXTAREA') && root.placeholder && !root.dataset.i18nPh) {
       const ph = root.placeholder.trim();
-      if (D[ph]) {
-        root.dataset.i18nPh = ph;
-        if (lang !== 'zh') root.placeholder = tr(ph) || ph;
+      const key = normalizeKey(ph);
+      if (D[key] || shouldAiTranslate(key)) {
+        root.dataset.i18nPh = key;
+        if (lang !== 'zh') root.placeholder = tr(key) || key;
       }
     }
 
@@ -219,12 +328,14 @@ const I18N = (() => {
     for (const node of root.childNodes) {
       if (node.nodeType === 3) {
         const txt = node.textContent.trim();
-        if (txt && D[txt] && !root.dataset.i18n) {
-          root.dataset.i18n = txt;
+        const key = normalizeKey(txt);
+        if (lang !== 'zh' && key === txt && !/[\u4e00-\u9fff]/.test(key)) continue;
+        if (key && (D[key] || shouldAiTranslate(key)) && !root.dataset.i18n) {
+          root.dataset.i18n = key;
           if (lang !== 'zh') {
             const leading  = node.textContent.match(/^\s*/)[0];
             const trailing = node.textContent.match(/\s*$/)[0];
-            node.textContent = leading + (tr(txt) || txt) + trailing;
+            node.textContent = leading + (tr(key) || key) + trailing;
           }
         }
       } else if (node.nodeType === 1) {
@@ -237,6 +348,7 @@ const I18N = (() => {
   function applyLang(newLang) {
     lang = newLang;
     localStorage.setItem('quizLang', newLang);
+    clearTimeout(aiTimer);
 
     // 重翻所有標記過的元素
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -248,6 +360,7 @@ const I18N = (() => {
 
     // 同步所有選單
     document.querySelectorAll('.lang-switcher').forEach(s => { s.value = newLang; });
+    if (newLang !== 'zh') scheduleAiTranslate(newLang);
   }
 
   /* 建立選單 */
@@ -285,6 +398,16 @@ const I18N = (() => {
     scanDOM(document.body);
     // 如果當前語言不是中文，補翻一次（scanDOM 已順便翻了，這裡是保險）
     if (lang !== 'zh') applyLang(lang);
+
+    const mo = new MutationObserver((records) => {
+      records.forEach(record => {
+        record.addedNodes.forEach(node => {
+          if (node.nodeType === 1) scanDOM(node);
+        });
+      });
+      if (lang !== 'zh') applyLang(lang);
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
   }
 
   if (document.readyState === 'loading') {
@@ -295,3 +418,5 @@ const I18N = (() => {
 
   return { applyLang, makeSwitcher, scan: scanDOM, currentLang: () => lang, tr };
 })();
+
+window.I18N = I18N;
