@@ -25,13 +25,62 @@
 
     <section class="tool-card story-hero-card">
       <div>
-        <span class="answer-pill">單人 / 合作</span>
+        <span class="answer-pill" id="storyModePill">單人闖關</span>
         <h2>選一條學習支線，完成越來越難的關卡。</h2>
-        <p>支援單人闖關或邀請好友合作挑戰，答題會保存進度，之後可以繼續。</p>
+        <p>不用房主、不用 PIN，答題會保存進度，之後可以繼續挑戰。</p>
       </div>
       <div class="story-progress-card">
         <span>目前玩家</span>
-        <strong id="storyUserName" style="color:#FFF;">-</strong>
+        <strong id="storyUserName">-</strong>
+      </div>
+    </section>
+
+    <!-- 模式選擇 -->
+    <section class="tool-card story-mode-picker-card">
+      <div class="tool-card-head">
+        <h2>選擇模式</h2>
+      </div>
+      <div class="story-mode-tabs">
+        <button class="story-mode-tab active" data-mode="solo">
+          <i class="fa-solid fa-user"></i>
+          <strong>單人闖關</strong>
+          <span>按自己步調挑戰支線</span>
+        </button>
+        <button class="story-mode-tab" data-mode="pvp">
+          <i class="fa-solid fa-sword"></i>
+          <strong>挑戰模式</strong>
+          <span>與好友即時對決 20 題</span>
+        </button>
+        <button class="story-mode-tab" data-mode="coop">
+          <i class="fa-solid fa-handshake"></i>
+          <strong>合作模式</strong>
+          <span>雙人協力，一人送出答案</span>
+        </button>
+      </div>
+
+      <!-- 雙人模式：連結操作區 -->
+      <div id="storyMultiPanel" style="display:none;" class="story-multi-panel">
+        <div class="story-link-row">
+          <button id="createChallengeBtn" class="tool-btn">
+            <i class="fa-solid fa-link"></i> 建立挑戰連結
+          </button>
+          <div class="story-link-divider">或</div>
+          <div class="story-paste-row">
+            <input id="challengeLinkInput" class="story-link-input" type="text" placeholder="貼上挑戰連結後加入" />
+            <button id="joinChallengeBtn" class="tool-btn secondary">
+              <i class="fa-solid fa-right-to-bracket"></i> 加入
+            </button>
+          </div>
+        </div>
+        <div id="storyLinkDisplay" class="story-link-display" style="display:none;">
+          <span id="storyLinkText" class="story-link-value"></span>
+          <button id="copyLinkBtn" class="tool-btn secondary">
+            <i class="fa-solid fa-copy"></i> 複製
+          </button>
+        </div>
+        <p id="storyWaitingMsg" class="story-waiting-msg" style="display:none;">
+          <i class="fa-solid fa-spinner fa-spin"></i> 等待對手加入...
+        </p>
       </div>
     </section>
 
@@ -54,33 +103,79 @@
       <div id="storyBranchList" class="story-branch-list"></div>
     </section>
 
-    <!-- 單人挑戰好友 / 合作模式 -->
-    <section class="tool-card">
-      <div class="tool-card-head">
-        <h2><i class="fa-solid fa-people-arrows"></i> 挑戰 & 合作</h2>
-      </div>
-      <div class="story-coop-row">
-        <div class="story-coop-card">
-          <i class="fa-solid fa-swords story-coop-icon" style="color:#f59e0b;"></i>
-          <div>
-            <strong>挑戰好友（競爭）</strong>
-            <p>各自作答同一支線，比較誰得分更高。</p>
-          </div>
-          <button id="copyStoryChallengeBtn" class="tool-btn secondary" type="button"><i class="fa-solid fa-link"></i> 複製挑戰連結</button>
+    <!-- 雙人對戰畫面 -->
+    <section id="storyDuelSection" class="tool-card story-duel-card" style="display:none;">
+      <!-- 倒數計時 -->
+      <div class="duel-timer-bar">
+        <div class="duel-timer-label">
+          <i class="fa-solid fa-clock"></i>
+          <span id="duelTimerDisplay">10</span>
         </div>
-        <div class="story-coop-card">
-          <i class="fa-solid fa-handshake story-coop-icon" style="color:#10b981;"></i>
-          <div>
-            <strong>合作闖關（協力）</strong>
-            <p>兩人一起作答，共享生命值，互相補位。</p>
-          </div>
-          <button id="copyStoryCoopBtn" class="tool-btn secondary" type="button"><i class="fa-solid fa-link"></i> 複製合作連結</button>
+        <div class="duel-timer-track">
+          <div id="duelTimerFill" class="duel-timer-fill"></div>
         </div>
       </div>
-      <div id="storyFriendChallengeList" class="story-branch-list"></div>
+
+      <!-- 雙人分數列 -->
+      <div class="duel-score-row">
+        <div class="duel-player duel-player-left">
+          <div class="duel-avatar" id="duelAvatarLeft">🧑</div>
+          <strong id="duelNameLeft">你</strong>
+          <span class="duel-score" id="duelScoreLeft">0</span>
+        </div>
+        <div class="duel-vs-badge">VS</div>
+        <div class="duel-player duel-player-right">
+          <div class="duel-avatar" id="duelAvatarRight">🤖</div>
+          <strong id="duelNameRight">對手</strong>
+          <span class="duel-score" id="duelScoreRight">0</span>
+        </div>
+      </div>
+
+      <!-- 題目進度 -->
+      <div class="duel-progress-row">
+        <span id="duelQIndex">第 1 題</span>
+        <span>/ 20 題</span>
+        <span id="duelModeLabel" class="answer-pill">挑戰模式</span>
+      </div>
+
+      <!-- 題目 -->
+      <div id="duelQuestionBox" class="duel-question-box"></div>
+
+      <!-- 選項 -->
+      <div id="duelOptions" class="duel-options"></div>
+
+      <!-- 合作模式：已作答提示 -->
+      <div id="coopAnsweredMsg" class="coop-answered-msg" style="display:none;">
+        <i class="fa-solid fa-check-circle"></i> 本題已送出答案，等待下一題...
+      </div>
+
+      <!-- 結果浮層 -->
+      <div id="duelResultOverlay" class="duel-result-overlay" style="display:none;">
+        <div class="duel-result-card">
+          <div id="duelResultIcon" class="duel-result-icon">🏆</div>
+          <h2 id="duelResultTitle">遊戲結束</h2>
+          <div class="duel-final-scores">
+            <div>
+              <span id="duelFinalNameLeft">你</span>
+              <strong id="duelFinalScoreLeft">0</strong>
+            </div>
+            <div>
+              <span id="duelFinalNameRight">對手</span>
+              <strong id="duelFinalScoreRight">0</strong>
+            </div>
+          </div>
+          <button id="duelPlayAgainBtn" class="tool-btn">
+            <i class="fa-solid fa-rotate-right"></i> 再來一局
+          </button>
+          <button id="duelBackBtn" class="tool-btn secondary">
+            <i class="fa-solid fa-chevron-left"></i> 回到模式選擇
+          </button>
+        </div>
+      </div>
     </section>
 
-    <section class="tool-card">
+    <!-- 單人模式作答區 -->
+    <section class="tool-card" id="storySoloSection">
       <div id="storyPlayArea" class="story-play-area">
         <p>先選擇一個項目，再挑戰支線關卡。</p>
       </div>
