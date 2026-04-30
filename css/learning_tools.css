@@ -1380,24 +1380,28 @@ body.dark-mode .tool-btn.primary {
 }
 
 /* =========================================================
-   QuizArena Learning Pages Beauty Patch
-   Scope: story_mode.html / wrong_book.html / daily_mission.html
-   Light mode only base styles. HTML unchanged.
+   QuizArena Learning Tools - 強化玻璃擬態美編
+   只靠 CSS 判斷頁面：故事模式 / 錯題本 / 每日任務
    ========================================================= */
+:root {
+  --qa-glass-dark-text: #241f38;
+  --qa-glass-muted-text: #655a76;
+  --qa-glass-pink: #ff72b8;
+  --qa-glass-purple: #8d76ff;
+  --qa-glass-blue: #56c9ff;
+  --qa-glass-gold: #ffbf4d;
+}
 
 body:has(#storySubjectList),
 body:has(#wrongBookList),
 body:has(#dailyMissionList) {
-  color: #2f2940;
+  color: var(--qa-glass-dark-text) !important;
   background:
-    linear-gradient(135deg, rgba(255, 247, 252, 0.9), rgba(239, 247, 255, 0.9)),
-    radial-gradient(circle at 10% 12%, rgba(255, 126, 179, 0.34), transparent 28%),
-    radial-gradient(circle at 88% 8%, rgba(124, 123, 255, 0.28), transparent 30%),
-    radial-gradient(circle at 50% 100%, rgba(72, 192, 216, 0.2), transparent 32%),
-    url('../images/bg.png');
-  background-size: cover, auto, auto, auto, cover;
+    radial-gradient(circle at 11% 9%, rgba(255, 126, 190, .34), transparent 25%),
+    radial-gradient(circle at 90% 7%, rgba(111, 201, 255, .28), transparent 27%),
+    radial-gradient(circle at 48% 92%, rgba(163, 132, 255, .24), transparent 30%),
+    linear-gradient(135deg, #fff8fc 0%, #eef7ff 52%, #fff7ee 100%) !important;
   background-attachment: fixed;
-  animation: qaLightGradientFloat 16s ease-in-out infinite alternate;
 }
 
 body:has(#storySubjectList)::before,
@@ -1406,47 +1410,75 @@ body:has(#dailyMissionList)::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.92) 0 2px, transparent 3px),
-    radial-gradient(circle at 78% 28%, rgba(255, 126, 179, 0.44) 0 2px, transparent 3px),
-    radial-gradient(circle at 66% 78%, rgba(124, 123, 255, 0.38) 0 2px, transparent 3px),
-    linear-gradient(120deg, transparent 0 44%, rgba(255, 255, 255, 0.38) 48%, transparent 54%);
-  background-size: 180px 180px, 220px 220px, 260px 260px, 240% 240%;
-  opacity: 0.75;
+    url('../images/girl-bg.png') left bottom / 330px auto no-repeat,
+    linear-gradient(120deg, transparent 0 42%, rgba(255,255,255,.52) 50%, transparent 58%);
+  opacity: .23;
+  animation: qaGlassBgFloat 11s ease-in-out infinite alternate;
+}
+
+body:has(#storySubjectList)::after,
+body:has(#wrongBookList)::after,
+body:has(#dailyMissionList)::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.92) 0 2px, transparent 3px),
+    radial-gradient(circle, rgba(255, 135, 201, .42) 0 2px, transparent 3px),
+    radial-gradient(circle, rgba(131, 118, 255, .32) 0 1.5px, transparent 3px);
+  background-size: 120px 120px, 170px 170px, 220px 220px;
+  background-position: 0 0, 45px 25px, 80px 65px;
+  opacity: .62;
   animation: qaSparkleDrift 18s linear infinite;
 }
 
 body:has(#storySubjectList) .tool-shell,
 body:has(#wrongBookList) .tool-shell,
 body:has(#dailyMissionList) .tool-shell {
-  position: relative;
-  isolation: isolate;
+  width: min(1180px, calc(100% - 32px));
 }
 
 body:has(#storySubjectList) .tool-topbar,
 body:has(#wrongBookList) .tool-topbar,
 body:has(#dailyMissionList) .tool-topbar {
-  padding: 16px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,.72);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.62);
-  box-shadow: 0 18px 42px rgba(124, 123, 255, 0.16);
-  backdrop-filter: blur(18px);
+  background: rgba(255,255,255,.44);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.90),
+    0 22px 52px rgba(111, 96, 160, .16);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
 }
 
 body:has(#storySubjectList) .tool-topbar h1,
 body:has(#wrongBookList) .tool-topbar h1,
 body:has(#dailyMissionList) .tool-topbar h1 {
-  color: #2f2940;
-  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.72);
+  color: #262044 !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.75);
 }
 
 body:has(#storySubjectList) .tool-kicker,
 body:has(#wrongBookList) .tool-kicker,
 body:has(#dailyMissionList) .tool-kicker {
-  color: #b55389;
+  color: #7e6f93 !important;
+}
+
+body:has(#storySubjectList) .tool-back,
+body:has(#wrongBookList) .tool-back,
+body:has(#dailyMissionList) .tool-back {
+  border: 1px solid rgba(255,255,255,.72);
+  background: linear-gradient(135deg, rgba(255,120,188,.88), rgba(139,118,255,.88)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 12px 30px rgba(139,118,255,.24),
+    0 0 26px rgba(255,114,184,.18);
 }
 
 body:has(#storySubjectList) .summary-grid article,
@@ -1454,211 +1486,289 @@ body:has(#wrongBookList) .summary-grid article,
 body:has(#dailyMissionList) .summary-grid article,
 body:has(#storySubjectList) .tool-card,
 body:has(#wrongBookList) .tool-card,
-body:has(#dailyMissionList) .tool-card {
+body:has(#dailyMissionList) .tool-card,
+body:has(#storySubjectList) .question-card,
+body:has(#wrongBookList) .question-card,
+body:has(#dailyMissionList) .question-card,
+body:has(#wrongBookList) .analysis-card,
+body:has(#wrongBookList) .wrong-insight-grid article,
+body:has(#storySubjectList) .story-subject-card,
+body:has(#storySubjectList) .story-branch-card,
+body:has(#storySubjectList) .story-progress-card,
+body:has(#storySubjectList) .story-modal,
+body:has(#wrongBookList) .radar-legend span,
+body:has(#wrongBookList) .practice-box > p {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 28px;
-  color: #2f2940;
+  color: var(--qa-glass-dark-text) !important;
+  border: 1px solid rgba(255,255,255,.70) !important;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 236, 248, 0.78)),
-    radial-gradient(circle at 92% 10%, rgba(255, 126, 179, 0.22), transparent 34%),
-    radial-gradient(circle at 5% 100%, rgba(124, 123, 255, 0.16), transparent 32%);
-  box-shadow: 0 22px 52px rgba(114, 93, 163, 0.18);
-  backdrop-filter: blur(18px);
+    linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.34)),
+    radial-gradient(circle at 16% 8%, rgba(255,255,255,.86), transparent 28%),
+    radial-gradient(circle at 88% 12%, rgba(255,122,188,.22), transparent 32%),
+    radial-gradient(circle at 12% 90%, rgba(105,201,255,.18), transparent 28%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.42),
+    0 18px 45px rgba(93, 87, 145, .18),
+    0 0 0 1px rgba(255,255,255,.20) !important;
+  backdrop-filter: blur(24px) saturate(165%);
+  -webkit-backdrop-filter: blur(24px) saturate(165%);
+}
+
+body:has(#storySubjectList) .summary-grid article,
+body:has(#wrongBookList) .summary-grid article,
+body:has(#dailyMissionList) .summary-grid article {
+  min-height: 112px;
+  border-radius: 26px !important;
+}
+
+body:has(#storySubjectList) .tool-card,
+body:has(#wrongBookList) .tool-card,
+body:has(#dailyMissionList) .tool-card {
+  border-radius: 30px !important;
+  padding: 24px !important;
 }
 
 body:has(#storySubjectList) .tool-card::before,
 body:has(#wrongBookList) .tool-card::before,
-body:has(#dailyMissionList) .tool-card::before {
+body:has(#dailyMissionList) .tool-card::before,
+body:has(#storySubjectList) .summary-grid article::before,
+body:has(#wrongBookList) .summary-grid article::before,
+body:has(#dailyMissionList) .summary-grid article::before,
+body:has(#storySubjectList) .story-subject-card::before,
+body:has(#storySubjectList) .story-branch-card::before,
+body:has(#wrongBookList) .question-card::before,
+body:has(#dailyMissionList) .question-card::before {
   content: "";
   position: absolute;
-  inset: -50%;
-  z-index: 0;
+  inset: -45% -20%;
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.55) 48%, transparent 58%);
-  transform: translateX(-30%) rotate(10deg);
-  animation: qaCardShine 8s ease-in-out infinite;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.64) 48%, rgba(255,255,255,.22) 54%, transparent 64%);
+  transform: translateX(-38%) rotate(8deg);
+  animation: qaGlassSheen 8.5s ease-in-out infinite;
 }
 
-body:has(#storySubjectList) .tool-card > *,
-body:has(#wrongBookList) .tool-card > *,
-body:has(#dailyMissionList) .tool-card > * {
-  position: relative;
-  z-index: 1;
+body:has(#storySubjectList) .tool-card::after,
+body:has(#wrongBookList) .tool-card::after,
+body:has(#dailyMissionList) .tool-card::after {
+  content: "✦";
+  position: absolute;
+  top: 17px;
+  right: 22px;
+  color: rgba(255, 124, 193, .46);
+  font-size: 32px;
+  text-shadow: 0 0 18px rgba(255, 124, 193, .38);
+  pointer-events: none;
 }
 
-body:has(#storySubjectList) .tool-card h2,
-body:has(#wrongBookList) .tool-card h2,
-body:has(#dailyMissionList) .tool-card h2,
-body:has(#storySubjectList) .tool-card h3,
-body:has(#wrongBookList) .tool-card h3,
-body:has(#dailyMissionList) .tool-card h3,
-body:has(#storySubjectList) .tool-card h4,
-body:has(#wrongBookList) .tool-card h4,
-body:has(#dailyMissionList) .tool-card h4 {
-  color: #2f2940;
+body:has(#storySubjectList) .story-hero-card {
+  grid-template-columns: minmax(0, 1.2fr) 260px;
+  min-height: 285px;
+  background:
+    url('../images/waiting_bg.gif') right center / 430px auto no-repeat,
+    linear-gradient(135deg, rgba(255,255,255,.63), rgba(236,231,255,.44)),
+    radial-gradient(circle at 22% 20%, rgba(255,255,255,.95), transparent 23%),
+    radial-gradient(circle at 88% 18%, rgba(164,135,255,.36), transparent 36%) !important;
 }
 
-body:has(#storySubjectList) .summary-grid span,
-body:has(#wrongBookList) .summary-grid span,
-body:has(#dailyMissionList) .summary-grid span,
-body:has(#storySubjectList) .tool-note,
+body:has(#storySubjectList) .story-hero-card h2 {
+  color: #262044 !important;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  line-height: 1.18;
+}
+
+body:has(#storySubjectList) .story-hero-card p,
+body:has(#storySubjectList) .story-scene,
+body:has(#storySubjectList) .story-clear-state,
+body:has(#storySubjectList) .story-play-area > p,
 body:has(#wrongBookList) .tool-note,
-body:has(#dailyMissionList) .tool-note,
-body:has(#storySubjectList) .tool-card p,
-body:has(#wrongBookList) .tool-card p,
-body:has(#dailyMissionList) .tool-card p {
-  color: #5f5472;
+body:has(#wrongBookList) .question-card p,
+body:has(#dailyMissionList) .question-card p {
+  color: var(--qa-glass-muted-text) !important;
 }
 
-body:has(#storySubjectList) .summary-grid strong,
-body:has(#wrongBookList) .summary-grid strong,
-body:has(#dailyMissionList) .summary-grid strong {
-  color: #6a55db;
-}
-
-body:has(#storySubjectList) .question-card,
-body:has(#wrongBookList) .question-card,
-body:has(#dailyMissionList) .question-card,
 body:has(#storySubjectList) .story-subject-card,
 body:has(#storySubjectList) .story-branch-card,
-body:has(#wrongBookList) .analysis-card,
-body:has(#wrongBookList) .radar-legend span,
-body:has(#wrongBookList) .practice-box > p,
-body:has(#wrongBookList) .wrong-insight-grid > *,
-body:has(#dailyMissionList) .practice-option {
-  border: 1px solid rgba(124, 123, 255, 0.16);
-  border-radius: 22px;
-  color: #34405f;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.96), rgba(247,248,255,.92));
-  box-shadow: 0 14px 30px rgba(83, 92, 143, 0.12);
+body:has(#wrongBookList) .question-card,
+body:has(#dailyMissionList) .question-card {
+  border-radius: 24px !important;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
 }
 
 body:has(#storySubjectList) .story-subject-card:hover,
 body:has(#storySubjectList) .story-branch-card:hover,
-body:has(#dailyMissionList) .practice-option:not(:disabled):hover,
-body:has(#wrongBookList) .practice-option:not(:disabled):hover {
-  transform: translateY(-3px);
-  border-color: rgba(255, 117, 173, 0.48);
-  box-shadow: 0 20px 40px rgba(255, 117, 173, 0.18);
+body:has(#wrongBookList) .question-card:hover,
+body:has(#dailyMissionList) .question-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 126, 190, .56) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    0 26px 54px rgba(139, 118, 255, .22),
+    0 0 26px rgba(255,126,190,.14) !important;
 }
 
-body:has(#storySubjectList) .story-hero-card {
-  grid-template-columns: minmax(0, 1fr) minmax(190px, 240px);
+body:has(#storySubjectList) .story-subject-card.active,
+body:has(#storySubjectList) .story-branch-card.active {
+  border-color: rgba(255, 103, 181, .78) !important;
   background:
-    linear-gradient(135deg, rgba(255, 247, 252, 0.94), rgba(239, 245, 255, 0.9)),
-    radial-gradient(circle at 80% 18%, rgba(255, 126, 179, 0.26), transparent 30%),
-    radial-gradient(circle at 6% 90%, rgba(124, 123, 255, 0.22), transparent 30%),
-    url('../images/create_gitl.png');
-  background-repeat: no-repeat;
-  background-size: cover, auto, auto, 230px auto;
-  background-position: center, center, center, right 18px bottom -8px;
-  padding-right: 260px;
-}
-
-body:has(#storySubjectList) .story-hero-card h2 {
-  color: #2f2940;
-}
-
-body:has(#storySubjectList) .story-progress-card {
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  color: #7d4a9d;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.42), 0 12px 28px rgba(124,123,255,.13);
+    linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,226,242,.48)),
+    radial-gradient(circle at 78% 15%, rgba(255,118,187,.32), transparent 32%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    0 22px 54px rgba(255, 103, 181, .25),
+    0 0 0 4px rgba(255, 142, 200, .12) !important;
 }
 
 body:has(#storySubjectList) .story-subject-card i,
-body:has(#storySubjectList) .practice-option b,
-body:has(#wrongBookList) .practice-option b,
-body:has(#dailyMissionList) .practice-option b {
-  background: linear-gradient(135deg, #ff75ad, #8d6cff);
-  box-shadow: 0 8px 18px rgba(141, 108, 255, 0.24);
+body:has(#storySubjectList) .practice-option b {
+  border: 1px solid rgba(255,255,255,.64);
+  background: linear-gradient(135deg, #ff71b8, #8d76ff 62%, #5ccfff) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 10px 22px rgba(139,118,255,.22);
 }
 
-body:has(#storySubjectList) .answer-pill,
+body:has(#storySubjectList) .story-subject-card strong,
+body:has(#storySubjectList) .story-branch-card strong,
+body:has(#storySubjectList) .story-stage-card h4,
+body:has(#wrongBookList) .question-card h3,
+body:has(#dailyMissionList) .question-card h3,
+body:has(#wrongBookList) .tool-card-head h2,
+body:has(#dailyMissionList) .tool-card-head h2,
+body:has(#storySubjectList) .tool-card-head h2 {
+  color: #27213d !important;
+}
+
+body:has(#storySubjectList) .story-subject-card span,
+body:has(#storySubjectList) .story-branch-card span,
+body:has(#wrongBookList) .question-tags span,
+body:has(#dailyMissionList) .question-tags span,
 body:has(#wrongBookList) .answer-pill,
 body:has(#dailyMissionList) .answer-pill,
-body:has(#storySubjectList) .question-tags span,
-body:has(#wrongBookList) .question-tags span,
-body:has(#dailyMissionList) .question-tags span {
-  color: #9d3f78;
-  background: linear-gradient(135deg, #fff0f8, #efedff);
-  border: 1px solid rgba(255, 117, 173, 0.22);
+body:has(#storySubjectList) .answer-pill {
+  color: #5f5571 !important;
+}
+
+body:has(#wrongBookList) .summary-grid article:nth-child(1) strong,
+body:has(#dailyMissionList) .summary-grid article:nth-child(1) strong { color: #ff5fae !important; }
+body:has(#wrongBookList) .summary-grid article:nth-child(2) strong,
+body:has(#dailyMissionList) .summary-grid article:nth-child(2) strong { color: #8a6cff !important; }
+body:has(#wrongBookList) .summary-grid article:nth-child(3) strong,
+body:has(#dailyMissionList) .summary-grid article:nth-child(3) strong { color: #28a9d6 !important; }
+
+body:has(#wrongBookList) .wrong-insight-grid article,
+body:has(#wrongBookList) .radar-legend span,
+body:has(#wrongBookList) .practice-box > p {
+  border-radius: 22px !important;
+}
+
+body:has(#wrongBookList) .radar-layout canvas {
+  border: 1px solid rgba(255,255,255,.72) !important;
+  border-radius: 28px !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.58), rgba(240,246,255,.36)),
+    radial-gradient(circle at 80% 10%, rgba(255,120,188,.20), transparent 30%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 20px 46px rgba(93, 87, 145, .17) !important;
+  backdrop-filter: blur(20px) saturate(155%);
+  -webkit-backdrop-filter: blur(20px) saturate(155%);
+}
+
+body:has(#dailyMissionList) .question-card,
+body:has(#dailyMissionList) .tool-card {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.65), rgba(255,244,225,.42)),
+    radial-gradient(circle at 85% 15%, rgba(255,190,80,.26), transparent 31%),
+    radial-gradient(circle at 8% 92%, rgba(86,201,255,.20), transparent 27%) !important;
 }
 
 body:has(#storySubjectList) .tool-btn,
 body:has(#wrongBookList) .tool-btn,
 body:has(#dailyMissionList) .tool-btn {
-  color: #fff;
-  border: 0;
-  background: linear-gradient(135deg, #ff75ad, #8d6cff);
-  box-shadow: 0 14px 28px rgba(141, 108, 255, 0.24);
-  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  position: relative;
+  overflow: hidden;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.58) !important;
+  background: linear-gradient(135deg, rgba(255,113,184,.95), rgba(141,118,255,.96), rgba(86,201,255,.90)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.48),
+    0 14px 30px rgba(139, 118, 255, .24),
+    0 0 22px rgba(255, 113, 184, .16) !important;
+}
+
+body:has(#dailyMissionList) .tool-btn {
+  background: linear-gradient(135deg, rgba(255,181,70,.96), rgba(255,113,184,.92), rgba(141,118,255,.92)) !important;
 }
 
 body:has(#storySubjectList) .tool-btn:hover,
 body:has(#wrongBookList) .tool-btn:hover,
 body:has(#dailyMissionList) .tool-btn:hover {
   transform: translateY(-2px);
-  filter: saturate(1.08);
-  box-shadow: 0 18px 34px rgba(255, 117, 173, 0.26);
+  filter: brightness(1.05);
 }
 
-body:has(#wrongBookList) .radar-layout canvas {
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(245, 247, 255, 0.9));
-  box-shadow: inset 0 0 0 1px rgba(124, 123, 255, 0.08), 0 14px 32px rgba(83, 92, 143, 0.12);
+body:has(#wrongBookList) .option-list li,
+body:has(#dailyMissionList) .option-list li,
+body:has(#storySubjectList) .option-list li,
+body:has(#wrongBookList) .practice-option,
+body:has(#storySubjectList) .practice-option,
+body:has(#dailyMissionList) .practice-option,
+body:has(#wrongBookList) .explanation-box,
+body:has(#dailyMissionList) .explanation-box,
+body:has(#storySubjectList) .explanation-box {
+  color: #332a45 !important;
+  border: 1px solid rgba(255,255,255,.66) !important;
+  background: rgba(255,255,255,.58) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82), 0 10px 22px rgba(93,87,145,.10);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
 }
 
-body:has(#dailyMissionList) .question-card {
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,243,250,.9)),
-    radial-gradient(circle at 96% 12%, rgba(255,117,173,.18), transparent 30%);
+body:has(#storySubjectList) .bar-track,
+body:has(#wrongBookList) .bar-track,
+body:has(#dailyMissionList) .bar-track,
+body:has(#storySubjectList) .level-track,
+body:has(#wrongBookList) .level-track,
+body:has(#dailyMissionList) .level-track {
+  background: rgba(255,255,255,.66) !important;
+  box-shadow: inset 0 1px 3px rgba(70,60,100,.12);
 }
 
-body:has(#dailyMissionList) .question-card::after,
-body:has(#wrongBookList) .tool-card::after,
-body:has(#storySubjectList) .tool-card::after {
-  content: "✦";
-  position: absolute;
-  right: 18px;
-  top: 14px;
-  color: rgba(255, 117, 173, 0.38);
-  font-size: 28px;
-  line-height: 1;
-  pointer-events: none;
+body:has(#storySubjectList) .bar-fill,
+body:has(#wrongBookList) .bar-fill,
+body:has(#dailyMissionList) .bar-fill,
+body:has(#storySubjectList) .level-track span,
+body:has(#wrongBookList) .level-track span,
+body:has(#dailyMissionList) .level-track span {
+  background: linear-gradient(90deg, #ff72b8, #8d76ff, #56c9ff) !important;
+  box-shadow: 0 0 16px rgba(255,114,184,.36);
 }
 
-@keyframes qaLightGradientFloat {
-  0% { background-position: center, 0 0, 0 0, 0 0, center; }
-  100% { background-position: center, 30px -20px, -20px 25px, 18px 18px, center; }
+@keyframes qaGlassSheen {
+  0%, 45% { transform: translateX(-42%) rotate(8deg); opacity: 0; }
+  55% { opacity: .95; }
+  100% { transform: translateX(42%) rotate(8deg); opacity: 0; }
 }
 
 @keyframes qaSparkleDrift {
-  0% { background-position: 0 0, 0 0, 0 0, 0 0; }
-  100% { background-position: 180px 180px, -220px 220px, 260px -260px, 240% 240%; }
+  from { background-position: 0 0, 45px 25px, 80px 65px; }
+  to { background-position: 120px 120px, 215px 195px, 300px 285px; }
 }
 
-@keyframes qaCardShine {
-  0%, 55% { transform: translateX(-38%) rotate(10deg); opacity: 0; }
-  72% { opacity: 1; }
-  100% { transform: translateX(38%) rotate(10deg); opacity: 0; }
+@keyframes qaGlassBgFloat {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(12px, -10px, 0) scale(1.025); }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 720px) {
   body:has(#storySubjectList) .story-hero-card {
     grid-template-columns: 1fr;
-    padding-right: 18px;
-    background-size: cover, auto, auto, 150px auto;
-    background-position: center, center, center, right -12px bottom -18px;
+    background-size: 260px auto, auto, auto, auto !important;
   }
-
-  body:has(#storySubjectList) .tool-topbar,
-  body:has(#wrongBookList) .tool-topbar,
-  body:has(#dailyMissionList) .tool-topbar {
-    border-radius: 22px;
+  body:has(#storySubjectList) .tool-card,
+  body:has(#wrongBookList) .tool-card,
+  body:has(#dailyMissionList) .tool-card {
+    padding: 18px !important;
+    border-radius: 24px !important;
   }
 }
