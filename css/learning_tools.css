@@ -1378,3 +1378,287 @@ body.dark-mode .tool-btn.primary {
     width: 100%;
   }
 }
+
+/* =========================================================
+   QuizArena Learning Pages Beauty Patch
+   Scope: story_mode.html / wrong_book.html / daily_mission.html
+   Light mode only base styles. HTML unchanged.
+   ========================================================= */
+
+body:has(#storySubjectList),
+body:has(#wrongBookList),
+body:has(#dailyMissionList) {
+  color: #2f2940;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 252, 0.9), rgba(239, 247, 255, 0.9)),
+    radial-gradient(circle at 10% 12%, rgba(255, 126, 179, 0.34), transparent 28%),
+    radial-gradient(circle at 88% 8%, rgba(124, 123, 255, 0.28), transparent 30%),
+    radial-gradient(circle at 50% 100%, rgba(72, 192, 216, 0.2), transparent 32%),
+    url('../images/bg.png');
+  background-size: cover, auto, auto, auto, cover;
+  background-attachment: fixed;
+  animation: qaLightGradientFloat 16s ease-in-out infinite alternate;
+}
+
+body:has(#storySubjectList)::before,
+body:has(#wrongBookList)::before,
+body:has(#dailyMissionList)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.92) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 28%, rgba(255, 126, 179, 0.44) 0 2px, transparent 3px),
+    radial-gradient(circle at 66% 78%, rgba(124, 123, 255, 0.38) 0 2px, transparent 3px),
+    linear-gradient(120deg, transparent 0 44%, rgba(255, 255, 255, 0.38) 48%, transparent 54%);
+  background-size: 180px 180px, 220px 220px, 260px 260px, 240% 240%;
+  opacity: 0.75;
+  animation: qaSparkleDrift 18s linear infinite;
+}
+
+body:has(#storySubjectList) .tool-shell,
+body:has(#wrongBookList) .tool-shell,
+body:has(#dailyMissionList) .tool-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+body:has(#storySubjectList) .tool-topbar,
+body:has(#wrongBookList) .tool-topbar,
+body:has(#dailyMissionList) .tool-topbar {
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 18px 42px rgba(124, 123, 255, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+body:has(#storySubjectList) .tool-topbar h1,
+body:has(#wrongBookList) .tool-topbar h1,
+body:has(#dailyMissionList) .tool-topbar h1 {
+  color: #2f2940;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.72);
+}
+
+body:has(#storySubjectList) .tool-kicker,
+body:has(#wrongBookList) .tool-kicker,
+body:has(#dailyMissionList) .tool-kicker {
+  color: #b55389;
+}
+
+body:has(#storySubjectList) .summary-grid article,
+body:has(#wrongBookList) .summary-grid article,
+body:has(#dailyMissionList) .summary-grid article,
+body:has(#storySubjectList) .tool-card,
+body:has(#wrongBookList) .tool-card,
+body:has(#dailyMissionList) .tool-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 28px;
+  color: #2f2940;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 236, 248, 0.78)),
+    radial-gradient(circle at 92% 10%, rgba(255, 126, 179, 0.22), transparent 34%),
+    radial-gradient(circle at 5% 100%, rgba(124, 123, 255, 0.16), transparent 32%);
+  box-shadow: 0 22px 52px rgba(114, 93, 163, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+body:has(#storySubjectList) .tool-card::before,
+body:has(#wrongBookList) .tool-card::before,
+body:has(#dailyMissionList) .tool-card::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.55) 48%, transparent 58%);
+  transform: translateX(-30%) rotate(10deg);
+  animation: qaCardShine 8s ease-in-out infinite;
+}
+
+body:has(#storySubjectList) .tool-card > *,
+body:has(#wrongBookList) .tool-card > *,
+body:has(#dailyMissionList) .tool-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body:has(#storySubjectList) .tool-card h2,
+body:has(#wrongBookList) .tool-card h2,
+body:has(#dailyMissionList) .tool-card h2,
+body:has(#storySubjectList) .tool-card h3,
+body:has(#wrongBookList) .tool-card h3,
+body:has(#dailyMissionList) .tool-card h3,
+body:has(#storySubjectList) .tool-card h4,
+body:has(#wrongBookList) .tool-card h4,
+body:has(#dailyMissionList) .tool-card h4 {
+  color: #2f2940;
+}
+
+body:has(#storySubjectList) .summary-grid span,
+body:has(#wrongBookList) .summary-grid span,
+body:has(#dailyMissionList) .summary-grid span,
+body:has(#storySubjectList) .tool-note,
+body:has(#wrongBookList) .tool-note,
+body:has(#dailyMissionList) .tool-note,
+body:has(#storySubjectList) .tool-card p,
+body:has(#wrongBookList) .tool-card p,
+body:has(#dailyMissionList) .tool-card p {
+  color: #5f5472;
+}
+
+body:has(#storySubjectList) .summary-grid strong,
+body:has(#wrongBookList) .summary-grid strong,
+body:has(#dailyMissionList) .summary-grid strong {
+  color: #6a55db;
+}
+
+body:has(#storySubjectList) .question-card,
+body:has(#wrongBookList) .question-card,
+body:has(#dailyMissionList) .question-card,
+body:has(#storySubjectList) .story-subject-card,
+body:has(#storySubjectList) .story-branch-card,
+body:has(#wrongBookList) .analysis-card,
+body:has(#wrongBookList) .radar-legend span,
+body:has(#wrongBookList) .practice-box > p,
+body:has(#wrongBookList) .wrong-insight-grid > *,
+body:has(#dailyMissionList) .practice-option {
+  border: 1px solid rgba(124, 123, 255, 0.16);
+  border-radius: 22px;
+  color: #34405f;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.96), rgba(247,248,255,.92));
+  box-shadow: 0 14px 30px rgba(83, 92, 143, 0.12);
+}
+
+body:has(#storySubjectList) .story-subject-card:hover,
+body:has(#storySubjectList) .story-branch-card:hover,
+body:has(#dailyMissionList) .practice-option:not(:disabled):hover,
+body:has(#wrongBookList) .practice-option:not(:disabled):hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 117, 173, 0.48);
+  box-shadow: 0 20px 40px rgba(255, 117, 173, 0.18);
+}
+
+body:has(#storySubjectList) .story-hero-card {
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 240px);
+  background:
+    linear-gradient(135deg, rgba(255, 247, 252, 0.94), rgba(239, 245, 255, 0.9)),
+    radial-gradient(circle at 80% 18%, rgba(255, 126, 179, 0.26), transparent 30%),
+    radial-gradient(circle at 6% 90%, rgba(124, 123, 255, 0.22), transparent 30%),
+    url('../images/create_gitl.png');
+  background-repeat: no-repeat;
+  background-size: cover, auto, auto, 230px auto;
+  background-position: center, center, center, right 18px bottom -8px;
+  padding-right: 260px;
+}
+
+body:has(#storySubjectList) .story-hero-card h2 {
+  color: #2f2940;
+}
+
+body:has(#storySubjectList) .story-progress-card {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  color: #7d4a9d;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.42), 0 12px 28px rgba(124,123,255,.13);
+}
+
+body:has(#storySubjectList) .story-subject-card i,
+body:has(#storySubjectList) .practice-option b,
+body:has(#wrongBookList) .practice-option b,
+body:has(#dailyMissionList) .practice-option b {
+  background: linear-gradient(135deg, #ff75ad, #8d6cff);
+  box-shadow: 0 8px 18px rgba(141, 108, 255, 0.24);
+}
+
+body:has(#storySubjectList) .answer-pill,
+body:has(#wrongBookList) .answer-pill,
+body:has(#dailyMissionList) .answer-pill,
+body:has(#storySubjectList) .question-tags span,
+body:has(#wrongBookList) .question-tags span,
+body:has(#dailyMissionList) .question-tags span {
+  color: #9d3f78;
+  background: linear-gradient(135deg, #fff0f8, #efedff);
+  border: 1px solid rgba(255, 117, 173, 0.22);
+}
+
+body:has(#storySubjectList) .tool-btn,
+body:has(#wrongBookList) .tool-btn,
+body:has(#dailyMissionList) .tool-btn {
+  color: #fff;
+  border: 0;
+  background: linear-gradient(135deg, #ff75ad, #8d6cff);
+  box-shadow: 0 14px 28px rgba(141, 108, 255, 0.24);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+body:has(#storySubjectList) .tool-btn:hover,
+body:has(#wrongBookList) .tool-btn:hover,
+body:has(#dailyMissionList) .tool-btn:hover {
+  transform: translateY(-2px);
+  filter: saturate(1.08);
+  box-shadow: 0 18px 34px rgba(255, 117, 173, 0.26);
+}
+
+body:has(#wrongBookList) .radar-layout canvas {
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(245, 247, 255, 0.9));
+  box-shadow: inset 0 0 0 1px rgba(124, 123, 255, 0.08), 0 14px 32px rgba(83, 92, 143, 0.12);
+}
+
+body:has(#dailyMissionList) .question-card {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,243,250,.9)),
+    radial-gradient(circle at 96% 12%, rgba(255,117,173,.18), transparent 30%);
+}
+
+body:has(#dailyMissionList) .question-card::after,
+body:has(#wrongBookList) .tool-card::after,
+body:has(#storySubjectList) .tool-card::after {
+  content: "✦";
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  color: rgba(255, 117, 173, 0.38);
+  font-size: 28px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+@keyframes qaLightGradientFloat {
+  0% { background-position: center, 0 0, 0 0, 0 0, center; }
+  100% { background-position: center, 30px -20px, -20px 25px, 18px 18px, center; }
+}
+
+@keyframes qaSparkleDrift {
+  0% { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 180px 180px, -220px 220px, 260px -260px, 240% 240%; }
+}
+
+@keyframes qaCardShine {
+  0%, 55% { transform: translateX(-38%) rotate(10deg); opacity: 0; }
+  72% { opacity: 1; }
+  100% { transform: translateX(38%) rotate(10deg); opacity: 0; }
+}
+
+@media (max-width: 768px) {
+  body:has(#storySubjectList) .story-hero-card {
+    grid-template-columns: 1fr;
+    padding-right: 18px;
+    background-size: cover, auto, auto, 150px auto;
+    background-position: center, center, center, right -12px bottom -18px;
+  }
+
+  body:has(#storySubjectList) .tool-topbar,
+  body:has(#wrongBookList) .tool-topbar,
+  body:has(#dailyMissionList) .tool-topbar {
+    border-radius: 22px;
+  }
+}
