@@ -18,32 +18,34 @@
     <header class="tool-topbar">
       <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
       <div>
-        <p class="tool-kicker">Review</p>
+        <p class="tool-kicker"><i class="fa-solid fa-book-bookmark"></i> Review</p>
         <h1>我的錯題本</h1>
       </div>
-      
     </header>
 
+    <!-- Stats -->
     <section class="summary-grid">
-      <article><span>錯題數</span><strong id="wrongItemCount">0</strong></article>
-      <article><span>累積答錯</span><strong id="wrongTotalCount">0</strong></article>
-      <article><span>目前帳號</span><strong id="wrongUserName">-</strong></article>
+      <article><span><i class="fa-solid fa-circle-xmark"></i> 錯題數</span><strong id="wrongItemCount">0</strong></article>
+      <article><span><i class="fa-solid fa-chart-line"></i> 累積答錯</span><strong id="wrongTotalCount">0</strong></article>
+      <article><span><i class="fa-solid fa-user"></i> 目前帳號</span><strong id="wrongUserName">-</strong></article>
     </section>
 
-    <section class="tool-card">
-      <div class="tool-card-head"><h2>複習建議</h2></div>
-      <div id="wrongBookInsight" class="wrong-insight-grid"></div>
-      <div style="margin-top:14px;display:flex;justify-content:flex-end">
-        <button id="getAiAdviceBtn" class="tool-btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> 讓 AI 給我學習建議
-        </button>
-      </div>
-      <div id="aiAdviceBox" style="display:none;margin-top:14px;padding:16px 20px;border-radius:18px;background:rgba(147,51,234,.07);border:1.5px solid rgba(147,51,234,.15);font-size:.9rem;line-height:1.7;color:#3a1a60;white-space:pre-wrap"></div>
-    </section>
-
+    <!-- AI Advice + Insight -->
     <section class="tool-card">
       <div class="tool-card-head">
-        <h2>學習弱點雷達圖</h2>
+        <h2><i class="fa-solid fa-lightbulb"></i> 複習建議</h2>
+        <button id="getAiAdviceBtn" class="tool-btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:.82rem">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> AI 給建議
+        </button>
+      </div>
+      <div id="wrongBookInsight" class="wrong-insight-grid"></div>
+      <div id="aiAdviceBox" class="wb-ai-box" style="display:none"></div>
+    </section>
+
+    <!-- Radar -->
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2><i class="fa-solid fa-radar"></i> 學習弱點雷達圖</h2>
         <span class="tool-note">依類別、難度、題型統計錯題比例</span>
       </div>
       <div class="radar-layout">
@@ -52,7 +54,7 @@
       </div>
     </section>
 
-    <!-- 知識地圖 -->
+    <!-- Knowledge Map -->
     <section class="tool-card">
       <div class="tool-card-head">
         <h2><i class="fa-solid fa-map"></i> 知識地圖</h2>
@@ -61,9 +63,24 @@
       <div id="knowledgeMapArea" class="knowledge-map-area"></div>
     </section>
 
+    <!-- Smart Review tabs -->
     <section class="tool-card">
       <div class="tool-card-head">
-        <h2>錯題練習</h2>
+        <h2><i class="fa-solid fa-brain"></i> 智慧複習</h2>
+      </div>
+      <div class="wb-review-tabs">
+        <button class="wb-tab active" data-tab="today"><i class="fa-solid fa-calendar-day"></i> 今日複習</button>
+        <button class="wb-tab" data-tab="ai-rec"><i class="fa-solid fa-robot"></i> AI 推薦</button>
+        <button class="wb-tab" data-tab="most-wrong"><i class="fa-solid fa-fire"></i> 最常答錯</button>
+        <button class="wb-tab" data-tab="high-err"><i class="fa-solid fa-triangle-exclamation"></i> 高錯誤率</button>
+      </div>
+      <div id="wb-review-panel" class="wb-review-panel"></div>
+    </section>
+
+    <!-- Practice -->
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2><i class="fa-solid fa-dumbbell"></i> 錯題練習</h2>
         <button id="startPracticeBtn" class="tool-btn"><i class="fa-solid fa-play"></i> 開始練習</button>
       </div>
       <div id="wrongPracticeBox" class="practice-box">
@@ -71,9 +88,10 @@
       </div>
     </section>
 
+    <!-- Review list -->
     <section class="tool-card">
       <div class="tool-card-head">
-        <h2>複習清單</h2>
+        <h2><i class="fa-solid fa-list-check"></i> 完整複習清單</h2>
         <button id="refreshWrongBookBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> 重新整理</button>
       </div>
       <div id="wrongBookList" class="question-list"></div>
@@ -86,44 +104,117 @@
   <script src="js/Audio_manager.js"></script>
   <script src="js/nav_drawer.js"></script>
   <script src="js/music_drawer.js"></script>
+
   <script>
-  // AI Study Advice
+  // ── Smart Review Tabs ──────────────────────────────
+  const wbTabBtns = document.querySelectorAll('.wb-tab');
+  const wbPanel = document.getElementById('wb-review-panel');
+  let _wbActiveTab = 'today';
+
+  function renderWbTab(tab) {
+    const items = window._wrongBookItems || [];
+    if (!items.length) {
+      wbPanel.innerHTML = `<p style="color:#aaa;text-align:center;padding:20px">目前沒有錯題記錄。答錯題目後會自動出現在這裡！</p>`;
+      return;
+    }
+    let filtered = [];
+    const escH = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    if (tab === 'today') {
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+      filtered = items.filter(i => i.lastWrongAt && new Date(i.lastWrongAt) >= todayStart);
+      if (!filtered.length) filtered = items.slice(0, 5); // fallback: 5 oldest
+    } else if (tab === 'ai-rec') {
+      // Sort by wrong count desc, take top 6
+      filtered = [...items].sort((a,b) => (b.wrongCount||0)-(a.wrongCount||0)).slice(0,6);
+    } else if (tab === 'most-wrong') {
+      filtered = [...items].sort((a,b) => (b.wrongCount||0)-(a.wrongCount||0)).slice(0,10);
+    } else if (tab === 'high-err') {
+      // High error rate = wrongCount / total attempts (estimate as wrongCount)
+      filtered = [...items].filter(i => (i.wrongCount||0) >= 2).sort((a,b)=>(b.wrongCount||0)-(a.wrongCount||0)).slice(0,10);
+      if (!filtered.length) filtered = items.slice(0,6);
+    }
+
+    if (!filtered.length) {
+      wbPanel.innerHTML = `<p style="color:#aaa;text-align:center;padding:20px;font-size:.88rem">此分類暫無記錄</p>`;
+      return;
+    }
+
+    wbPanel.innerHTML = `<div class="wb-mini-list">${filtered.map(item => `
+      <div class="wb-mini-card">
+        <div class="wb-mini-meta">
+          <span class="wb-mini-cat"><i class="fa-solid fa-tag"></i> ${escH(item.category||item.sourceBankTitle||'未知')}</span>
+          <span class="wb-mini-diff wb-diff-${item.difficulty||'medium'}">${{easy:'簡單',medium:'中等',hard:'困難'}[item.difficulty]||'中等'}</span>
+          <span class="wb-mini-wrong"><i class="fa-solid fa-xmark"></i> ${item.wrongCount||1}次</span>
+        </div>
+        <p class="wb-mini-q">${escH(item.content||item.title||'題目')}</p>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  wbTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      wbTabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _wbActiveTab = btn.dataset.tab;
+      renderWbTab(_wbActiveTab);
+    });
+  });
+
+  // Re-render tabs when wrong book loads
+  const _origPatch = setInterval(() => {
+    if (window._wrongBookItems !== undefined) {
+      clearInterval(_origPatch);
+      renderWbTab(_wbActiveTab);
+    }
+  }, 300);
+
+  // ── AI Study Advice ────────────────────────────────
   document.getElementById('getAiAdviceBtn')?.addEventListener('click', async function() {
     const btn = this;
     const box = document.getElementById('aiAdviceBox');
     const items = window._wrongBookItems || [];
-    if (!items.length) { box.style.display=''; box.textContent='目前沒有錯題，繼續練習後再來查看 AI 建議！'; return; }
-
+    if (!items.length) {
+      box.style.display = '';
+      box.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#22c55e"></i> 目前沒有錯題，繼續練習後再來查看 AI 建議！';
+      return;
+    }
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 分析中…';
     box.style.display = '';
-    box.textContent = '⏳ 正在分析你的學習狀況…';
+    box.innerHTML = '<i class="fa-solid fa-hourglass-half fa-spin"></i> 正在深度分析你的學習狀況…';
 
     try {
-      // Build a summary of wrong items for AI
       const summary = items.slice(0, 15).map((item, i) =>
-        `第${i+1}題: [${item.category||'未知'}/${item.difficulty||'medium'}] ${item.content||item.title} (答錯${item.wrongCount||1}次)`
+        `${i+1}. [${item.category||'未知'}/${item.difficulty||'medium'}] ${item.content||item.title} (錯${item.wrongCount||1}次)`
       ).join('\n');
-
       const catCounts = {};
       items.forEach(it => { const c = it.category||'未知'; catCounts[c] = (catCounts[c]||0) + (it.wrongCount||1); });
       const topCats = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c,n])=>`${c}(${n}次)`).join('、');
+      const total = items.reduce((s,i) => s+(i.wrongCount||1), 0);
 
-      const prompt = `你是一位友善的學習顧問。以下是學生在 QuizArena 練習題中的錯題紀錄：
+      const prompt = `你是一位友善、專業的學習顧問，專門協助學生分析錯題。
 
-最常出錯的類別：${topCats}
-錯題總數：${items.length} 題
-累積答錯次數：${items.reduce((s,i)=>s+(i.wrongCount||1),0)} 次
+學習者在 QuizArena 的錯題資料：
+- 最弱類別：${topCats}
+- 錯題總數：${items.length} 題，累積錯誤：${total} 次
 
-部分錯題範例：
+部分錯題紀錄：
 ${summary}
 
-請用繁體中文給出：
-1. 對這位學生學習狀況的簡短分析（2-3句）
-2. 針對最弱的類別，提供 3 個具體的改進建議
-3. 一句鼓勵的話
+請用繁體中文提供以下內容（格式清晰，使用 emoji）：
 
-語氣要親切、具體、有建設性。不要超過 250 字。`;
+📊 **學習狀況分析**（2-3句，具體點出弱點）
+
+🎯 **三個具體改進建議**（針對最弱類別）
+
+📚 **推薦複習題型**（列出 2-3 種）
+
+⏰ **建議練習順序**（一句話說明）
+
+💪 **鼓勵語**（一句溫暖有力的話）
+
+語氣親切、具體、有建設性，總字數不超過 280 字。`;
 
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -135,17 +226,18 @@ ${summary}
         })
       });
       const data = await res.json();
-      const text = (data.content || []).map(c => c.text || '').join('');
-      box.textContent = text || '無法取得建議，請稍後再試。';
+      let text = (data.content || []).map(c => c.text || '').join('');
+      // Convert markdown-ish to HTML
+      text = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      box.innerHTML = `<div class="wb-ai-content">${text}</div>`;
     } catch(e) {
-      box.textContent = '⚠️ AI 服務暫時無法使用，請稍後再試。\n\n小提示：多次答錯的題目優先複習，每天固定練習 10-15 分鐘效果最佳！';
+      box.innerHTML = `<div class="wb-ai-content">⚠️ AI 服務暫時無法使用。<br><br>💡 <strong>小提示：</strong>多次答錯的題目優先複習，每天固定練習 10–15 分鐘效果最佳！</div>`;
     }
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 重新分析';
   });
-
-  // Expose items for AI (hook into wrong_book load)
-  const _origRenderWrongBook = window.renderWrongBook;
   </script>
 </body>
 </html>

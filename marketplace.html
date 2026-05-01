@@ -75,24 +75,82 @@
       </div>
       <div id="mktBankList" class="mkt-bank-list"></div>
     </section>
-    <!-- Bottom animated market banner -->
-    <div class="mkt-bottom-banner">
-      <div class="mkt-icon-row">
-        <div class="mkt-float-icon"><i class="fa-solid fa-flask" style="color:#9333ea"></i><span>自然科學</span></div>
-        <div class="mkt-float-icon"><i class="fa-solid fa-landmark" style="color:#e879a8"></i><span>歷史文化</span></div>
-        <div class="mkt-float-icon"><i class="fa-solid fa-language" style="color:#4f8cff"></i><span>英文閱讀</span></div>
-        <div class="mkt-float-icon"><i class="fa-solid fa-calculator" style="color:#22d3ee"></i><span>數學推理</span></div>
-        <div class="mkt-float-icon"><i class="fa-solid fa-code" style="color:#a855f7"></i><span>程式邏輯</span></div>
-        <div class="mkt-float-icon"><i class="fa-solid fa-pen-nib" style="color:#f43f5e"></i><span>設計企劃</span></div>
+    <!-- Quick-search category tags -->
+    <section class="tool-card mkt-quicksearch-card">
+      <div class="tool-card-head">
+        <h2><i class="fa-solid fa-bolt"></i> 快速搜尋</h2>
+        <span class="tool-note">點擊即可搜尋</span>
       </div>
-      <div class="mkt-banner-title">🌟 QuizArena 題庫市集</div>
-      <p class="mkt-banner-desc">
-        探索來自全球玩家與 AI 精心設計的題庫<br>
-        複製後即可直接在「創建題庫」建立房間，馬上開始挑戰！
-      </p>
-      <a href="create_home.html" class="mkt-banner-cta">
-        <i class="fa-solid fa-plus"></i> 前往創建題庫
-      </a>
+      <div class="mkt-quicksearch-tags">
+        <button class="mkt-qs-tag" data-kw="英文"><i class="fa-solid fa-language"></i> 英文</button>
+        <button class="mkt-qs-tag" data-kw="國文"><i class="fa-solid fa-feather"></i> 國文</button>
+        <button class="mkt-qs-tag" data-kw="數學"><i class="fa-solid fa-calculator"></i> 數學</button>
+        <button class="mkt-qs-tag" data-kw="歷史"><i class="fa-solid fa-landmark"></i> 歷史</button>
+        <button class="mkt-qs-tag" data-kw="自然科學"><i class="fa-solid fa-flask"></i> 自然</button>
+        <button class="mkt-qs-tag" data-kw="程式語言"><i class="fa-solid fa-code"></i> 程式</button>
+        <button class="mkt-qs-tag" data-kw="Python"><i class="fa-brands fa-python"></i> Python</button>
+        <button class="mkt-qs-tag" data-kw="AI設計"><i class="fa-solid fa-robot"></i> AI</button>
+        <button class="mkt-qs-tag" data-kw="閱讀"><i class="fa-solid fa-book-open-reader"></i> 閱讀</button>
+        <button class="mkt-qs-tag" data-kw="設計"><i class="fa-solid fa-pen-nib"></i> 設計</button>
+      </div>
+    </section>
+
+    <!-- RPG Market animated footer -->
+    <div class="mkt-rpg-market">
+      <!-- Floating coins -->
+      <div class="mkt-coin" style="left:8%;animation-delay:0s"><i class="fa-solid fa-coins"></i></div>
+      <div class="mkt-coin" style="left:22%;animation-delay:.7s"><i class="fa-solid fa-gem"></i></div>
+      <div class="mkt-coin" style="left:38%;animation-delay:1.4s"><i class="fa-solid fa-star"></i></div>
+      <div class="mkt-coin" style="left:55%;animation-delay:.4s"><i class="fa-solid fa-book"></i></div>
+      <div class="mkt-coin" style="left:70%;animation-delay:1.1s"><i class="fa-solid fa-scroll"></i></div>
+      <div class="mkt-coin" style="left:85%;animation-delay:.9s"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <div class="mkt-coin" style="left:15%;animation-delay:2.2s;font-size:.9rem"><i class="fa-solid fa-sparkles"></i></div>
+      <div class="mkt-coin" style="left:62%;animation-delay:1.8s;font-size:.9rem"><i class="fa-solid fa-hat-wizard"></i></div>
+
+      <!-- Sparkle burst effects -->
+      <div class="mkt-sparkle" style="left:25%;top:35%">✦</div>
+      <div class="mkt-sparkle" style="left:75%;top:25%;animation-delay:.6s">✧</div>
+      <div class="mkt-sparkle" style="left:50%;top:55%;animation-delay:1.2s">◆</div>
+      <div class="mkt-sparkle" style="left:88%;top:45%;animation-delay:1.8s">✦</div>
+
+      <div class="mkt-rpg-market-inner">
+        <div class="mkt-rpg-shop-icons">
+          <div class="mkt-rpg-icon" style="animation-delay:0s">
+            <i class="fa-solid fa-store" style="color:#9333ea"></i>
+            <span>市集</span>
+          </div>
+          <div class="mkt-rpg-icon" style="animation-delay:.35s">
+            <i class="fa-solid fa-coins" style="color:#f59e0b"></i>
+            <span>收藏</span>
+          </div>
+          <div class="mkt-rpg-icon" style="animation-delay:.7s">
+            <i class="fa-solid fa-gem" style="color:#06b6d4"></i>
+            <span>珍藏</span>
+          </div>
+          <div class="mkt-rpg-icon" style="animation-delay:1.05s">
+            <i class="fa-solid fa-scroll" style="color:#e879a8"></i>
+            <span>題卷</span>
+          </div>
+          <div class="mkt-rpg-icon" style="animation-delay:1.4s">
+            <i class="fa-solid fa-hat-wizard" style="color:#8b5cf6"></i>
+            <span>魔法</span>
+          </div>
+        </div>
+        <div class="mkt-rpg-market-title">
+          <i class="fa-solid fa-store"></i> QuizArena 題庫市集
+        </div>
+        <p class="mkt-rpg-market-desc">
+          探索來自 AI 與玩家設計的精選題庫，複製後可直接建立房間開始挑戰！
+        </p>
+        <div class="mkt-rpg-market-btns">
+          <a href="create_home.html" class="mkt-rpg-cta primary">
+            <i class="fa-solid fa-plus"></i> 創建題庫
+          </a>
+          <button class="mkt-rpg-cta secondary" onclick="document.getElementById('mktSearchInput').focus();document.getElementById('mktSearchInput').scrollIntoView({behavior:'smooth'})">
+            <i class="fa-solid fa-magnifying-glass"></i> 瀏覽全部
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -186,20 +244,25 @@
   })();
   </script>
 
-  <!-- Auto-focus search on filter click -->
+  <!-- Auto-focus search on filter click + quick search tags -->
   <script>
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.mkt-filter-btn').forEach(function(btn) {
+    // Quick-search tags
+    document.querySelectorAll('.mkt-qs-tag').forEach(function(btn) {
       btn.addEventListener('click', function() {
+        var kw = btn.dataset.kw || btn.textContent.trim();
         var input = document.getElementById('mktSearchInput');
-        if (input) { input.focus(); }
+        if (input) {
+          input.value = kw;
+          input.focus();
+          // Trigger search
+          var searchBtn = document.getElementById('mktSearchBtn');
+          if (searchBtn) searchBtn.click();
+        }
+        // Highlight active tag
+        document.querySelectorAll('.mkt-qs-tag').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
       });
-    });
-    // Search btn also focuses input
-    var sBtn = document.getElementById('mktSearchBtn');
-    if (sBtn) sBtn.addEventListener('click', function() {
-      var input = document.getElementById('mktSearchInput');
-      if (input) { input.focus(); }
     });
   });
   </script>

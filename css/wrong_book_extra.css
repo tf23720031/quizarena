@@ -100,3 +100,61 @@ body.dark-mode:has(#wrongItemCount) .wrong-card{
   border-color:rgba(255,255,255,.18) !important;
   color:#fff !important;
 }
+
+/* ══════════════════════════════════════════════════
+   Wrong Book — AI advice box
+   ══════════════════════════════════════════════════ */
+.wb-ai-box {
+  margin-top: 14px; padding: 18px 22px; border-radius: 20px;
+  background: linear-gradient(135deg,rgba(147,51,234,.07),rgba(232,121,168,.05));
+  border: 1.5px solid rgba(147,51,234,.18);
+  font-size: .9rem; line-height: 1.75; color: #3a1a60;
+}
+body.dark-mode .wb-ai-box { background: rgba(80,30,120,.2); border-color: rgba(147,51,234,.3); color: #e0d0f8; }
+.wb-ai-content strong { color: #7c3aed; }
+body.dark-mode .wb-ai-content strong { color: #d0a8ff; }
+
+/* ══════════════════════════════════════════════════
+   Wrong Book — Smart Review Tabs
+   ══════════════════════════════════════════════════ */
+.wb-review-tabs {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.wb-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 99px;
+  border: 1.5px solid rgba(147,51,234,.22);
+  background: rgba(255,255,255,.6); backdrop-filter: blur(10px);
+  color: #7c3aed; font-size: .82rem; font-weight: 800;
+  cursor: pointer; transition: all .18s;
+}
+.wb-tab:hover { background: rgba(147,51,234,.1); transform: translateY(-1px); }
+.wb-tab.active {
+  background: linear-gradient(135deg,#9333ea,#c026d3);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 16px rgba(147,51,234,.30);
+}
+body.dark-mode .wb-tab { background: rgba(40,20,70,.55); color: #c0a0e0; border-color: rgba(147,51,234,.25); }
+body.dark-mode .wb-tab.active { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; }
+
+.wb-review-panel { min-height: 60px; }
+.wb-mini-list { display: flex; flex-direction: column; gap: 10px; }
+.wb-mini-card {
+  padding: 14px 16px; border-radius: 16px;
+  background: rgba(255,255,255,.65); backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255,255,255,.82);
+  box-shadow: 0 4px 16px rgba(147,51,234,.07);
+  transition: transform .15s;
+}
+.wb-mini-card:hover { transform: translateX(4px); }
+.wb-mini-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+.wb-mini-cat { font-size: .72rem; font-weight: 800; color: #7c3aed; background: rgba(147,51,234,.1); padding: 2px 9px; border-radius: 99px; }
+.wb-mini-diff { font-size: .72rem; font-weight: 800; padding: 2px 9px; border-radius: 99px; }
+.wb-diff-easy   { background: rgba(34,197,94,.12); color: #15803d; }
+.wb-diff-medium { background: rgba(245,158,11,.12); color: #92400e; }
+.wb-diff-hard   { background: rgba(239,68,68,.12);  color: #991b1b; }
+.wb-mini-wrong { font-size: .72rem; font-weight: 800; color: #ef4444; margin-left: auto; }
+.wb-mini-q { font-size: .88rem; color: #2d1550; margin: 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+body.dark-mode .wb-mini-card { background: rgba(40,20,70,.55); border-color: rgba(147,51,234,.2); }
+body.dark-mode .wb-mini-q { color: #e8d8ff; }
+body.dark-mode .wb-mini-cat { background: rgba(147,51,234,.2); color: #c8a8ff; }

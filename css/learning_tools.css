@@ -3540,3 +3540,138 @@ body:has(#dailyMissionList) .tool-topbar {
   display: inline-block;
   padding: 4px 12px;
 }
+
+/* ══════════════════════════════════════════════════
+   Story Mode — My Banks Picker Modal (RPG Glass)
+   ══════════════════════════════════════════════════ */
+#myBanksPickerBackdrop {
+  position: fixed; inset: 0; z-index: 10001;
+  background: rgba(30,10,60,.52);
+  backdrop-filter: blur(14px) saturate(160%);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: rpgFadeIn .22s ease;
+}
+@keyframes rpgFadeIn { from{opacity:0} to{opacity:1} }
+
+.story-picker-modal {
+  width: 92%; max-width: 540px; max-height: 82vh;
+  display: flex; flex-direction: column;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.82) 0%, rgba(255,230,250,.72) 40%, rgba(230,235,255,.72) 100%);
+  backdrop-filter: blur(32px) saturate(200%);
+  border: 1.5px solid rgba(255,255,255,.88);
+  border-radius: 32px;
+  box-shadow:
+    0 40px 100px rgba(120,40,200,.28),
+    0 0 0 1px rgba(255,255,255,.5),
+    inset 0 1.5px 0 rgba(255,255,255,.95);
+  overflow: hidden;
+  animation: rpgModalUp .28s cubic-bezier(.16,1,.3,1);
+}
+@keyframes rpgModalUp {
+  from { opacity:0; transform: scale(.88) translateY(24px); }
+  to   { opacity:1; transform: scale(1) translateY(0); }
+}
+
+.story-picker-header {
+  padding: 22px 24px 16px;
+  background: linear-gradient(135deg,rgba(147,51,234,.12),rgba(232,121,168,.08));
+  border-bottom: 1.5px solid rgba(255,255,255,.6);
+  position: relative;
+}
+.story-picker-header h3 {
+  font-size: 1.15rem; font-weight: 900; margin: 0 0 4px;
+  background: linear-gradient(135deg,#7c3aed,#e879a8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.story-picker-header p { font-size:.82rem; color:#9b72c8; margin:0; }
+.story-picker-close {
+  position: absolute; top: 18px; right: 18px;
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: rgba(147,51,234,.12); color: #7c3aed;
+  font-size:.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition: all .15s;
+}
+.story-picker-close:hover { background: rgba(147,51,234,.22); transform: scale(1.1); }
+
+.story-picker-body {
+  flex: 1; overflow-y: auto; padding: 16px 20px 20px;
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147,51,234,.35) transparent;
+}
+.story-picker-body::-webkit-scrollbar { width: 5px; }
+.story-picker-body::-webkit-scrollbar-track { background: transparent; }
+.story-picker-body::-webkit-scrollbar-thumb { background: rgba(147,51,234,.3); border-radius: 99px; }
+
+.story-picker-list { display: flex; flex-direction: column; gap: 12px; }
+
+.story-picker-bank-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  background: rgba(255,255,255,.68);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255,255,255,.85);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: transform .18s, box-shadow .18s, border-color .18s, background .18s;
+  box-shadow: 0 4px 16px rgba(147,51,234,.07), inset 0 1px 0 rgba(255,255,255,.9);
+  width: 100%; text-align: left;
+}
+.story-picker-bank-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(147,51,234,.18), 0 0 0 2px rgba(147,51,234,.2), inset 0 1px 0 rgba(255,255,255,.9);
+  border-color: rgba(147,51,234,.35);
+  background: rgba(255,255,255,.85);
+}
+.story-picker-bank-card:active { transform: scale(.98); }
+
+.story-picker-bank-icon {
+  width: 46px; height: 46px; border-radius: 16px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  background: linear-gradient(135deg,rgba(147,51,234,.15),rgba(232,121,168,.12));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+.story-picker-bank-info { flex: 1; min-width: 0; }
+.story-picker-bank-info strong { display:block; font-size:.95rem; color:#2d1550; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.story-picker-bank-meta { display:flex; gap:8px; margin-top:5px; flex-wrap:wrap; }
+.story-picker-tag {
+  font-size:.7rem; font-weight:800; padding:2px 8px; border-radius:99px;
+  background:rgba(147,51,234,.1); color:#7c3aed; border:1px solid rgba(147,51,234,.15);
+}
+.story-picker-use-btn {
+  flex-shrink: 0; padding: 8px 16px; border-radius: 14px; border: none;
+  background: linear-gradient(135deg,#9333ea,#c026d3); color:#fff;
+  font-size:.82rem; font-weight:800; cursor:pointer;
+  box-shadow: 0 4px 14px rgba(147,51,234,.30);
+  transition: opacity .15s, transform .15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.story-picker-use-btn:hover { opacity:.88; transform:scale(1.05); }
+
+.story-picker-empty {
+  text-align: center; padding: 36px 20px; color: #b090d0;
+}
+.story-picker-empty i { font-size: 2.8rem; margin-bottom: 14px; display:block; opacity:.4; }
+
+/* RPG glow deco on picker modal */
+.story-picker-modal::before {
+  content:""; position:absolute; inset:0; pointer-events:none; border-radius:32px;
+  background:
+    radial-gradient(ellipse at 15% 15%, rgba(255,180,240,.3) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 85%, rgba(170,190,255,.25) 0%, transparent 45%);
+}
+
+/* Dark mode */
+body.dark-mode #myBanksPickerBackdrop { background: rgba(10,5,25,.65); }
+body.dark-mode .story-picker-modal {
+  background: linear-gradient(145deg,rgba(25,12,50,.9),rgba(40,20,70,.85));
+  border-color: rgba(147,51,234,.30);
+}
+body.dark-mode .story-picker-header { background: linear-gradient(135deg,rgba(147,51,234,.2),rgba(80,30,120,.15)); border-color: rgba(147,51,234,.20); }
+body.dark-mode .story-picker-bank-card { background: rgba(40,20,70,.65); border-color: rgba(147,51,234,.22); }
+body.dark-mode .story-picker-bank-card:hover { background: rgba(55,28,90,.75); border-color: rgba(147,51,234,.45); }
+body.dark-mode .story-picker-bank-info strong { color: #e8d8ff; }
+body.dark-mode .story-picker-close { background: rgba(147,51,234,.2); color: #c0a0e0; }

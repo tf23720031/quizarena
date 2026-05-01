@@ -220,17 +220,25 @@
     </section>
   </div>
 
-  <!-- My Banks Picker Modal -->
-  <div class="story-modal-backdrop" id="myBanksPickerBackdrop" style="display:none;z-index:10001">
-    <section class="story-modal" style="max-width:520px;width:92%;max-height:80vh;overflow-y:auto;">
-      <span class="answer-pill"><i class="fa-solid fa-folder-open"></i> 我的題庫</span>
-      <h2 style="font-size:1.1rem;margin:10px 0 4px">選擇要匯入故事模式的題庫</h2>
-      <p style="font-size:.85rem;color:#9b72c8;margin-bottom:14px">從你在「創建題庫」中建立的題庫選取，至少需要 5 題。</p>
-      <div id="myBanksPickerList" style="display:flex;flex-direction:column;gap:10px;"></div>
-      <button id="myBanksPickerCloseBtn" class="tool-btn secondary" style="margin-top:16px;width:100%;">
-        <i class="fa-solid fa-xmark"></i> 關閉
-      </button>
-    </section>
+  <!-- My Banks Picker Modal — RPG Glassmorphism -->
+  <div id="myBanksPickerBackdrop" style="display:none">
+    <div class="story-picker-modal" style="position:relative">
+      <div class="story-picker-header">
+        <h3><i class="fa-solid fa-treasure-chest" style="-webkit-text-fill-color:#9333ea"></i> 選擇題庫</h3>
+        <p><i class="fa-solid fa-circle-info"></i> 從你建立的題庫中選取，至少需要 5 題</p>
+        <button class="story-picker-close" id="myBanksPickerCloseBtn" aria-label="關閉">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="story-picker-body">
+        <div class="story-picker-list" id="myBanksPickerList">
+          <div class="story-picker-empty">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <p>載入中…</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="toast-qa" id="toast"></div>

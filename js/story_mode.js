@@ -585,7 +585,7 @@ async function openMyBanksPicker() {
   const list = $("myBanksPickerList");
   if (!backdrop || !list) return;
 
-  list.innerHTML = `<div style="text-align:center;padding:20px;color:#9b72c8"><i class="fa-solid fa-spinner fa-spin"></i> 載入題庫中…</div>`;
+  list.innerHTML = `<div class="story-picker-empty"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.8rem"></i><p>載入題庫中…</p></div>`;
   backdrop.style.display = "flex";
 
   try {
@@ -595,61 +595,86 @@ async function openMyBanksPicker() {
     if (username && username !== "guest") {
       try {
         const data = await api(`/load_quiz_banks?username=${encodeURIComponent(username)}`);
-        banks = (data.quizBanks || []).filter(b => !b.isSystem && !b.isWrongBook && Array.isArray(b.questions) && b.questions.length >= 5);
+        banks = (data.quizBanks || []).filter(b =>
+          !b.isSystem && !b.isWrongBook && Array.isArray(b.questions) && b.questions.length >= 5
+        );
       } catch {}
     }
 
-    // Also load from localStorage
-    try {
-      const localRaw = localStorage.getItem(`quizBanks_${username}`) || localStorage.getItem("quizBanks") || "[]";
-      const localBanks = JSON.parse(localRaw);
-      if (Array.isArray(localBanks)) {
-        localBanks.filter(b => !b.isSystem && !b.isWrongBook && Array.isArray(b.questions) && b.questions.length >= 5)
-          .forEach(b => { if (!banks.some(x => x.id === b.id)) banks.push(b); });
-      }
-    } catch {}
+    // Also load from localStorage (create_home fallback)
+    for (const key of [`quizBanks_${username}`, "quizBanks"]) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const localBanks = JSON.parse(raw);
+        if (Array.isArray(localBanks)) {
+          localBanks
+            .filter(b => !b.isSystem && !b.isWrongBook && Array.isArray(b.questions) && b.questions.length >= 5)
+            .forEach(b => { if (!banks.some(x => x.id === b.id)) banks.push(b); });
+        }
+      } catch {}
+    }
 
     if (!banks.length) {
-      list.innerHTML = `<div style="text-align:center;padding:24px;color:#aaa">
-        <i class="fa-solid fa-folder-open" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4"></i>
-        <p>目前沒有可用的題庫（至少需 5 題）。</p>
-        <p style="font-size:.82rem">請先到「創建題庫」頁面建立題庫。</p>
+      list.innerHTML = `<div class="story-picker-empty">
+        <i class="fa-solid fa-folder-open"></i>
+        <p style="font-weight:800;font-size:1rem">尚無可用題庫</p>
+        <p style="font-size:.84rem;margin-top:6px">請先到「<a href="create_home.html" style="color:#9333ea;font-weight:800">創建題庫</a>」頁面建立至少 5 題的題庫。</p>
       </div>`;
       return;
     }
 
-    list.innerHTML = banks.map(b => `
-      <button class="story-picker-bank-btn" data-bank-id="${escapeHtml(b.id)}" style="
-        display:flex;align-items:center;gap:12px;padding:14px 16px;
-        background:rgba(255,255,255,.65);backdrop-filter:blur(12px);
-        border:1.5px solid rgba(255,255,255,.8);border-radius:18px;
-        cursor:pointer;text-align:left;width:100%;transition:all .15s;
-        box-shadow:0 4px 16px rgba(160,80,220,.08);">
-        <i class="fa-solid fa-book" style="color:#9333ea;font-size:1.2rem;flex-shrink:0"></i>
-        <div style="flex:1">
-          <strong style="display:block;font-size:.95rem;color:#2d1550">${escapeHtml(b.title || "未命名題庫")}</strong>
-          <span style="font-size:.78rem;color:#9b72c8">${b.questions.length} 題</span>
-        </div>
-        <i class="fa-solid fa-chevron-right" style="color:#c0a0e0;font-size:.85rem"></i>
-      </button>
-    `).join("");
+    const CAT_ICONS = {
+      '國文':'fa-feather','英文':'fa-language','數學':'fa-calculator',
+      '程式語言':'fa-code','設計概論':'fa-pen-nib','歷史':'fa-landmark',
+      '地理':'fa-earth-asia','公民':'fa-scale-balanced','藝術':'fa-palette',
+      '健康教育':'fa-heart-pulse','遊戲設計':'fa-gamepad','自然科學':'fa-flask',
+    };
 
     window._myPickerBanks = banks;
+    list.innerHTML = banks.map(b => {
+      const qCount = b.questions?.length || 0;
+      const icon = CAT_ICONS[b.category] || 'fa-book-open';
+      const types = [...new Set((b.questions||[]).map(q=>q.type||'single'))].slice(0,2);
+      const typeLabel = { single:'單選', multiple:'多選', tf:'是非', fill:'填充', matching:'配對' };
+      const updatedDate = b.updatedAt ? new Date(b.updatedAt * 1000).toLocaleDateString('zh-TW') : '';
+      return `
+        <button class="story-picker-bank-card" data-bank-id="${escapeHtml(b.id)}">
+          <div class="story-picker-bank-icon">
+            <i class="fa-solid ${icon}" style="background:linear-gradient(135deg,#9333ea,#e879a8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text"></i>
+          </div>
+          <div class="story-picker-bank-info">
+            <strong>${escapeHtml(b.title || "未命名題庫")}</strong>
+            <div class="story-picker-bank-meta">
+              <span class="story-picker-tag"><i class="fa-solid fa-list-check"></i> ${qCount} 題</span>
+              ${types.map(t=>`<span class="story-picker-tag">${typeLabel[t]||t}</span>`).join('')}
+              ${updatedDate ? `<span class="story-picker-tag"><i class="fa-regular fa-calendar"></i> ${updatedDate}</span>` : ''}
+            </div>
+          </div>
+          <button class="story-picker-use-btn" data-bank-id="${escapeHtml(b.id)}" type="button">
+            <i class="fa-solid fa-play"></i> 使用
+          </button>
+        </button>`;
+    }).join('');
 
-    list.querySelectorAll(".story-picker-bank-btn").forEach(btn => {
-      btn.addEventListener("mouseenter", () => { btn.style.transform = "translateX(4px)"; btn.style.boxShadow = "0 8px 24px rgba(160,80,220,.16)"; });
-      btn.addEventListener("mouseleave", () => { btn.style.transform = ""; btn.style.boxShadow = ""; });
-      btn.addEventListener("click", () => {
-        const bank = (window._myPickerBanks || []).find(b => b.id === btn.dataset.bankId);
+    list.querySelectorAll(".story-picker-bank-card, .story-picker-use-btn").forEach(el => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const bankId = el.dataset.bankId;
+        const bank = (window._myPickerBanks || []).find(b => b.id === bankId);
         if (!bank) return;
         importBankToStory(bank);
         backdrop.style.display = "none";
       });
     });
   } catch (error) {
-    list.innerHTML = `<div style="text-align:center;color:#f87171;padding:20px">${escapeHtml(error.message || "載入失敗")}</div>`;
+    list.innerHTML = `<div class="story-picker-empty" style="color:#f87171">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <p>${escapeHtml(error.message || "載入失敗，請稍後再試")}</p>
+    </div>`;
   }
 }
+
 
 function importBankToStory(bank) {
   const questions = (bank.questions || []).map(q => {
