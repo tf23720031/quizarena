@@ -2493,19 +2493,23 @@ def init_extended_postgres_tables():
     with closing(get_pg_conn()) as conn:
         with conn.cursor() as c:
             # ── Users extended columns ──────────────────────────────
-            for col, defn in [
-                ('nickname',       "TEXT DEFAULT ''"),
-                ('level',          "INTEGER DEFAULT 1"),
-                ('exp',            "INTEGER DEFAULT 0"),
-                ('coins',          "INTEGER DEFAULT 0"),
+            _user_extra_cols = [
+                ('nickname',            "TEXT DEFAULT ''"),
+                ('level',               "INTEGER DEFAULT 1"),
+                ('exp',                 "INTEGER DEFAULT 0"),
+                ('coins',               "INTEGER DEFAULT 0"),
                 ('completed_questions', "INTEGER DEFAULT 0"),
-                ('correct_rate',   "FLOAT DEFAULT 0"),
-                ("total_play_time", "INTEGER DEFAULT 0"),
-                ('login_days',     "INTEGER DEFAULT 0"),
-                ('account_status', "TEXT DEFAULT 'active'"),
-                ('last_login_at',  "BIGINT DEFAULT 0"),
-            ]:
-                c.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {defn}")
+                ('correct_rate',        "FLOAT DEFAULT 0"),
+                ('total_play_time',     "INTEGER DEFAULT 0"),
+                ('login_days',          "INTEGER DEFAULT 0"),
+                ('account_status',      "TEXT DEFAULT 'active'"),
+                ('last_login_at',       "BIGINT DEFAULT 0"),
+            ]
+            for col, defn in _user_extra_cols:
+                try:
+                    c.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {defn}")
+                except Exception:
+                    pass
 
             # ── Story Progress ──────────────────────────────────────
             c.execute("""
@@ -2526,24 +2530,48 @@ def init_extended_postgres_tables():
             c.execute("CREATE INDEX IF NOT EXISTS idx_story_progress_username ON story_progress(username)")
 
             # ── Story Wrong Answers (extended) ──────────────────────
-            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS story_chapter TEXT DEFAULT ''")
-            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS story_level INTEGER DEFAULT 0")
-            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS user_answer_index INTEGER DEFAULT -1")
-            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS review_count INTEGER DEFAULT 0")
-            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS mastered BOOLEAN DEFAULT FALSE")
-            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS updated_at BIGINT DEFAULT 0")
+            _wq_extra = [
+                ("story_chapter",      "TEXT DEFAULT ''"),
+                ("story_level",        "INTEGER DEFAULT 0"),
+                ("user_answer_index",  "INTEGER DEFAULT -1"),
+                ("review_count",       "INTEGER DEFAULT 0"),
+                ("mastered",           "BOOLEAN DEFAULT FALSE"),
+                ("updated_at",         "BIGINT DEFAULT 0"),
+            ]
+            for _col, _defn in _wq_extra:
+                try:
+                    c.execute(f"ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS {_col} {_defn}")
+                except Exception:
+                    pass
 
-            # ── Quiz Banks (owner-based, full schema) ───────────────
+            # ── Quiz Banks — ensure base table exists, then extend ──
             c.execute("""
-                ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS owner_user_id TEXT DEFAULT ''
+                CREATE TABLE IF NOT EXISTS quiz_banks (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    bank_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    data JSONB NOT NULL DEFAULT '{}',
+                    updated_at BIGINT DEFAULT 0,
+                    UNIQUE(username, bank_id)
+                )
             """)
-            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''")
-            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS category TEXT DEFAULT '綜合'")
-            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'private'")
-            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS source_type TEXT DEFAULT 'user'")
-            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS source_marketplace_id TEXT DEFAULT ''")
-            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS question_count INTEGER DEFAULT 0")
-            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS created_at BIGINT DEFAULT 0")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_quiz_banks_username ON quiz_banks(username)")
+            _qb_extra = [
+                ("owner_user_id",         "TEXT DEFAULT ''"),
+                ("description",           "TEXT DEFAULT ''"),
+                ("category",              "TEXT DEFAULT '綜合'"),
+                ("visibility",            "TEXT DEFAULT 'private'"),
+                ("source_type",           "TEXT DEFAULT 'user'"),
+                ("source_marketplace_id", "TEXT DEFAULT ''"),
+                ("question_count",        "INTEGER DEFAULT 0"),
+                ("created_at",            "BIGINT DEFAULT 0"),
+            ]
+            for _col, _defn in _qb_extra:
+                try:
+                    c.execute(f"ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS {_col} {_defn}")
+                except Exception:
+                    pass
 
             # ── Marketplace Banks ───────────────────────────────────
             c.execute("""
@@ -2605,11 +2633,18 @@ def init_extended_postgres_tables():
             c.execute("CREATE INDEX IF NOT EXISTS idx_room_history_host ON room_history(host_username)")
 
             # ── Daily Mission Extended ──────────────────────────────
-            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS mission_id TEXT DEFAULT ''")
-            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS streak_day INTEGER DEFAULT 0")
-            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS reward_claimed BOOLEAN DEFAULT FALSE")
-            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS selected_answer INTEGER DEFAULT -1")
-            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS correct_answer INTEGER DEFAULT -1")
+            _dm_extra = [
+                ("mission_id",     "TEXT DEFAULT ''"),
+                ("streak_day",     "INTEGER DEFAULT 0"),
+                ("reward_claimed", "BOOLEAN DEFAULT FALSE"),
+                ("selected_answer","INTEGER DEFAULT -1"),
+                ("correct_answer", "INTEGER DEFAULT -1"),
+            ]
+            for _col, _defn in _dm_extra:
+                try:
+                    c.execute(f"ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS {_col} {_defn}")
+                except Exception:
+                    pass
 
         conn.commit()
 
@@ -2699,7 +2734,18 @@ def init_extended_sqlite_tables():
                 ended_at INTEGER
             )
         """)
-        # Quiz banks extra columns (safe)
+        # Quiz banks — create if not exists first (SQLite path uses JSON, table may not exist)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS quiz_banks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                bank_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                data TEXT NOT NULL DEFAULT '{}',
+                updated_at INTEGER DEFAULT 0,
+                UNIQUE(username, bank_id)
+            )
+        """)
         existing_qb_cols = {r[1] for r in c.execute('PRAGMA table_info(quiz_banks)').fetchall()}
         for col, typ in [
             ('owner_user_id', "TEXT DEFAULT ''"),
@@ -2744,6 +2790,8 @@ def init_extended_sqlite_tables():
 
 
 def init_extended_db():
+    # Ensure base quiz_banks table exists first
+    init_postgres_quiz_banks_db()  # no-op if not postgres or already exists
     if use_postgres_user_store():
         init_extended_postgres_tables()
     init_extended_sqlite_tables()
