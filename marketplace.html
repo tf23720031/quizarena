@@ -12,69 +12,84 @@
 </head>
 <body>
   <script>document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');</script>
+
+  <!-- Floating particle canvas -->
+  <canvas id="mktParticleCanvas"></canvas>
+
   <main class="tool-shell">
     <header class="tool-topbar">
       <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
       <div>
-        <p class="tool-kicker">Marketplace</p>
-        <h1>題庫市集</h1>
+        <p class="tool-kicker"><i class="fa-solid fa-store"></i> Marketplace</p>
+        <h1><i class="fa-solid fa-layer-group"></i> 題庫市集</h1>
       </div>
       <button id="publishMyBankBtn" class="tool-btn" style="margin-left:auto">
-        <i class="fa-solid fa-upload"></i> 上架我的題庫
+        <i class="fa-solid fa-cloud-arrow-up"></i> 上架我的題庫
       </button>
     </header>
 
+    <!-- Stats -->
     <section class="summary-grid">
-      <article><span>公開題庫</span><strong id="mktTotal">0</strong></article>
-      <article><span>本週新增</span><strong id="mktWeekly">0</strong></article>
-      <article><span>總評分</span><strong id="mktAvgRating">-</strong></article>
+      <article>
+        <span><i class="fa-solid fa-database"></i> 公開題庫</span>
+        <strong id="mktTotal">0</strong>
+      </article>
+      <article>
+        <span><i class="fa-solid fa-calendar-plus"></i> 本週新增</span>
+        <strong id="mktWeekly">0</strong>
+      </article>
+      <article>
+        <span><i class="fa-solid fa-star"></i> 總評分</span>
+        <strong id="mktAvgRating">-</strong>
+      </article>
     </section>
 
-    <!-- 搜尋 -->
+    <!-- Search -->
     <section class="tool-card">
       <div class="mkt-search-row">
-        <input type="text" id="mktSearchInput" class="mkt-search-input" placeholder="搜尋題庫名稱、類別…">
+        <input type="text" id="mktSearchInput" class="mkt-search-input" placeholder="🔍 搜尋題庫名稱、類別…">
         <button id="mktSearchBtn" class="tool-btn"><i class="fa-solid fa-magnifying-glass"></i> 搜尋</button>
       </div>
       <div class="mkt-filter-row" id="mktFilterRow">
-        <button class="mkt-filter-btn active" data-filter="all">全部</button>
+        <button class="mkt-filter-btn active" data-filter="all"><i class="fa-solid fa-border-all"></i> 全部</button>
         <button class="mkt-filter-btn" data-filter="hot"><i class="fa-solid fa-fire"></i> 熱門</button>
         <button class="mkt-filter-btn" data-filter="new"><i class="fa-solid fa-sparkles"></i> 最新</button>
-        <button class="mkt-filter-btn" data-filter="mine"><i class="fa-solid fa-user"></i> 我上架的</button>
+        <button class="mkt-filter-btn" data-filter="mine"><i class="fa-solid fa-user-tag"></i> 我上架的</button>
       </div>
     </section>
 
-    <!-- 排行榜 -->
+    <!-- Leaderboard -->
     <section class="tool-card">
       <div class="tool-card-head">
-        <h2><i class="fa-solid fa-ranking-star"></i> 熱門題庫排行榜</h2>
+        <h2><i class="fa-solid fa-trophy"></i> 熱門題庫排行榜</h2>
+        <span class="tool-note"><i class="fa-solid fa-chart-line"></i> 依複製數排名</span>
       </div>
       <div id="mktLeaderboard" class="mkt-leaderboard"></div>
     </section>
 
-    <!-- 題庫列表 -->
+    <!-- Bank list -->
     <section class="tool-card">
       <div class="tool-card-head">
-        <h2>所有公開題庫</h2>
+        <h2><i class="fa-solid fa-book-open"></i> 所有公開題庫</h2>
         <span class="tool-note" id="mktResultNote"></span>
       </div>
       <div id="mktBankList" class="mkt-bank-list"></div>
     </section>
   </main>
 
-  <!-- 上架 Modal -->
+  <!-- Publish Modal -->
   <div class="mkt-modal-backdrop" id="publishModal" style="display:none">
     <div class="mkt-modal">
-      <h3><i class="fa-solid fa-upload"></i> 上架題庫</h3>
-      <label>選擇題庫</label>
+      <h3><i class="fa-solid fa-cloud-arrow-up"></i> 上架題庫</h3>
+      <label><i class="fa-solid fa-list-check"></i> 選擇題庫</label>
       <select id="publishBankSelect" class="mkt-search-input" style="margin-bottom:12px;"></select>
-      <label>介紹說明（可選）</label>
+      <label><i class="fa-solid fa-align-left"></i> 介紹說明（可選）</label>
       <textarea id="publishDescription" class="mkt-search-input" style="min-height:80px;resize:vertical" placeholder="讓其他人了解這個題庫的用途…"></textarea>
-      <label>或上傳自己的題庫 JSON（至少 5 題）</label>
+      <label><i class="fa-solid fa-file-code"></i> 或上傳自己的題庫 JSON（至少 5 題）</label>
       <input id="publishUploadInput" type="file" class="mkt-search-input" accept="application/json,.json">
       <div class="mkt-modal-actions">
         <button id="doPublishBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 確認上架</button>
-        <button id="cancelPublishBtn" class="tool-btn secondary">取消</button>
+        <button id="cancelPublishBtn" class="tool-btn secondary"><i class="fa-solid fa-xmark"></i> 取消</button>
       </div>
     </div>
   </div>
@@ -85,5 +100,89 @@
   <script src="js/Audio_manager.js"></script>
   <script src="js/nav_drawer.js"></script>
   <script src="js/music_drawer.js"></script>
+
+  <!-- Particle system -->
+  <script>
+  (function() {
+    const canvas = document.getElementById('mktParticleCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const ICONS = ['✦','✧','◆','◇','★','☆','♦','❋','✿','❀','♪','♫','◈','⬡','⬢'];
+    let W, H, particles = [];
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const COLORS = [
+      'rgba(200,100,255,VAL)','rgba(255,100,180,VAL)','rgba(100,180,255,VAL)',
+      'rgba(255,210,100,VAL)','rgba(180,255,200,VAL)','rgba(255,150,200,VAL)'
+    ];
+
+    function mkParticle() {
+      const col = COLORS[Math.random()*COLORS.length|0].replace('VAL', (Math.random()*.5+.2).toFixed(2));
+      return {
+        x: Math.random()*W, y: Math.random()*H + H,
+        vy: -(Math.random()*0.6+0.25),
+        vx: (Math.random()-.5)*0.3,
+        size: Math.random()*11+7,
+        icon: ICONS[Math.random()*ICONS.length|0],
+        color: col,
+        rot: Math.random()*360,
+        rotV: (Math.random()-.5)*0.7,
+        life: 1,
+        decay: Math.random()*.002+.001
+      };
+    }
+
+    for(let i=0;i<55;i++) {
+      const p = mkParticle();
+      p.y = Math.random()*H;
+      particles.push(p);
+    }
+
+    function frame() {
+      ctx.clearRect(0,0,W,H);
+      if(particles.length < 55) particles.push(mkParticle());
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.rot += p.rotV; p.life -= p.decay;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life * 0.8);
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot * Math.PI/180);
+        ctx.font = `${p.size}px serif`;
+        ctx.fillStyle = p.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.icon, 0, 0);
+        ctx.restore();
+      });
+      requestAnimationFrame(frame);
+    }
+    frame();
+  })();
+  </script>
+
+  <!-- Auto-focus search on filter click -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.mkt-filter-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var input = document.getElementById('mktSearchInput');
+        if (input) { input.focus(); }
+      });
+    });
+    // Search btn also focuses input
+    var sBtn = document.getElementById('mktSearchBtn');
+    if (sBtn) sBtn.addEventListener('click', function() {
+      var input = document.getElementById('mktSearchInput');
+      if (input) { input.focus(); }
+    });
+  });
+  </script>
 </body>
 </html>

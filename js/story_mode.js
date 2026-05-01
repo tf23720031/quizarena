@@ -712,6 +712,7 @@ function checkStoryAnswer() {
   }
   state.checked = true;
   if (state.selected === stage.answer) {
+    // 答對：若是重補模式，從待補清單移除
     if (state.retryMode) {
       state.retrySet.delete(stageRealIndex);
       state.retryQueue = state.retryQueue.filter((index) => index !== stageRealIndex);
@@ -723,7 +724,33 @@ function checkStoryAnswer() {
     showToast("答對了，前往下一題");
     setTimeout(nextStoryStage, 450);
   } else {
+    // 答錯：記入錯題本
     addToWrongBook(stage, activeSubject().title);
+
+    if (state.retryMode) {
+      // 回補模式答錯：扣心，但仍把題目留在隊列尾繼續回補
+      state.hearts = Math.max(0, state.hearts - 1);
+      if (state.hearts <= 0) {
+        const progress = loadProgress();
+        delete progress[`${state.subjectId}:${state.branchId}`];
+        localStorage.setItem(progressKey(), JSON.stringify(progress));
+        showToast("三顆愛心用完，題庫重新開始並打亂順序", 2600);
+        resetStoryRun(true);
+        renderAll();
+        return;
+      }
+      // 回補題答錯：把這題加回隊列尾端繼續補考
+      if (!state.retryQueue.includes(stageRealIndex)) {
+        state.retryQueue.push(stageRealIndex);
+        state.stageOrder.push(stageRealIndex);
+      }
+      showToast(`回補題答錯，扣 1 顆愛心，剩下 ${state.hearts} 顆，稍後再考`);
+      setTimeout(nextStoryStage, 900);
+      renderAll();
+      return;
+    }
+
+    // 一般模式答錯：加入待回補清單，繼續下一題
     if (!state.retrySet.has(stageRealIndex)) {
       state.retrySet.add(stageRealIndex);
       state.retryQueue.push(stageRealIndex);
@@ -736,7 +763,7 @@ function checkStoryAnswer() {
       showToast("三顆愛心用完，題庫重新開始並打亂順序", 2600);
       resetStoryRun(true);
     } else {
-      showToast(`答錯了，扣 1 顆愛心，剩下 ${state.hearts} 顆`);
+      showToast(`答錯了，扣 1 顆愛心（剩 ${state.hearts} 顆），20 題後會再補考`);
       setTimeout(nextStoryStage, 900);
     }
     renderAll();

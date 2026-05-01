@@ -133,15 +133,22 @@ function renderLeaderboard(market) {
   const top = [...market].sort((a, b) => (b.copyCount || 0) - (a.copyCount || 0)).slice(0, 5);
   if (!top.length) { board.innerHTML = `<p style="color:#aaa">尚無公開題庫</p>`; return; }
   const numClass = i => ['gold','silver','bronze','other','other'][i] || 'other';
-  board.innerHTML = top.map((b, i) => `
+  const rankIcons = ['🥇','🥈','🥉','🎖️','🏅'];
+  const catIcons = { '自然科學':'fa-flask','歷史':'fa-landmark','英文':'fa-language','數學':'fa-calculator','程式語言':'fa-code','設計概論':'fa-pen-nib' };
+  board.innerHTML = top.map((b, i) => {
+    const cat = (b.categories||[])[0]||'';
+    const fIcon = catIcons[cat] || 'fa-book-open';
+    return `
     <div class="mkt-rank-item">
-      <div class="mkt-rank-num ${numClass(i)}">${i+1}</div>
+      <div class="mkt-rank-num ${numClass(i)}">${rankIcons[i]||i+1}</div>
+      <div class="mkt-rank-icon"><i class="fa-solid ${fIcon}"></i></div>
       <div class="mkt-rank-info">
         <strong>${escapeHtml(b.title)}</strong>
-        <span>by ${escapeHtml(b.author)} ・ ${b.questions?.length || 0} 題</span>
+        <span><i class="fa-solid fa-user" style="font-size:.7rem"></i> ${escapeHtml(b.author)} ・ ${b.questions?.length || 0} 題</span>
       </div>
-      <div class="mkt-rank-score">${b.copyCount || 0} 複製</div>
-    </div>`).join('');
+      <div class="mkt-rank-score"><i class="fa-solid fa-copy" style="font-size:.8rem"></i> ${b.copyCount || 0}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderBankList(market) {
@@ -152,21 +159,25 @@ function renderBankList(market) {
     list.innerHTML = `<div class="question-card"><h3>找不到相符題庫</h3><p>換個關鍵字試試，或上架你自己的！</p></div>`;
     return;
   }
+  const catIcons2 = { '自然科學':'fa-flask','歷史':'fa-landmark','英文':'fa-language','數學':'fa-calculator','程式語言':'fa-code','設計概論':'fa-pen-nib','AI設計':'fa-wand-magic-sparkles' };
   list.innerHTML = filtered.map(b => {
     const rating = avgRating(b);
     const ratingCount = b.ratings?.length || 0;
     const cats = (b.categories || []).slice(0, 3);
+    const mainCat = cats[0] || '';
+    const cardIcon = catIcons2[mainCat] || (b.source === 'ai' ? 'fa-robot' : 'fa-book-open');
     return `
       <div class="mkt-bank-card">
+        <span class="mkt-bank-card-icon"><i class="fa-solid ${cardIcon}"></i></span>
         <div class="mkt-bank-card-title">${escapeHtml(b.title)}</div>
         <div class="mkt-bank-card-author"><i class="fa-solid ${b.source === "ai" ? "fa-wand-magic-sparkles" : "fa-user"}"></i> ${escapeHtml(b.author)} ・ ${b.questions?.length || 0} 題</div>
         ${b.description ? `<div class="mkt-bank-card-desc">${escapeHtml(b.description)}</div>` : ''}
         <div class="mkt-bank-card-meta">
           ${cats.map(c => `<button type="button" class="mkt-tag mkt-search-tag" data-query="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}
-          <span class="mkt-tag"><i class="fa-solid fa-copy"></i> ${b.copyCount || 0}</span>
+          <span class="mkt-count-badge"><i class="fa-solid fa-copy"></i> ${b.copyCount || 0}</span>
         </div>
         <div class="mkt-bank-card-actions">
-          <button class="mkt-copy-btn" data-id="${escapeHtml(b.id)}"><i class="fa-solid fa-copy"></i> 複製使用</button>
+          <button class="mkt-copy-btn" data-id="${escapeHtml(b.id)}"><i class="fa-solid fa-clone"></i> 複製使用</button>
           <div class="mkt-rating-area">
             ${renderStars(rating, b.id)}
             <span style="color:#888;font-size:.75rem">(${ratingCount})</span>

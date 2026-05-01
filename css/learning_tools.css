@@ -3529,3 +3529,14 @@ body:has(#dailyMissionList) .tool-topbar {
     justify-content: flex-start;
   }
 }
+
+/* ── Story hero card paragraph → dark readable text ── */
+.story-hero-card p {
+  color: #1a0a30 !important;
+  text-shadow: 0 1px 4px rgba(255,255,255,.45) !important;
+  font-weight: 700 !important;
+  background: rgba(255,255,255,.32);
+  border-radius: 12px;
+  display: inline-block;
+  padding: 4px 12px;
+}
