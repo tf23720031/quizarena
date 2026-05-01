@@ -81,3 +81,307 @@ body.dark-mode .mkt-bank-card-title { color: #e8eaf6; }
 body.dark-mode .mkt-bank-card-desc { color: #bbb; }
 body.dark-mode .mkt-rank-item { background: rgba(40,35,60,.5); }
 body.dark-mode .mkt-modal { background: #1e1b2e; color: #e8eaf6; }
+
+/* ===== Marketplace kawaii glass RPG bazaar pass ===== */
+body:has(#mktBankList) {
+  background:
+    radial-gradient(circle at 8% 14%, rgba(255,126,179,.34), transparent 28%),
+    radial-gradient(circle at 88% 10%, rgba(100,210,255,.26), transparent 28%),
+    radial-gradient(circle at 50% 92%, rgba(255,209,102,.22), transparent 32%),
+    linear-gradient(135deg, #fff3fa 0%, #ffe9f4 42%, #f1f7ff 100%) !important;
+}
+
+body:has(#mktBankList)::before {
+  content: "\f54e   \f290   \f07a   \f005   \f291";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  color: rgba(255,126,179,.16);
+  font-family: "Font Awesome 6 Free";
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 3.4rem;
+  line-height: 8rem;
+  white-space: pre-wrap;
+  transform: rotate(-8deg);
+  animation: mktIconDrift 22s linear infinite;
+  pointer-events: none;
+}
+
+body:has(#mktBankList)::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(255,255,255,.9) 0 1px, transparent 2px),
+    radial-gradient(circle at 32% 26%, rgba(255,209,102,.76) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 72% 18%, rgba(100,210,255,.68) 0 1px, transparent 2px),
+    radial-gradient(circle at 86% 74%, rgba(255,126,179,.66) 0 1px, transparent 2px);
+  background-size: 160px 160px, 230px 230px, 190px 190px, 250px 250px;
+  animation: sparkleFloat 9s ease-in-out infinite alternate;
+}
+
+body:has(#mktBankList) .tool-topbar,
+body:has(#mktBankList) .tool-card,
+body:has(#mktBankList) .summary-grid article,
+.mkt-bank-card,
+.mkt-rank-item,
+.mkt-modal {
+  border: 1px solid rgba(255,255,255,.46) !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.66), rgba(255,241,249,.46)) !important;
+  box-shadow: 0 20px 54px rgba(255,126,179,.16), 0 0 28px rgba(100,210,255,.12) !important;
+  backdrop-filter: blur(18px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
+}
+
+body:has(#mktBankList) .tool-topbar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 24px;
+  margin-bottom: 26px;
+}
+
+body:has(#mktBankList) .tool-topbar::after {
+  content: "\f54e";
+  position: absolute;
+  right: 26px;
+  bottom: -16px;
+  color: rgba(255,126,179,.16);
+  font-family: "Font Awesome 6 Free";
+  font-size: 6.2rem;
+  font-weight: 900;
+  animation: mktBob 3.5s ease-in-out infinite;
+}
+
+.mkt-search-row {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+body:has(#mktBankList) .tool-card-head {
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+body:has(#mktBankList) .tool-card-head h2 {
+  line-height: 1.25;
+  padding-right: 14px;
+}
+
+.mkt-search-input {
+  min-height: 48px;
+  border-radius: 18px !important;
+  border-color: rgba(255,255,255,.62) !important;
+  background: rgba(255,255,255,.66) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 10px 26px rgba(255,126,179,.10);
+}
+
+.mkt-search-input:focus {
+  border-color: rgba(255,126,179,.78) !important;
+  box-shadow: 0 0 0 4px rgba(255,126,179,.14), 0 0 24px rgba(100,210,255,.16);
+}
+
+.mkt-filter-row {
+  gap: 12px;
+}
+
+.mkt-filter-btn,
+.mkt-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,.62) !important;
+  background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,234,247,.62)) !important;
+  color: #6d3f91 !important;
+  box-shadow: 0 8px 18px rgba(255,126,179,.10);
+  transition: all .35s ease;
+}
+
+.mkt-filter-btn:hover,
+.mkt-filter-btn.active,
+.mkt-tag:hover {
+  transform: translateY(-2px);
+  color: #b93c87 !important;
+  box-shadow: 0 0 22px rgba(255,126,179,.28), 0 12px 24px rgba(124,123,255,.12);
+}
+
+.mkt-search-tag {
+  cursor: pointer;
+  appearance: none;
+}
+
+.mkt-leaderboard {
+  gap: 12px;
+}
+
+.mkt-rank-item {
+  position: relative;
+  padding: 14px 16px;
+  border-radius: 20px;
+}
+
+.mkt-rank-item::after {
+  content: "\f005";
+  color: rgba(255,209,102,.72);
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  filter: drop-shadow(0 0 8px rgba(255,209,102,.45));
+}
+
+.mkt-bank-list {
+  gap: 20px;
+}
+
+.mkt-bank-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 208px;
+  padding: 24px !important;
+  border-radius: 24px !important;
+}
+
+.mkt-bank-card::before {
+  content: "\f07a";
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  color: rgba(255,126,179,.18);
+  font-family: "Font Awesome 6 Free";
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.mkt-bank-card:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 0 26px 64px rgba(255,126,179,.22), 0 0 28px rgba(100,210,255,.18) !important;
+}
+
+.mkt-bank-card-title {
+  margin-bottom: 12px !important;
+  padding-right: 36px;
+  color: #2d2449 !important;
+  font-size: 1.06rem;
+  line-height: 1.45;
+}
+
+.mkt-bank-card-author {
+  margin-bottom: 12px !important;
+  color: #806999 !important;
+  font-weight: 800;
+}
+
+.mkt-bank-card-desc {
+  margin-bottom: 14px !important;
+  color: #4e4767 !important;
+}
+
+.mkt-bank-card-meta {
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.mkt-bank-card-actions {
+  align-items: center;
+  gap: 12px;
+}
+
+.mkt-copy-btn {
+  min-height: 40px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff75ad, #a78bfa) !important;
+  box-shadow: 0 12px 24px rgba(167,139,250,.18), 0 0 18px rgba(255,117,173,.18);
+  transition: all .35s ease;
+}
+
+.mkt-copy-btn:hover {
+  opacity: 1;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 0 26px rgba(255,117,173,.34), 0 14px 28px rgba(167,139,250,.18);
+}
+
+.mkt-rating-area {
+  color: #ff9f1c;
+  white-space: nowrap;
+}
+
+.mkt-modal-backdrop {
+  background: rgba(35, 24, 49, .42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.mkt-modal {
+  border-radius: 28px !important;
+  padding: 30px !important;
+}
+
+.mkt-modal h3 {
+  color: #2d2449;
+  font-size: 1.28rem;
+}
+
+.mkt-modal label {
+  color: #6d3f91;
+  font-weight: 900;
+}
+
+#publishUploadInput::file-selector-button {
+  height: 34px;
+  margin-right: 12px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #4a2466;
+  font-weight: 900;
+  background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,234,247,.82));
+  box-shadow: 0 0 14px rgba(255,126,179,.16);
+}
+
+body.dark-mode:has(#mktBankList) .tool-topbar,
+body.dark-mode:has(#mktBankList) .tool-card,
+body.dark-mode:has(#mktBankList) .summary-grid article,
+body.dark-mode .mkt-bank-card,
+body.dark-mode .mkt-rank-item,
+body.dark-mode .mkt-modal {
+  color: #fff2fb !important;
+  border-color: rgba(255,255,255,.16) !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.055)) !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,.42), 0 0 30px rgba(255,126,179,.14) !important;
+}
+
+body.dark-mode .mkt-bank-card-title,
+body.dark-mode .mkt-modal h3 {
+  color: #fff8ff !important;
+}
+
+body.dark-mode .mkt-bank-card-desc,
+body.dark-mode .mkt-bank-card-author,
+body.dark-mode .mkt-rank-info span {
+  color: rgba(255,242,251,.74) !important;
+}
+
+@keyframes mktIconDrift {
+  from { transform: translate3d(-40px, 0, 0) rotate(-8deg); }
+  to { transform: translate3d(40px, -60px, 0) rotate(-8deg); }
+}
+
+@keyframes mktBob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-8px) rotate(4deg); }
+}
+
+@media (max-width: 720px) {
+  .mkt-search-row,
+  .mkt-bank-card-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mkt-rating-area {
+    margin-left: 0;
+  }
+}

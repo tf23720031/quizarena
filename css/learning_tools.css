@@ -3394,6 +3394,25 @@ body:has(#profileAchievementsList) .tool-card {
   animation: iconBounce 1.25s ease-in-out infinite;
 }
 
+.story-route-node.retry {
+  background: linear-gradient(135deg, #ff8fbd, #ffcf70);
+  box-shadow: 0 0 24px rgba(255,143,189,.36), 0 0 16px rgba(255,207,112,.22);
+}
+
+body:has(.story-shell) .story-hero-card,
+body:has(.story-shell) .story-hero-card h2,
+body:has(.story-shell) .story-hero-card p,
+body:has(.story-shell) .story-progress-card,
+body:has(.story-shell) .story-progress-card span,
+body:has(.story-shell) .story-progress-card strong {
+  color: #2c2445 !important;
+  text-shadow: none !important;
+}
+
+body:has(.story-shell) .story-hero-card p {
+  font-weight: 900;
+}
+
 .daily-question-card {
   padding: 26px 28px !important;
   margin-bottom: 14px !important;

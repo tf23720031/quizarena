@@ -259,7 +259,18 @@ function expandStorySubjects() {
 
 expandStorySubjects();
 
-const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false, hearts: 3, stageOrder: [] };
+const state = {
+  subjectId: SUBJECTS[0].id,
+  branchId: SUBJECTS[0].branches[0].id,
+  stageIndex: 0,
+  selected: null,
+  checked: false,
+  hearts: 3,
+  stageOrder: [],
+  retryQueue: [],
+  retrySet: new Set(),
+  retryMode: false,
+};
 
 function shuffleArray(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -273,6 +284,9 @@ function resetStoryRun(shuffle = false) {
   state.selected = null;
   state.checked = false;
   state.hearts = 3;
+  state.retryQueue = [];
+  state.retrySet = new Set();
+  state.retryMode = false;
 }
 
 function customStoryBanksKey() {
@@ -302,6 +316,9 @@ function addCustomStorySubject(title, questions, options = {}) {
   state.checked = false;
   state.stageOrder = [];
   state.hearts = 3;
+  state.retryQueue = [];
+  state.retrySet = new Set();
+  state.retryMode = false;
   return subject;
 }
 
@@ -322,6 +339,9 @@ function loadCustomStorySubjects() {
   state.branchId = previous.branchId;
   state.stageOrder = [];
   state.hearts = 3;
+  state.retryQueue = [];
+  state.retrySet = new Set();
+  state.retryMode = false;
 }
 
 function saveCustomStorySubject(subject) {
@@ -627,7 +647,7 @@ function renderBranches() {
 function renderPlayArea() {
   const subject = activeSubject();
   const branch = activeBranch();
-  if (!state.stageOrder.length || state.stageOrder.length !== branch.stages.length) resetStoryRun(false);
+  if (!state.stageOrder.length || (!state.retryMode && state.stageOrder.length !== branch.stages.length)) resetStoryRun(false);
   const stageRealIndex = state.stageOrder[state.stageIndex] ?? 0;
   const stage = branch.stages[stageRealIndex] || branch.stages[0];
   const progress = loadProgress();
@@ -637,11 +657,15 @@ function renderPlayArea() {
   const routeNodes = branch.stages.map((item, index) => {
     const isDone = index < cleared;
     const isCurrent = item.level === stage.level;
+    const isRetry = state.retrySet.has(index) || state.stageOrder.includes(index) && state.retryMode;
     const icon = routeIcons[index % routeIcons.length];
-    return `<span class="story-route-node ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}" aria-label="第 ${item.level} 關">
+    return `<span class="story-route-node ${isDone ? "done" : ""} ${isCurrent ? "current" : ""} ${isRetry ? "retry" : ""}" aria-label="第 ${item.level} 關">
       <i class="fa-solid ${icon}"></i>
     </span>`;
   }).join("");
+  const retryNote = state.retryMode
+    ? `錯題回補中，剩餘 ${Math.max(1, state.stageOrder.length - state.stageIndex)} 題`
+    : (state.retrySet.size ? `待回補錯題 ${state.retrySet.size} 題，輪完後會再出現` : "");
   $("storyPlayArea").innerHTML = `
     <article class="story-stage-card ${state.checked ? "answer-confirmed" : ""}">
       <div class="story-rpg-route">${routeNodes}</div>
@@ -664,7 +688,7 @@ function renderPlayArea() {
       <div class="practice-actions">
         <button id="checkStoryBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 確認答案</button>
       </div>
-      <div class="story-clear-state">本支線已通關 ${cleared} / ${branch.stages.length} 關</div>
+      <div class="story-clear-state">本支線已通關 ${cleared} / ${branch.stages.length} 關${retryNote ? `｜${retryNote}` : ""}</div>
     </article>
   `;
   document.querySelectorAll("[data-answer]").forEach((button) => {
@@ -679,7 +703,8 @@ function renderPlayArea() {
 
 function checkStoryAnswer() {
   const branch = activeBranch();
-  const stage = branch.stages[state.stageOrder[state.stageIndex] ?? 0];
+  const stageRealIndex = state.stageOrder[state.stageIndex] ?? 0;
+  const stage = branch.stages[stageRealIndex];
   if (state.checked) return;
   if (state.selected === null) {
     showToast("請先選擇答案");
@@ -687,12 +712,22 @@ function checkStoryAnswer() {
   }
   state.checked = true;
   if (state.selected === stage.answer) {
-    saveProgress(state.subjectId, state.branchId, stage.level);
+    if (state.retryMode) {
+      state.retrySet.delete(stageRealIndex);
+      state.retryQueue = state.retryQueue.filter((index) => index !== stageRealIndex);
+    }
+    if (!state.retrySet.size) {
+      saveProgress(state.subjectId, state.branchId, stage.level);
+    }
     checkStoryAchievements();
     showToast("答對了，前往下一題");
     setTimeout(nextStoryStage, 450);
   } else {
     addToWrongBook(stage, activeSubject().title);
+    if (!state.retrySet.has(stageRealIndex)) {
+      state.retrySet.add(stageRealIndex);
+      state.retryQueue.push(stageRealIndex);
+    }
     state.hearts = Math.max(0, state.hearts - 1);
     if (state.hearts <= 0) {
       const progress = loadProgress();
@@ -711,10 +746,30 @@ function checkStoryAnswer() {
 
 function nextStoryStage() {
   const branch = activeBranch();
-  state.stageIndex = (state.stageIndex + 1) % branch.stages.length;
   state.selected = null;
   state.checked = false;
-  renderPlayArea();
+  if (state.stageIndex < state.stageOrder.length - 1) {
+    state.stageIndex += 1;
+    renderPlayArea();
+    return;
+  }
+
+  if (state.retryQueue.length) {
+    state.stageOrder = [...state.retryQueue];
+    state.stageIndex = 0;
+    state.retryQueue = [];
+    state.retryMode = true;
+    showToast("錯題回補開始：答對所有錯題即可通關", 2400);
+    renderPlayArea();
+    return;
+  }
+
+  state.retryMode = false;
+  state.retrySet = new Set();
+  saveProgress(state.subjectId, state.branchId, branch.stages.length);
+  showStoryModal("支線通關！", "所有題目都已答對，包含先前答錯後回補的題目。", "通關完成");
+  renderAll();
+  return;
 }
 
 function resetCurrentProgress() {

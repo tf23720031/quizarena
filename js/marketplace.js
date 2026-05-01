@@ -162,7 +162,7 @@ function renderBankList(market) {
         <div class="mkt-bank-card-author"><i class="fa-solid ${b.source === "ai" ? "fa-wand-magic-sparkles" : "fa-user"}"></i> ${escapeHtml(b.author)} ・ ${b.questions?.length || 0} 題</div>
         ${b.description ? `<div class="mkt-bank-card-desc">${escapeHtml(b.description)}</div>` : ''}
         <div class="mkt-bank-card-meta">
-          ${cats.map(c => `<span class="mkt-tag">${escapeHtml(c)}</span>`).join('')}
+          ${cats.map(c => `<button type="button" class="mkt-tag mkt-search-tag" data-query="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('')}
           <span class="mkt-tag"><i class="fa-solid fa-copy"></i> ${b.copyCount || 0}</span>
         </div>
         <div class="mkt-bank-card-actions">
@@ -177,6 +177,19 @@ function renderBankList(market) {
 
   document.querySelectorAll('.mkt-copy-btn').forEach(btn => {
     btn.addEventListener('click', () => copyBank(btn.dataset.id));
+  });
+  document.querySelectorAll('.mkt-search-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      const input = $("mktSearchInput");
+      searchQuery = tag.dataset.query || "";
+      if (input) {
+        input.value = searchQuery;
+        input.focus();
+      }
+      currentFilter = "all";
+      $("mktFilterRow")?.querySelectorAll(".mkt-filter-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+      renderAll();
+    });
   });
   document.querySelectorAll('.mkt-star').forEach(star => {
     star.addEventListener('click', () => rateBank(star.dataset.bank, parseInt(star.dataset.star)));
@@ -194,7 +207,7 @@ function copyBank(id) {
   // Increment copy count
   bank.copyCount = (bank.copyCount || 0) + 1;
   saveMarket(market);
-  showToast(`「${bank.title}」已複製到你的題庫！`);
+  showToast(`「${bank.title}」已複製到建立題庫，可前往編輯使用！`, 2600);
   renderAll();
 }
 
@@ -287,6 +300,10 @@ $("mktFilterRow")?.querySelectorAll(".mkt-filter-btn").forEach(btn => {
     $("mktFilterRow").querySelectorAll(".mkt-filter-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentFilter = btn.dataset.filter;
+    const input = $("mktSearchInput");
+    if (input && currentFilter !== "all") {
+      input.focus();
+    }
     renderAll();
   });
 });
