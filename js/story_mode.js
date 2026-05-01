@@ -369,7 +369,14 @@ async function api(url, options = {}) {
 }
 
 function userKey() {
-  return localStorage.getItem("currentUser") || "guest";
+  const direct = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+  if (direct) return direct;
+  try {
+    const profile = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
+    const username = String(profile?.username || "").trim();
+    if (username) return username;
+  } catch {}
+  return "guest";
 }
 
 function progressKey() {
@@ -737,9 +744,17 @@ function addToWrongBook(stage, subjectTitle) {
     api("/story_wrong_question", {
       method: "POST",
       body: JSON.stringify({ username, sourceTitle: `故事模式 - ${subjectTitle}`, question: stage }),
-    }).catch((error) => console.warn("[WrongBook] story sync failed", error));
+    }).catch((error) => {
+      console.warn("[WrongBook] story sync failed", error);
+      saveWrongBookFallback(stage, subjectTitle);
+    });
     return;
   }
+  saveWrongBookFallback(stage, subjectTitle);
+}
+
+function saveWrongBookFallback(stage, subjectTitle) {
+  if (!stage) return;
   try {
     const book = JSON.parse(localStorage.getItem(wrongBookKey()) || "[]");
     const existing = book.findIndex((item) => item.q === stage.q);

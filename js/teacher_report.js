@@ -90,30 +90,35 @@ function selectedTextForRow(row = {}, report = latestReport) {
 }
 
 function correctTextForQuestion(question = {}, report = latestReport) {
-  const existing = String(question.correctAnswerText || "").trim();
-  if (existing && existing !== "-" && existing !== "無") return existing;
+  const existing = String(question.correctAnswerText || question.correct_answer_text || "").trim();
+  const emptyTexts = new Set(["", "-", "??", "unselected", "no answer", "\u672a\u9078\u64c7", "\u672a\u63d0\u4f9b\u6b63\u89e3", "\u7121"]);
+  if (existing && !emptyTexts.has(existing)) return existing;
 
   const options = Array.isArray(question.options) ? question.options : [];
-  const indexes = Array.isArray(question.correctIndexes)
-    ? question.correctIndexes.map((item) => Number(item)).filter(Number.isInteger)
+  const explicitIndexes = question.correctIndexes || question.correct_indexes || question.answerIndexes || question.answer_indexes;
+  const indexes = Array.isArray(explicitIndexes)
+    ? explicitIndexes.map((item) => Number(item)).filter(Number.isInteger)
     : options
       .map((option, index) => (option && typeof option === "object" && option.correct ? index : -1))
       .filter((index) => index >= 0);
+
   if (indexes.length) {
     return indexes.map((idx) => {
       const option = options[idx] || {};
       const label = option.label || String.fromCharCode(65 + idx);
       const text = String(option.text || "").trim();
       return text ? `${label}. ${text}` : label;
-    }).join("、");
+    }).join("\u3001");
   }
 
   const qKey = questionKey(question);
   const correctRow = (report?.results || []).find((row) => resultQuestionKey(row) === qKey && row.isCorrect);
-  if (correctRow) return selectedTextForRow(correctRow, report);
-  return "-";
+  if (correctRow) {
+    const inferred = selectedTextForRow(correctRow, report);
+    if (inferred && !emptyTexts.has(inferred)) return inferred;
+  }
+  return "\u672a\u63d0\u4f9b\u6b63\u89e3";
 }
-
 function normalizeResultRow(row = {}) {
   const rawCorrect = row.isCorrect ?? row.is_correct ?? false;
   return {
@@ -312,6 +317,7 @@ function renderAnalysis(data) {
   const panel = $("reportAnalysisPanel");
   if (!panel) return;
   const analysis = getReportAnalysis(data);
+  const maxBandCount = Math.max(1, ...analysis.accuracyBands.map((band) => toNumber(band.count)));
 
   panel.innerHTML = `
     <article class="analysis-card">
@@ -331,6 +337,9 @@ function renderAnalysis(data) {
           <div class="distribution-item">
             <span>${escapeHtml(band.label)}</span>
             <strong>${band.count}</strong>
+            <div class="distribution-bar" aria-hidden="true">
+              <i style="height:${Math.max(6, safePercent((toNumber(band.count) / maxBandCount) * 100))}%"></i>
+            </div>
           </div>
         `).join("")}
       </div>
@@ -438,8 +447,8 @@ function renderReport(data) {
           <span>作答 ${Number(question.answered || 0)} 人</span>
           <span>答對 ${Number(question.correct || 0)} 人</span>
           <span>答錯 ${Math.max(0, Number(question.answered || 0) - Number(question.correct || 0))} 人</span>
-          <span>正解 ${escapeHtml(correctTextForQuestion(question, cleanData))}</span>
         </div>
+        <div class="report-correct-answer"><strong>正解</strong><span>${escapeHtml(correctTextForQuestion(question, cleanData))}</span></div>
         ${question.explanation ? `<div class="explanation-box">${escapeHtml(question.explanation)}</div>` : ""}
       </article>
     `;

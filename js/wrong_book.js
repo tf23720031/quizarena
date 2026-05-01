@@ -1,4 +1,45 @@
 const $ = (id) => document.getElementById(id);
+
+function getCurrentUser() {
+  const direct = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+  if (direct) return direct;
+  try {
+    const profile = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
+    return String(profile?.username || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function loadLocalStoryWrongItems(username) {
+  if (!username) return [];
+  try {
+    const book = JSON.parse(localStorage.getItem(`quizarena_wrong_book_${username}`) || "[]");
+    if (!Array.isArray(book)) return [];
+    return book.map((item, index) => {
+      const answer = Number(item.answer || 0);
+      const options = Array.isArray(item.options) ? item.options.map((option, optIndex) => ({
+        text: typeof option === "object" ? String(option.text || "") : String(option || ""),
+        correct: optIndex === answer,
+      })) : [];
+      return {
+        questionId: `story_local_${index}`,
+        title: item.title || item.q || "故事模式錯題",
+        content: item.q || item.content || "",
+        type: "single",
+        options,
+        explanation: item.explanation || item.scene || "",
+        sourceBankTitle: item.source || "故事模式",
+        category: item.category || "故事模式",
+        difficulty: item.difficulty || "medium",
+        wrongCount: Number(item.wrongCount || 1),
+        lastWrongAtText: item.lastWrongAt ? new Date(item.lastWrongAt).toLocaleString("zh-TW") : "",
+      };
+    }).filter((item) => item.content);
+  } catch {
+    return [];
+  }
+}
 const practiceState = { items: [], order: [], index: 0, selected: [], checked: false };
 
 function escapeHtml(value) {
@@ -481,7 +522,7 @@ function renderWrongBook(data) {
 }
 
 async function loadWrongBook() {
-  const username = localStorage.getItem("currentUser") || "";
+  const username = getCurrentUser();
   if (!username) {
     showToast("請先登入");
     $("wrongBookList").innerHTML = `<article class="question-card"><h3>請先登入</h3><p>登入後就能查看自己的錯題本。</p></article>`;
@@ -489,6 +530,13 @@ async function loadWrongBook() {
   }
   try {
     const data = await api(`/wrong_book_summary?username=${encodeURIComponent(username)}`);
+    const localItems = loadLocalStoryWrongItems(username);
+    if (localItems.length) {
+      const seen = new Set((data.items || []).map((item) => String(item.content || item.title || "")));
+      const mergedLocal = localItems.filter((item) => !seen.has(String(item.content || item.title || "")));
+      data.items = [...(data.items || []), ...mergedLocal];
+      data.totalWrongCount = Number(data.totalWrongCount || 0) + mergedLocal.reduce((sum, item) => sum + Number(item.wrongCount || 1), 0);
+    }
     renderWrongBook(data);
   } catch (error) { showToast(error.message); }
 }
