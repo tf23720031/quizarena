@@ -290,6 +290,14 @@
   .unav-link:nth-of-type(6) { background: linear-gradient(135deg, rgba(255,209,102,.24), rgba(114,224,189,.18)) !important; }
   .unav-link:nth-of-type(7) { background: linear-gradient(135deg, rgba(100,210,255,.28), rgba(167,139,250,.16)) !important; }
   .unav-link:nth-of-type(8) { background: linear-gradient(135deg, rgba(255,209,102,.30), rgba(255,143,189,.20)) !important; }
+  .unav-link.nav-tone-1 { background: linear-gradient(135deg, rgba(255,117,173,.32), rgba(167,139,250,.20)) !important; }
+  .unav-link.nav-tone-2 { background: linear-gradient(135deg, rgba(255,209,102,.30), rgba(255,117,173,.20)) !important; }
+  .unav-link.nav-tone-3 { background: linear-gradient(135deg, rgba(167,139,250,.30), rgba(100,210,255,.22)) !important; }
+  .unav-link.nav-tone-4 { background: linear-gradient(135deg, rgba(255,95,130,.25), rgba(255,209,102,.20)) !important; }
+  .unav-link.nav-tone-5 { background: linear-gradient(135deg, rgba(114,224,189,.30), rgba(255,255,255,.42)) !important; }
+  .unav-link.nav-tone-6 { background: linear-gradient(135deg, rgba(255,209,102,.28), rgba(114,224,189,.22)) !important; }
+  .unav-link.nav-tone-7 { background: linear-gradient(135deg, rgba(100,210,255,.32), rgba(167,139,250,.18)) !important; }
+  .unav-link.nav-tone-8 { background: linear-gradient(135deg, rgba(255,183,77,.34), rgba(255,143,189,.22)) !important; }
   .unav-link:hover,
   .unav-btn:hover,
   .unav-dark-row:hover {
@@ -324,6 +332,14 @@
     border-color: rgba(255,255,255,.16) !important;
     background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.06)) !important;
   }
+  body.dark-mode .unav-link.nav-tone-1 { background: linear-gradient(135deg, rgba(255,117,173,.22), rgba(167,139,250,.14)) !important; }
+  body.dark-mode .unav-link.nav-tone-2 { background: linear-gradient(135deg, rgba(255,209,102,.18), rgba(255,117,173,.13)) !important; }
+  body.dark-mode .unav-link.nav-tone-3 { background: linear-gradient(135deg, rgba(167,139,250,.22), rgba(100,210,255,.14)) !important; }
+  body.dark-mode .unav-link.nav-tone-4 { background: linear-gradient(135deg, rgba(255,95,130,.18), rgba(255,209,102,.12)) !important; }
+  body.dark-mode .unav-link.nav-tone-5 { background: linear-gradient(135deg, rgba(114,224,189,.19), rgba(255,255,255,.08)) !important; }
+  body.dark-mode .unav-link.nav-tone-6 { background: linear-gradient(135deg, rgba(255,209,102,.17), rgba(114,224,189,.13)) !important; }
+  body.dark-mode .unav-link.nav-tone-7 { background: linear-gradient(135deg, rgba(100,210,255,.22), rgba(167,139,250,.12)) !important; }
+  body.dark-mode .unav-link.nav-tone-8 { background: linear-gradient(135deg, rgba(255,183,77,.22), rgba(255,143,189,.14)) !important; }
   `;
 
   function injectCSS() {
@@ -342,9 +358,9 @@
     const lang = getCurrentLang();
     const isDark = document.body.classList.contains('dark-mode');
 
-    const navItems = NAV_LINKS.map(link => {
+    const navItems = NAV_LINKS.map((link, index) => {
       const isActive = PAGE === link.href;
-      return `<a class="unav-link${isActive ? ' active' : ''}" href="${link.href}">
+      return `<a class="unav-link nav-tone-${index + 1}${isActive ? ' active' : ''}" href="${link.href}">
         <i class="fa-solid ${link.icon}"></i>${link.label}
       </a>`;
     }).join('');

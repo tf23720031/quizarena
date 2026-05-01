@@ -103,7 +103,7 @@ function render(state) {
   const questions = Array.isArray(state.questions) ? state.questions : [];
   $("dailyMissionList").innerHTML = questions.map((item, index) => {
     const done = Boolean(item.done);
-    return `<article class="question-card">
+    return `<article class="question-card daily-question-card ${done ? "daily-completed-card" : ""}">
       <div class="question-meta-row">
         <h3>每日任務 ${index + 1}</h3>
         <span class="answer-pill">${done ? "已完成" : "未完成"}</span>
@@ -112,7 +112,7 @@ function render(state) {
       <div class="practice-options">
         ${(item.options || []).map((option, optIndex) => {
           const correct = done && Number(item.answer) === optIndex;
-          return `<button class="practice-option ${correct ? "correct" : ""}" data-q="${index}" data-a="${optIndex}" ${done ? "disabled" : ""}>
+          return `<button class="practice-option ${correct ? "correct completed-answer" : ""}" data-q="${index}" data-a="${optIndex}" ${done ? "disabled" : ""}>
             <b>${String.fromCharCode(65 + optIndex)}</b><span>${escapeHtml(option)}</span>
           </button>`;
         }).join("")}

@@ -633,8 +633,18 @@ function renderPlayArea() {
   const progress = loadProgress();
   const cleared = Number(progress[`${subject.id}:${branch.id}`] || 0);
   const hearts = Array.from({ length: 3 }, (_, index) => `<i class="fa-solid fa-heart ${index >= state.hearts ? "lost" : ""}"></i>`).join("");
+  const routeIcons = ["fa-person-running", "fa-cat", "fa-paw", "fa-dragon"];
+  const routeNodes = branch.stages.map((item, index) => {
+    const isDone = index < cleared;
+    const isCurrent = item.level === stage.level;
+    const icon = routeIcons[index % routeIcons.length];
+    return `<span class="story-route-node ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}" aria-label="第 ${item.level} 關">
+      <i class="fa-solid ${icon}"></i>
+    </span>`;
+  }).join("");
   $("storyPlayArea").innerHTML = `
-    <article class="story-stage-card">
+    <article class="story-stage-card ${state.checked ? "answer-confirmed" : ""}">
+      <div class="story-rpg-route">${routeNodes}</div>
       <div class="question-meta-row">
         <h3>${escapeHtml(branch.title)}：第 ${stage.level} 關</h3>
         <div class="story-heart-row" aria-label="剩餘生命 ${state.hearts}">${hearts}</div>
@@ -646,7 +656,7 @@ function renderPlayArea() {
         ${stage.options.map((option, index) => {
           const selected = state.selected === index;
           const reveal = state.checked ? (stage.answer === index ? "correct" : selected ? "wrong" : "") : "";
-          return `<button type="button" class="practice-option ${selected ? "selected" : ""} ${reveal}" data-answer="${index}">
+          return `<button type="button" class="practice-option ${selected ? "selected selected-confirm" : ""} ${reveal}" data-answer="${index}">
             <b>${String.fromCharCode(65 + index)}</b><span>${escapeHtml(option)}</span>
           </button>`;
         }).join("")}
