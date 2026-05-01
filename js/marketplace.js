@@ -207,7 +207,23 @@ function renderBankList(market) {
   });
 }
 
-function copyBank(id) {
+async function copyBank(id) {
+  // Try DB-backed copy first
+  if (window.QA && QA.getUsername()) {
+    try {
+      const data = await QA.copyMarketplaceBank(id);
+      showToast(`✅「${data.bank?.title || '題庫'}」已複製到「創建題庫」，可直接前往建立房間！`, 3200);
+      renderAll();
+      return;
+    } catch (e) {
+      console.warn('[marketplace] DB copy failed, fallback:', e.message);
+    }
+  }
+  // Fallback: local only
+  _copyBankLocal(id);
+}
+
+function _copyBankLocal(id) {
   const market = loadMarket();
   const bank = market.find(b => b.id === id);
   if (!bank) return;

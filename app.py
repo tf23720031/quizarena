@@ -2481,6 +2481,872 @@ def init_postgres_users_db():
         conn.commit()
 
 
+# ═══════════════════════════════════════════════════════════════════════
+#  EXTENDED SCHEMA — Story Progress, Story Wrong, Quiz Banks (full),
+#  Achievements, Room History, Account Status, Marketplace
+# ═══════════════════════════════════════════════════════════════════════
+
+def init_extended_postgres_tables():
+    """Add all missing tables for full persistence."""
+    if not use_postgres_user_store():
+        return
+    with closing(get_pg_conn()) as conn:
+        with conn.cursor() as c:
+            # ── Users extended columns ──────────────────────────────
+            for col, defn in [
+                ('nickname',       "TEXT DEFAULT ''"),
+                ('level',          "INTEGER DEFAULT 1"),
+                ('exp',            "INTEGER DEFAULT 0"),
+                ('coins',          "INTEGER DEFAULT 0"),
+                ('completed_questions', "INTEGER DEFAULT 0"),
+                ('correct_rate',   "FLOAT DEFAULT 0"),
+                ("total_play_time", "INTEGER DEFAULT 0"),
+                ('login_days',     "INTEGER DEFAULT 0"),
+                ('account_status', "TEXT DEFAULT 'active'"),
+                ('last_login_at',  "BIGINT DEFAULT 0"),
+            ]:
+                c.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {defn}")
+
+            # ── Story Progress ──────────────────────────────────────
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS story_progress (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    quiz_bank_id TEXT NOT NULL,
+                    story_mode_type TEXT DEFAULT 'solo',
+                    current_chapter INTEGER DEFAULT 1,
+                    current_level INTEGER DEFAULT 1,
+                    cleared_levels INTEGER DEFAULT 0,
+                    total_score INTEGER DEFAULT 0,
+                    completed BOOLEAN DEFAULT FALSE,
+                    last_played_at BIGINT,
+                    UNIQUE(username, quiz_bank_id, story_mode_type)
+                )
+            """)
+            c.execute("CREATE INDEX IF NOT EXISTS idx_story_progress_username ON story_progress(username)")
+
+            # ── Story Wrong Answers (extended) ──────────────────────
+            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS story_chapter TEXT DEFAULT ''")
+            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS story_level INTEGER DEFAULT 0")
+            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS user_answer_index INTEGER DEFAULT -1")
+            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS review_count INTEGER DEFAULT 0")
+            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS mastered BOOLEAN DEFAULT FALSE")
+            c.execute("ALTER TABLE wrong_question_book ADD COLUMN IF NOT EXISTS updated_at BIGINT DEFAULT 0")
+
+            # ── Quiz Banks (owner-based, full schema) ───────────────
+            c.execute("""
+                ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS owner_user_id TEXT DEFAULT ''
+            """)
+            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''")
+            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS category TEXT DEFAULT '綜合'")
+            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'private'")
+            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS source_type TEXT DEFAULT 'user'")
+            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS source_marketplace_id TEXT DEFAULT ''")
+            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS question_count INTEGER DEFAULT 0")
+            c.execute("ALTER TABLE quiz_banks ADD COLUMN IF NOT EXISTS created_at BIGINT DEFAULT 0")
+
+            # ── Marketplace Banks ───────────────────────────────────
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS marketplace_banks (
+                    id SERIAL PRIMARY KEY,
+                    bank_id TEXT UNIQUE NOT NULL,
+                    owner_username TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT DEFAULT '',
+                    category TEXT DEFAULT '綜合',
+                    source_type TEXT DEFAULT 'user',
+                    questions_json JSONB NOT NULL DEFAULT '[]',
+                    question_count INTEGER DEFAULT 0,
+                    copy_count INTEGER DEFAULT 0,
+                    avg_rating FLOAT DEFAULT 0,
+                    ratings_json TEXT DEFAULT '[]',
+                    published_at BIGINT,
+                    updated_at BIGINT
+                )
+            """)
+            c.execute("CREATE INDEX IF NOT EXISTS idx_marketplace_banks_owner ON marketplace_banks(owner_username)")
+
+            # ── Achievements / Badges ───────────────────────────────
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS user_achievements (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    achievement_id TEXT NOT NULL,
+                    badge_level INTEGER DEFAULT 1,
+                    rarity TEXT DEFAULT 'common',
+                    unlocked BOOLEAN DEFAULT FALSE,
+                    unlocked_at BIGINT,
+                    selected_showcase BOOLEAN DEFAULT FALSE,
+                    progress INTEGER DEFAULT 0,
+                    target INTEGER DEFAULT 1,
+                    updated_at BIGINT,
+                    UNIQUE(username, achievement_id)
+                )
+            """)
+            c.execute("CREATE INDEX IF NOT EXISTS idx_user_achievements_username ON user_achievements(username)")
+
+            # ── Room History ────────────────────────────────────────
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS room_history (
+                    id SERIAL PRIMARY KEY,
+                    room_id TEXT UNIQUE NOT NULL,
+                    host_username TEXT NOT NULL,
+                    room_pin TEXT,
+                    room_name TEXT,
+                    quiz_bank_id TEXT,
+                    quiz_bank_title TEXT,
+                    mode TEXT DEFAULT 'individual',
+                    status TEXT DEFAULT 'ended',
+                    player_count INTEGER DEFAULT 0,
+                    created_at BIGINT,
+                    ended_at BIGINT
+                )
+            """)
+            c.execute("CREATE INDEX IF NOT EXISTS idx_room_history_host ON room_history(host_username)")
+
+            # ── Daily Mission Extended ──────────────────────────────
+            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS mission_id TEXT DEFAULT ''")
+            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS streak_day INTEGER DEFAULT 0")
+            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS reward_claimed BOOLEAN DEFAULT FALSE")
+            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS selected_answer INTEGER DEFAULT -1")
+            c.execute("ALTER TABLE user_daily_missions ADD COLUMN IF NOT EXISTS correct_answer INTEGER DEFAULT -1")
+
+        conn.commit()
+
+
+def init_extended_sqlite_tables():
+    """SQLite version of extended tables."""
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        c = conn.cursor()
+        # Story Progress
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS story_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                quiz_bank_id TEXT NOT NULL,
+                story_mode_type TEXT DEFAULT 'solo',
+                current_chapter INTEGER DEFAULT 1,
+                current_level INTEGER DEFAULT 1,
+                cleared_levels INTEGER DEFAULT 0,
+                total_score INTEGER DEFAULT 0,
+                completed INTEGER DEFAULT 0,
+                last_played_at INTEGER,
+                UNIQUE(username, quiz_bank_id, story_mode_type)
+            )
+        """)
+        # Wrong book extra columns (safe migration)
+        existing_wb = {r[1] for r in c.execute('PRAGMA table_info(wrong_question_book)').fetchall()}
+        for col, typ in [
+            ('story_chapter', 'TEXT DEFAULT ""'),
+            ('story_level', 'INTEGER DEFAULT 0'),
+            ('user_answer_index', 'INTEGER DEFAULT -1'),
+            ('review_count', 'INTEGER DEFAULT 0'),
+            ('mastered', 'INTEGER DEFAULT 0'),
+            ('updated_at', 'INTEGER DEFAULT 0'),
+        ]:
+            if col not in existing_wb:
+                c.execute(f'ALTER TABLE wrong_question_book ADD COLUMN {col} {typ}')
+        # Marketplace
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS marketplace_banks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bank_id TEXT UNIQUE NOT NULL,
+                owner_username TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                category TEXT DEFAULT '綜合',
+                source_type TEXT DEFAULT 'user',
+                questions_json TEXT NOT NULL DEFAULT '[]',
+                question_count INTEGER DEFAULT 0,
+                copy_count INTEGER DEFAULT 0,
+                avg_rating REAL DEFAULT 0,
+                ratings_json TEXT DEFAULT '[]',
+                published_at INTEGER,
+                updated_at INTEGER
+            )
+        """)
+        # Achievements
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS user_achievements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                achievement_id TEXT NOT NULL,
+                badge_level INTEGER DEFAULT 1,
+                rarity TEXT DEFAULT 'common',
+                unlocked INTEGER DEFAULT 0,
+                unlocked_at INTEGER,
+                selected_showcase INTEGER DEFAULT 0,
+                progress INTEGER DEFAULT 0,
+                target INTEGER DEFAULT 1,
+                updated_at INTEGER,
+                UNIQUE(username, achievement_id)
+            )
+        """)
+        # Room History
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS room_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_id TEXT UNIQUE NOT NULL,
+                host_username TEXT NOT NULL,
+                room_pin TEXT,
+                room_name TEXT,
+                quiz_bank_id TEXT,
+                quiz_bank_title TEXT,
+                mode TEXT DEFAULT 'individual',
+                status TEXT DEFAULT 'ended',
+                player_count INTEGER DEFAULT 0,
+                created_at INTEGER,
+                ended_at INTEGER
+            )
+        """)
+        # Quiz banks extra columns (safe)
+        existing_qb_cols = {r[1] for r in c.execute('PRAGMA table_info(quiz_banks)').fetchall()}
+        for col, typ in [
+            ('owner_user_id', "TEXT DEFAULT ''"),
+            ('description', "TEXT DEFAULT ''"),
+            ('category', "TEXT DEFAULT '綜合'"),
+            ('visibility', "TEXT DEFAULT 'private'"),
+            ('source_type', "TEXT DEFAULT 'user'"),
+            ('source_marketplace_id', "TEXT DEFAULT ''"),
+            ('question_count', "INTEGER DEFAULT 0"),
+            ('created_at', "INTEGER DEFAULT 0"),
+        ]:
+            if col not in existing_qb_cols:
+                c.execute(f'ALTER TABLE quiz_banks ADD COLUMN {col} {typ}')
+        # Users extra columns
+        existing_u = {r[1] for r in c.execute('PRAGMA table_info(users)').fetchall()}
+        for col, typ in [
+            ('nickname', "TEXT DEFAULT ''"),
+            ('level', "INTEGER DEFAULT 1"),
+            ('exp', "INTEGER DEFAULT 0"),
+            ('coins', "INTEGER DEFAULT 0"),
+            ('completed_questions', "INTEGER DEFAULT 0"),
+            ('correct_rate', "REAL DEFAULT 0"),
+            ('total_play_time', "INTEGER DEFAULT 0"),
+            ('login_days', "INTEGER DEFAULT 0"),
+            ('account_status', "TEXT DEFAULT 'active'"),
+            ('last_login_at', "INTEGER DEFAULT 0"),
+        ]:
+            if col not in existing_u:
+                c.execute(f'ALTER TABLE users ADD COLUMN {col} {typ}')
+        # Daily mission extra columns
+        existing_dm = {r[1] for r in c.execute('PRAGMA table_info(user_daily_missions)').fetchall()}
+        for col, typ in [
+            ('mission_id', "TEXT DEFAULT ''"),
+            ('streak_day', "INTEGER DEFAULT 0"),
+            ('reward_claimed', "INTEGER DEFAULT 0"),
+            ('selected_answer', "INTEGER DEFAULT -1"),
+            ('correct_answer', "INTEGER DEFAULT -1"),
+        ]:
+            if col not in existing_dm:
+                c.execute(f'ALTER TABLE user_daily_missions ADD COLUMN {col} {typ}')
+        conn.commit()
+
+
+def init_extended_db():
+    if use_postgres_user_store():
+        init_extended_postgres_tables()
+    init_extended_sqlite_tables()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  STORY PROGRESS API
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/story/progress', methods=['GET'])
+def api_get_story_progress():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("SELECT * FROM story_progress WHERE username=%s ORDER BY last_played_at DESC", (username,))
+                rows = list(c.fetchall())
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            rows = conn.execute("SELECT * FROM story_progress WHERE username=? ORDER BY last_played_at DESC", (username,)).fetchall()
+    return jsonify({'success': True, 'progress': [dict(r) for r in rows]})
+
+
+@app.route('/api/story/progress', methods=['POST'])
+def api_save_story_progress():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    bank_id  = str(data.get('quiz_bank_id', '')).strip()
+    if not username or not bank_id:
+        return jsonify({'success': False, 'message': '參數缺失'}), 400
+    mode           = str(data.get('story_mode_type', 'solo'))
+    cleared        = int(data.get('cleared_levels', 0))
+    current_level  = int(data.get('current_level', 1))
+    total_score    = int(data.get('total_score', 0))
+    completed      = bool(data.get('completed', False))
+    ts = now_ts()
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    INSERT INTO story_progress
+                      (username, quiz_bank_id, story_mode_type, current_level, cleared_levels,
+                       total_score, completed, last_played_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT(username, quiz_bank_id, story_mode_type)
+                    DO UPDATE SET
+                      current_level  = GREATEST(story_progress.current_level, EXCLUDED.current_level),
+                      cleared_levels = GREATEST(story_progress.cleared_levels, EXCLUDED.cleared_levels),
+                      total_score    = GREATEST(story_progress.total_score, EXCLUDED.total_score),
+                      completed      = story_progress.completed OR EXCLUDED.completed,
+                      last_played_at = EXCLUDED.last_played_at
+                """, (username, bank_id, mode, current_level, cleared, total_score, completed, ts))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute("""
+                INSERT INTO story_progress
+                  (username, quiz_bank_id, story_mode_type, current_level, cleared_levels,
+                   total_score, completed, last_played_at)
+                VALUES (?,?,?,?,?,?,?,?)
+                ON CONFLICT(username, quiz_bank_id, story_mode_type)
+                DO UPDATE SET
+                  current_level  = MAX(current_level, excluded.current_level),
+                  cleared_levels = MAX(cleared_levels, excluded.cleared_levels),
+                  total_score    = MAX(total_score, excluded.total_score),
+                  completed      = completed OR excluded.completed,
+                  last_played_at = excluded.last_played_at
+            """, (username, bank_id, mode, current_level, cleared, total_score, int(completed), ts))
+            conn.commit()
+    return jsonify({'success': True})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  STORY WRONG ANSWER (extended version with all fields)
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/story/wrong-answer', methods=['POST'])
+def api_story_wrong_answer():
+    """Alias for /story_wrong_question with extra fields."""
+    return story_wrong_question()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  WRONG BOOK API
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/wrong-book', methods=['GET'])
+def api_get_wrong_book():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    data = build_wrong_book_detail(username)
+    return jsonify({'success': True, **data})
+
+
+@app.route('/api/wrong-book/mark-reviewed', methods=['POST'])
+def api_wrong_book_mark_reviewed():
+    data = request.get_json(silent=True) or {}
+    username    = str(data.get('username', '')).strip()
+    question_id = str(data.get('question_id', '')).strip()
+    mastered    = bool(data.get('mastered', False))
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    ts = now_ts()
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    UPDATE wrong_question_book
+                    SET review_count = review_count + 1,
+                        mastered = %s,
+                        updated_at = %s
+                    WHERE username=%s AND question_id=%s
+                """, (mastered, ts, username, question_id))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute("""
+                UPDATE wrong_question_book
+                SET review_count = review_count + 1,
+                    mastered = ?,
+                    updated_at = ?
+                WHERE username=? AND question_id=?
+            """, (int(mastered), ts, username, question_id))
+            conn.commit()
+    return jsonify({'success': True})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  QUIZ BANKS API (extended)
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/quiz-banks/my', methods=['GET'])
+def api_get_my_quiz_banks():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    # Reuse existing load_quiz_banks logic
+    from flask import g
+    data = _load_quiz_banks_for_user(username)
+    return jsonify({'success': True, 'quizBanks': data})
+
+
+def _load_quiz_banks_for_user(username):
+    if use_postgres_quiz_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("SELECT bank_id, title, data, updated_at FROM quiz_banks WHERE username=%s ORDER BY updated_at DESC", (username,))
+                rows = c.fetchall()
+        return [dict(r['data']) if isinstance(r.get('data'), dict) else json.loads(r.get('data') or '{}') for r in rows]
+    else:
+        raw_path = QUIZ_BANKS_PATH
+        try:
+            with open(raw_path, 'r', encoding='utf-8') as f:
+                store = json.load(f)
+            return store.get('users', {}).get(username, [])
+        except Exception:
+            return []
+
+
+@app.route('/api/quiz-banks', methods=['POST'])
+def api_save_quiz_bank():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    bank     = data.get('bank', {})
+    if not username or not bank:
+        return jsonify({'success': False, 'message': '參數缺失'}), 400
+    bank_id = str(bank.get('id') or uid('bank')).strip()
+    bank['id'] = bank_id
+    bank['updatedAt'] = now_ts()
+    ts = now_ts()
+    if use_postgres_quiz_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    INSERT INTO quiz_banks (username, bank_id, title, data, owner_user_id, description,
+                        category, visibility, source_type, question_count, created_at, updated_at)
+                    VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT(username, bank_id)
+                    DO UPDATE SET title=%s, data=%s::jsonb, question_count=%s, updated_at=%s
+                """, (
+                    username, bank_id, bank.get('title',''), json.dumps(bank, ensure_ascii=False),
+                    username, bank.get('description',''), bank.get('category','綜合'),
+                    'private', bank.get('source_type','user'),
+                    len(bank.get('questions',[])), ts, ts,
+                    bank.get('title',''), json.dumps(bank, ensure_ascii=False),
+                    len(bank.get('questions',[])), ts
+                ))
+            conn.commit()
+    return jsonify({'success': True, 'bank_id': bank_id})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  MARKETPLACE API
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/marketplace/banks', methods=['GET'])
+def api_marketplace_banks():
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    SELECT bank_id, owner_username, title, description, category,
+                           question_count, copy_count, avg_rating, published_at
+                    FROM marketplace_banks ORDER BY copy_count DESC, published_at DESC LIMIT 100
+                """)
+                rows = [dict(r) for r in c.fetchall()]
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            rows = conn.execute("""
+                SELECT bank_id, owner_username, title, description, category,
+                       question_count, copy_count, avg_rating, published_at
+                FROM marketplace_banks ORDER BY copy_count DESC, published_at DESC LIMIT 100
+            """).fetchall()
+    return jsonify({'success': True, 'banks': rows})
+
+
+@app.route('/api/marketplace/copy', methods=['POST'])
+def api_marketplace_copy():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    bank_id  = str(data.get('bank_id', '')).strip()
+    if not username or not bank_id:
+        return jsonify({'success': False, 'message': '參數缺失'}), 400
+
+    # Load from marketplace
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("SELECT * FROM marketplace_banks WHERE bank_id=%s", (bank_id,))
+                mkt = c.fetchone()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            mkt = conn.execute("SELECT * FROM marketplace_banks WHERE bank_id=?", (bank_id,)).fetchone()
+
+    if not mkt:
+        return jsonify({'success': False, 'message': '找不到該題庫'}), 404
+
+    try:
+        questions = json.loads(mkt.get('questions_json') or '[]')
+    except Exception:
+        questions = []
+
+    new_bank_id = uid('mkt_copy')
+    new_bank = {
+        'id': new_bank_id,
+        'title': f"{mkt.get('title','')}（複製）",
+        'gameMode': 'individual',
+        'questions': questions,
+        'category': mkt.get('category', '綜合'),
+        'source_type': 'marketplace_copy',
+        'source_marketplace_id': bank_id,
+        'description': mkt.get('description', ''),
+        'updatedAt': now_ts(),
+    }
+    ts = now_ts()
+
+    # Save to user's quiz banks
+    if use_postgres_quiz_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    INSERT INTO quiz_banks (username, bank_id, title, data, owner_user_id,
+                        category, source_type, source_marketplace_id, question_count, created_at, updated_at)
+                    VALUES (%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT(username, bank_id) DO NOTHING
+                """, (
+                    username, new_bank_id, new_bank['title'],
+                    json.dumps(new_bank, ensure_ascii=False),
+                    username, mkt.get('category','綜合'), 'marketplace_copy',
+                    bank_id, len(questions), ts, ts
+                ))
+                # Increment copy count
+                c.execute("UPDATE marketplace_banks SET copy_count=copy_count+1 WHERE bank_id=%s", (bank_id,))
+            conn.commit()
+
+    return jsonify({'success': True, 'bank': new_bank, 'message': f'已複製到我的題庫'})
+
+
+@app.route('/api/marketplace/publish', methods=['POST'])
+def api_marketplace_publish():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    bank     = data.get('bank', {})
+    if not username or not bank:
+        return jsonify({'success': False, 'message': '參數缺失'}), 400
+
+    bank_id   = str(bank.get('id') or uid('mkt')).strip()
+    questions = bank.get('questions', [])
+    if len(questions) < 5:
+        return jsonify({'success': False, 'message': '題庫至少需要 5 題'}), 400
+
+    ts = now_ts()
+    row = (
+        bank_id, username, bank.get('title',''), bank.get('description',''),
+        bank.get('category','綜合'), 'user',
+        json.dumps(questions, ensure_ascii=False),
+        len(questions), 0, 0, '[]', ts, ts
+    )
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    INSERT INTO marketplace_banks
+                      (bank_id, owner_username, title, description, category, source_type,
+                       questions_json, question_count, copy_count, avg_rating, ratings_json,
+                       published_at, updated_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT(bank_id) DO UPDATE SET
+                      title=%s, description=%s, questions_json=%s::jsonb,
+                      question_count=%s, updated_at=%s
+                """, row + (bank.get('title',''), bank.get('description',''),
+                            json.dumps(questions, ensure_ascii=False), len(questions), ts))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO marketplace_banks
+                  (bank_id, owner_username, title, description, category, source_type,
+                   questions_json, question_count, copy_count, avg_rating, ratings_json,
+                   published_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, row)
+            conn.commit()
+
+    return jsonify({'success': True, 'bank_id': bank_id})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  PROFILE API (extended)
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/profile', methods=['GET'])
+def api_get_profile():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    SELECT username, email, avatar, display_title, preferred_language,
+                           county, showcase_ids, nickname, level, exp, coins,
+                           completed_questions, correct_rate, total_play_time,
+                           login_days, account_status, created_at, last_login_at
+                    FROM users WHERE username=%s
+                """, (username,))
+                row = c.fetchone()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            row = conn.execute("""
+                SELECT username, email, avatar, display_title, preferred_language,
+                       county, showcase_ids, nickname, level, exp, coins,
+                       completed_questions, correct_rate, total_play_time,
+                       login_days, account_status, created_at, last_login_at
+                FROM users WHERE username=?
+            """, (username,)).fetchone()
+    if not row:
+        return jsonify({'success': False, 'message': '找不到使用者'}), 404
+    profile = dict(row)
+    # Parse showcase_ids
+    try:
+        profile['showcase_ids'] = json.loads(profile.get('showcase_ids') or '[]')
+    except Exception:
+        profile['showcase_ids'] = []
+    return jsonify({'success': True, 'profile': profile})
+
+
+@app.route('/api/profile', methods=['PATCH'])
+def api_patch_profile():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    allowed = {'nickname', 'avatar', 'display_title', 'preferred_language', 'county',
+               'showcase_ids', 'level', 'exp', 'coins', 'completed_questions',
+               'correct_rate', 'total_play_time', 'login_days', 'account_status', 'last_login_at'}
+    updates = {k: v for k, v in data.items() if k in allowed}
+    if not updates:
+        return jsonify({'success': True})
+    ts = now_ts()
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                for key, val in updates.items():
+                    if key == 'showcase_ids':
+                        val = json.dumps(val if isinstance(val, list) else [])
+                    c.execute(f"UPDATE users SET {key}=%s WHERE username=%s", (val, username))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            for key, val in updates.items():
+                if key == 'showcase_ids':
+                    val = json.dumps(val if isinstance(val, list) else [])
+                conn.execute(f"UPDATE users SET {key}=? WHERE username=?", (val, username))
+            conn.commit()
+    return jsonify({'success': True})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  ACHIEVEMENTS API
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/achievements', methods=['GET'])
+def api_get_achievements():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    summary = build_achievement_summary(username)
+    return jsonify({'success': True, **summary})
+
+
+@app.route('/api/achievements/sync', methods=['POST'])
+def api_sync_achievements():
+    """Write achievement unlock to DB."""
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    ach_id   = str(data.get('achievement_id', '')).strip()
+    if not username or not ach_id:
+        return jsonify({'success': False, 'message': '參數缺失'}), 400
+    ts = now_ts()
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    INSERT INTO user_achievements (username, achievement_id, unlocked, unlocked_at, updated_at)
+                    VALUES (%s,%s,TRUE,%s,%s)
+                    ON CONFLICT(username, achievement_id) DO UPDATE SET
+                      unlocked=TRUE,
+                      unlocked_at=COALESCE(user_achievements.unlocked_at, EXCLUDED.unlocked_at),
+                      updated_at=EXCLUDED.updated_at
+                """, (username, ach_id, ts, ts))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute("""
+                INSERT OR IGNORE INTO user_achievements (username, achievement_id, unlocked, unlocked_at, updated_at)
+                VALUES (?,?,1,?,?)
+            """, (username, ach_id, ts, ts))
+            conn.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/achievements/showcase', methods=['PATCH'])
+def api_patch_achievements_showcase():
+    data = request.get_json(silent=True) or {}
+    username     = str(data.get('username', '')).strip()
+    showcase_ids = data.get('showcase_ids', [])
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("UPDATE users SET showcase_ids=%s WHERE username=%s",
+                          (json.dumps(showcase_ids), username))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute("UPDATE users SET showcase_ids=? WHERE username=?",
+                         (json.dumps(showcase_ids), username))
+            conn.commit()
+    return jsonify({'success': True})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  DAILY MISSION API (extended)
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/daily-mission', methods=['GET'])
+def api_get_daily_mission():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    state = build_daily_mission_state(username)
+    return jsonify({'success': True, **state})
+
+
+@app.route('/api/daily-mission/complete', methods=['POST'])
+def api_complete_daily_mission():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    # Delegate to existing handler logic
+    return daily_mission_answer_api()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  ROOM HISTORY API
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/rooms/history', methods=['GET'])
+def api_rooms_history():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    SELECT * FROM room_history WHERE host_username=%s
+                    ORDER BY created_at DESC LIMIT 50
+                """, (username,))
+                rows = [dict(r) for r in c.fetchall()]
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            rows = conn.execute("""
+                SELECT * FROM room_history WHERE host_username=?
+                ORDER BY created_at DESC LIMIT 50
+            """, (username,)).fetchall()
+    return jsonify({'success': True, 'rooms': rows})
+
+
+def save_room_history(room):
+    """Called when a room ends to persist history."""
+    try:
+        host = str(room.get('host_player_name') or room.get('host_username') or '').strip()
+        if not host:
+            return
+        ts  = now_ts()
+        rid = str(room.get('pin') or uid('room'))
+        row = (
+            rid, host, room.get('pin',''), room.get('room_name',''),
+            room.get('bank_id',''), room.get('bank_title',''),
+            room.get('mode','individual'), 'ended',
+            len(room.get('players', [])),
+            int(room.get('created_at', ts)), ts
+        )
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as c:
+                    c.execute("""
+                        INSERT INTO room_history
+                          (room_id, host_username, room_pin, room_name, quiz_bank_id, quiz_bank_title,
+                           mode, status, player_count, created_at, ended_at)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        ON CONFLICT(room_id) DO UPDATE SET status='ended', ended_at=EXCLUDED.ended_at
+                    """, row)
+                conn.commit()
+        else:
+            with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO room_history
+                      (room_id, host_username, room_pin, room_name, quiz_bank_id, quiz_bank_title,
+                       mode, status, player_count, created_at, ended_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                """, row)
+                conn.commit()
+    except Exception as e:
+        print(f'[room_history] save failed: {e}')
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  ACCOUNT STATUS API
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route('/api/account/status', methods=['GET'])
+def api_account_status():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("SELECT account_status FROM users WHERE username=%s", (username,))
+                row = c.fetchone()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            row = conn.execute("SELECT account_status FROM users WHERE username=?", (username,)).fetchone()
+    status = dict(row).get('account_status', 'active') if row else 'guest'
+    return jsonify({'success': True, 'status': status})
+
+
+@app.route('/api/account/status', methods=['PATCH'])
+def api_patch_account_status():
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    status   = str(data.get('status', 'active')).strip()
+    valid_statuses = {'active', 'inactive', 'banned', 'guest', 'student', 'teacher'}
+    if status not in valid_statuses:
+        return jsonify({'success': False, 'message': '無效狀態'}), 400
+    if not username:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("UPDATE users SET account_status=%s WHERE username=%s", (status, username))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute("UPDATE users SET account_status=? WHERE username=?", (status, username))
+            conn.commit()
+    return jsonify({'success': True})
+
+
 def init_users_db():
     if use_postgres_user_store():
         init_postgres_users_db()
@@ -2750,6 +3616,7 @@ ensure_data_store()
 init_users_db()
 init_rooms_db()
 init_postgres_quiz_banks_db()
+init_extended_db()
 ensure_file(QUIZ_BANKS_PATH, {'users': {}})
 
 

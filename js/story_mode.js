@@ -825,7 +825,16 @@ function checkStoryAnswer() {
     setTimeout(nextStoryStage, 450);
   } else {
     // 答錯：記入錯題本
-    addToWrongBook(stage, activeSubject().title);
+    // Write to DB via QA client (with chapter/level metadata)
+    if (window.QA) {
+      QA.addWrongAnswer(stage, activeSubject().title, {
+        chapter: activeBranch().title,
+        level: stage.level,
+        userAnswer: state.selected,
+      });
+    } else {
+      addToWrongBook(stage, activeSubject().title);
+    }
 
     if (state.retryMode) {
       // 回補模式答錯：扣心，但仍把題目留在隊列尾繼續回補
@@ -1250,7 +1259,16 @@ function startDuelTimer() {
       if (!duelState.answered) {
         // 超時：答錯，加入錯題本
         const stage = duelState.stages[duelState.index];
-        addToWrongBook(stage, activeSubject().title);
+        // Write to DB via QA client (with chapter/level metadata)
+    if (window.QA) {
+      QA.addWrongAnswer(stage, activeSubject().title, {
+        chapter: activeBranch().title,
+        level: stage.level,
+        userAnswer: state.selected,
+      });
+    } else {
+      addToWrongBook(stage, activeSubject().title);
+    }
         highlightDuelAnswer(-1, stage.answer);
         setTimeout(() => advanceDuel(), 1200);
       }
