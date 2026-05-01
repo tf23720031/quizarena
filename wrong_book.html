@@ -33,6 +33,12 @@
     <section class="tool-card">
       <div class="tool-card-head"><h2>複習建議</h2></div>
       <div id="wrongBookInsight" class="wrong-insight-grid"></div>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end">
+        <button id="getAiAdviceBtn" class="tool-btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> 讓 AI 給我學習建議
+        </button>
+      </div>
+      <div id="aiAdviceBox" style="display:none;margin-top:14px;padding:16px 20px;border-radius:18px;background:rgba(147,51,234,.07);border:1.5px solid rgba(147,51,234,.15);font-size:.9rem;line-height:1.7;color:#3a1a60;white-space:pre-wrap"></div>
     </section>
 
     <section class="tool-card">
@@ -80,5 +86,66 @@
   <script src="js/Audio_manager.js"></script>
   <script src="js/nav_drawer.js"></script>
   <script src="js/music_drawer.js"></script>
+  <script>
+  // AI Study Advice
+  document.getElementById('getAiAdviceBtn')?.addEventListener('click', async function() {
+    const btn = this;
+    const box = document.getElementById('aiAdviceBox');
+    const items = window._wrongBookItems || [];
+    if (!items.length) { box.style.display=''; box.textContent='目前沒有錯題，繼續練習後再來查看 AI 建議！'; return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 分析中…';
+    box.style.display = '';
+    box.textContent = '⏳ 正在分析你的學習狀況…';
+
+    try {
+      // Build a summary of wrong items for AI
+      const summary = items.slice(0, 15).map((item, i) =>
+        `第${i+1}題: [${item.category||'未知'}/${item.difficulty||'medium'}] ${item.content||item.title} (答錯${item.wrongCount||1}次)`
+      ).join('\n');
+
+      const catCounts = {};
+      items.forEach(it => { const c = it.category||'未知'; catCounts[c] = (catCounts[c]||0) + (it.wrongCount||1); });
+      const topCats = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c,n])=>`${c}(${n}次)`).join('、');
+
+      const prompt = `你是一位友善的學習顧問。以下是學生在 QuizArena 練習題中的錯題紀錄：
+
+最常出錯的類別：${topCats}
+錯題總數：${items.length} 題
+累積答錯次數：${items.reduce((s,i)=>s+(i.wrongCount||1),0)} 次
+
+部分錯題範例：
+${summary}
+
+請用繁體中文給出：
+1. 對這位學生學習狀況的簡短分析（2-3句）
+2. 針對最弱的類別，提供 3 個具體的改進建議
+3. 一句鼓勵的話
+
+語氣要親切、具體、有建設性。不要超過 250 字。`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = (data.content || []).map(c => c.text || '').join('');
+      box.textContent = text || '無法取得建議，請稍後再試。';
+    } catch(e) {
+      box.textContent = '⚠️ AI 服務暫時無法使用，請稍後再試。\n\n小提示：多次答錯的題目優先複習，每天固定練習 10-15 分鐘效果最佳！';
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 重新分析';
+  });
+
+  // Expose items for AI (hook into wrong_book load)
+  const _origRenderWrongBook = window.renderWrongBook;
+  </script>
 </body>
 </html>

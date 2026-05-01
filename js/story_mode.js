@@ -577,28 +577,103 @@ function extractQuestionsFromUpload(raw) {
   return [];
 }
 
-async function uploadStoryBank() {
-  const input = $("uploadStoryBankInput");
-  const file = input?.files?.[0];
-  if (!file) {
-    showToast("請先選擇 JSON 題庫檔");
-    return;
-  }
+// ═══════════════════════════════════════════════════════
+//  從我的題庫選取匯入故事模式
+// ═══════════════════════════════════════════════════════
+async function openMyBanksPicker() {
+  const backdrop = $("myBanksPickerBackdrop");
+  const list = $("myBanksPickerList");
+  if (!backdrop || !list) return;
+
+  list.innerHTML = `<div style="text-align:center;padding:20px;color:#9b72c8"><i class="fa-solid fa-spinner fa-spin"></i> 載入題庫中…</div>`;
+  backdrop.style.display = "flex";
+
   try {
-    const raw = JSON.parse(await file.text());
-    const title = String(raw.title || raw.quizBank?.title || file.name.replace(/\.json$/i, "") || "自訂故事題庫").trim();
-    const questions = uniqueQuestions(extractQuestionsFromUpload(raw));
-    if (questions.length < 5) throw new Error("上傳題庫必須有 5 題或以上，且題目與選項不可重複");
-    const subject = addCustomStorySubject(title, questions, {
-      icon: "fa-upload",
-      summary: `玩家上傳的「${title}」故事線，共 ${questions.length} 題。`,
+    const username = userKey();
+    let banks = [];
+
+    if (username && username !== "guest") {
+      try {
+        const data = await api(`/load_quiz_banks?username=${encodeURIComponent(username)}`);
+        banks = (data.quizBanks || []).filter(b => !b.isSystem && !b.isWrongBook && Array.isArray(b.questions) && b.questions.length >= 5);
+      } catch {}
+    }
+
+    // Also load from localStorage
+    try {
+      const localRaw = localStorage.getItem(`quizBanks_${username}`) || localStorage.getItem("quizBanks") || "[]";
+      const localBanks = JSON.parse(localRaw);
+      if (Array.isArray(localBanks)) {
+        localBanks.filter(b => !b.isSystem && !b.isWrongBook && Array.isArray(b.questions) && b.questions.length >= 5)
+          .forEach(b => { if (!banks.some(x => x.id === b.id)) banks.push(b); });
+      }
+    } catch {}
+
+    if (!banks.length) {
+      list.innerHTML = `<div style="text-align:center;padding:24px;color:#aaa">
+        <i class="fa-solid fa-folder-open" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4"></i>
+        <p>目前沒有可用的題庫（至少需 5 題）。</p>
+        <p style="font-size:.82rem">請先到「創建題庫」頁面建立題庫。</p>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = banks.map(b => `
+      <button class="story-picker-bank-btn" data-bank-id="${escapeHtml(b.id)}" style="
+        display:flex;align-items:center;gap:12px;padding:14px 16px;
+        background:rgba(255,255,255,.65);backdrop-filter:blur(12px);
+        border:1.5px solid rgba(255,255,255,.8);border-radius:18px;
+        cursor:pointer;text-align:left;width:100%;transition:all .15s;
+        box-shadow:0 4px 16px rgba(160,80,220,.08);">
+        <i class="fa-solid fa-book" style="color:#9333ea;font-size:1.2rem;flex-shrink:0"></i>
+        <div style="flex:1">
+          <strong style="display:block;font-size:.95rem;color:#2d1550">${escapeHtml(b.title || "未命名題庫")}</strong>
+          <span style="font-size:.78rem;color:#9b72c8">${b.questions.length} 題</span>
+        </div>
+        <i class="fa-solid fa-chevron-right" style="color:#c0a0e0;font-size:.85rem"></i>
+      </button>
+    `).join("");
+
+    window._myPickerBanks = banks;
+
+    list.querySelectorAll(".story-picker-bank-btn").forEach(btn => {
+      btn.addEventListener("mouseenter", () => { btn.style.transform = "translateX(4px)"; btn.style.boxShadow = "0 8px 24px rgba(160,80,220,.16)"; });
+      btn.addEventListener("mouseleave", () => { btn.style.transform = ""; btn.style.boxShadow = ""; });
+      btn.addEventListener("click", () => {
+        const bank = (window._myPickerBanks || []).find(b => b.id === btn.dataset.bankId);
+        if (!bank) return;
+        importBankToStory(bank);
+        backdrop.style.display = "none";
+      });
     });
-    saveCustomStorySubject(subject);
-    showToast(`已匯入「${title}」`);
-    renderAll();
   } catch (error) {
-    showToast(error.message || "題庫 JSON 格式錯誤", 3200);
+    list.innerHTML = `<div style="text-align:center;color:#f87171;padding:20px">${escapeHtml(error.message || "載入失敗")}</div>`;
   }
+}
+
+function importBankToStory(bank) {
+  const questions = (bank.questions || []).map(q => {
+    const options = Array.isArray(q.options) ? q.options : [];
+    return {
+      content: q.content || q.title || q.q || "題目",
+      difficulty: q.difficulty || "medium",
+      options: options.map(o => ({
+        text: typeof o === "string" ? o : (o.text || ""),
+        correct: typeof o === "object" ? !!o.correct : false,
+      })),
+      answer: typeof q.answer === "number" ? q.answer : options.findIndex(o => typeof o === "object" && o.correct),
+    };
+  }).filter(q => q.content && q.options.length >= 2);
+
+  if (questions.length < 5) { showToast("題庫至少需要 5 題", 2400); return; }
+
+  const subject = addCustomStorySubject(bank.title || "我的題庫", questions, {
+    icon: "fa-book",
+    summary: `從「創建題庫」匯入的「${bank.title}」，共 ${questions.length} 題。`,
+  });
+  saveCustomStorySubject(subject);
+  showToast(`已匯入「${bank.title || "題庫"}」到故事模式`);
+  renderAll();
 }
 
 function renderSubjects() {
@@ -817,7 +892,8 @@ function renderAll() {
 $("resetStoryBtn")?.addEventListener("click", resetCurrentProgress);
 $("generateStoryBtn")?.addEventListener("click", generateAiStoryQuestions);
 $("generateTopicBankBtn")?.addEventListener("click", generateTopicStoryBank);
-$("uploadStoryBankBtn")?.addEventListener("click", uploadStoryBank);
+$("openMyBanksPickerBtn")?.addEventListener("click", openMyBanksPicker);
+$("myBanksPickerCloseBtn")?.addEventListener("click", () => { const b = $("myBanksPickerBackdrop"); if(b) b.style.display="none"; });
 $("storyModalCloseBtn")?.addEventListener("click", () => $("storyModalBackdrop").classList.remove("show"));
 renderAll();
 

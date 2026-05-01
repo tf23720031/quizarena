@@ -447,6 +447,7 @@ async function loadInlineAiExplanation(itemIndex, btn) {
 function renderWrongBook(data) {
   const items = Array.isArray(data.items) ? data.items : [];
   practiceState.items = items;
+  window._wrongBookItems = items; // expose for AI advice
   practiceState.order = []; practiceState.index = 0; practiceState.selected = []; practiceState.checked = false;
   $("wrongItemCount").textContent = String(items.length);
   $("wrongTotalCount").textContent = String(Number(data.totalWrongCount || 0));

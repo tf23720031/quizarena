@@ -100,11 +100,13 @@
           </div>
         </div>
         <div class="story-tool-panel">
-          <label for="uploadStoryBankInput">上傳自己的題庫 JSON</label>
+          <label>從我的題庫選取</label>
           <div class="story-inline-form">
-            <input id="uploadStoryBankInput" class="story-link-input" type="file" accept="application/json,.json" />
-            <button id="uploadStoryBankBtn" class="tool-btn secondary" type="button">
-              <i class="fa-solid fa-upload"></i> 匯入題庫
+            <span class="story-link-input" style="flex:1;color:#9b72c8;font-size:.9rem;display:flex;align-items:center;gap:8px;">
+              <i class="fa-solid fa-folder-open"></i> 選擇已建立的題庫匯入故事模式
+            </span>
+            <button id="openMyBanksPickerBtn" class="tool-btn secondary" type="button">
+              <i class="fa-solid fa-book-open"></i> 選取題庫
             </button>
           </div>
         </div>
@@ -215,6 +217,19 @@
       <h2 id="storyModalTitle">新的支線片段</h2>
       <p id="storyModalText"></p>
       <button id="storyModalCloseBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 繼續冒險</button>
+    </section>
+  </div>
+
+  <!-- My Banks Picker Modal -->
+  <div class="story-modal-backdrop" id="myBanksPickerBackdrop" style="display:none;z-index:10001">
+    <section class="story-modal" style="max-width:520px;width:92%;max-height:80vh;overflow-y:auto;">
+      <span class="answer-pill"><i class="fa-solid fa-folder-open"></i> 我的題庫</span>
+      <h2 style="font-size:1.1rem;margin:10px 0 4px">選擇要匯入故事模式的題庫</h2>
+      <p style="font-size:.85rem;color:#9b72c8;margin-bottom:14px">從你在「創建題庫」中建立的題庫選取，至少需要 5 題。</p>
+      <div id="myBanksPickerList" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <button id="myBanksPickerCloseBtn" class="tool-btn secondary" style="margin-top:16px;width:100%;">
+        <i class="fa-solid fa-xmark"></i> 關閉
+      </button>
     </section>
   </div>
 

@@ -211,14 +211,34 @@ function copyBank(id) {
   const market = loadMarket();
   const bank = market.find(b => b.id === id);
   if (!bank) return;
+  const copy = {
+    id: `mkt_copy_${Date.now()}`,
+    title: `${bank.title}（複製）`,
+    gameMode: 'individual',
+    questions: (bank.questions || []).map(q => ({ ...q })),
+    updatedAt: Math.floor(Date.now() / 1000),
+    isSystem: false,
+    readonly: false,
+  };
+
+  // Save to localStorage (create_home reads this)
   const myBanks = loadMyBanks();
-  const copy = { ...bank, id: `mkt_copy_${Date.now()}`, title: `${bank.title}（複製）`, isSystem: false };
   myBanks.push(copy);
   localStorage.setItem("quizBanks", JSON.stringify(myBanks));
-  // Increment copy count
+
+  // Try to save to backend
+  const username = getCurrentUser();
+  if (username) {
+    fetch('/save_quiz_banks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, quizBanks: myBanks.filter(b => !b.isSystem && !b.isWrongBook) })
+    }).catch(() => {});
+  }
+
   bank.copyCount = (bank.copyCount || 0) + 1;
   saveMarket(market);
-  showToast(`「${bank.title}」已複製到建立題庫，可前往編輯使用！`, 2600);
+  showToast(`✅「${bank.title}」已複製到「創建題庫」，可直接前往建立房間！`, 3000);
   renderAll();
 }
 
@@ -312,8 +332,13 @@ $("mktFilterRow")?.querySelectorAll(".mkt-filter-btn").forEach(btn => {
     btn.classList.add("active");
     currentFilter = btn.dataset.filter;
     const input = $("mktSearchInput");
-    if (input && currentFilter !== "all") {
+    if (input) {
+      const filterHints = { hot: "熱門", new: "最新", mine: "我上架的", all: "" };
+      const hint = filterHints[currentFilter] || "";
+      input.value = hint;
+      searchQuery = hint;
       input.focus();
+      if (hint) input.setSelectionRange(0, hint.length);
     }
     renderAll();
   });
