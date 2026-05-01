@@ -12,10 +12,12 @@
 
   const NAV_LINKS = [
     { href: 'index.html',         icon: 'fa-house',              label: '首頁大廳' },
+    { href: 'create_home.html',   icon: 'fa-wand-magic-sparkles',label: '建立題庫' },
     { href: 'story_mode.html',    icon: 'fa-map-location-dot',   label: '故事模式' },
     { href: 'wrong_book.html',    icon: 'fa-book-open-reader',   label: '錯題本' },
     { href: 'daily_mission.html', icon: 'fa-calendar-check',     label: '每日任務' },
     { href: 'marketplace.html',   icon: 'fa-store',              label: '題庫市集' },
+    { href: 'teacher_report.html',icon: 'fa-chalkboard-user',    label: '老師模式' },
     { href: 'profile.html',       icon: 'fa-id-card',            label: '個人資料' },
   ];
 
@@ -126,11 +128,6 @@
   }
   body.dark-mode .unav-head { border-bottom-color: rgba(255,126,179,.10); }
   .unav-head img { height: 36px; object-fit: contain; }
-  .unav-head-title {
-    flex: 1; font-size: 15px; font-weight: 800;
-    background: linear-gradient(90deg, #ff4f8b, #c06bff);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
   .unav-close {
     background: none; border: none; cursor: pointer;
     font-size: 20px; color: #cca0c0; padding: 4px;
@@ -286,7 +283,6 @@
       <aside class="unav-drawer" id="unavDrawer" aria-label="導覽選單">
         <div class="unav-head">
           <img src="images/LOGO.png" alt="QuizArena" onerror="this.style.display='none'">
-          <span class="unav-head-title">QuizArena</span>
           <button class="unav-close" id="unavClose" aria-label="關閉">✕</button>
         </div>
 

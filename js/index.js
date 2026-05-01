@@ -240,12 +240,19 @@
     if (!content) return;
     const summary = profile.achievements || {};
     const unlocked = Number(summary.unlockedCount || 0);
-    const titles = Array.isArray(profile.titleOptions) ? profile.titleOptions : [];
-    const titleList = titles
-      .filter((item) => item && item.id !== "新手挑戰者")
-      .slice(0, 6)
-      .map((item) => `<span>${escapeHtml(item.label || item.id)}</span>`)
-      .join("");
+    const achievementList = Array.isArray(summary.achievements) ? summary.achievements : [];
+    const showcasedBadges = Array.isArray(profile.showcasedAchievements) ? profile.showcasedAchievements : [];
+    const showcaseIds = Array.isArray(profile.showcaseIds) ? profile.showcaseIds : [];
+    const displayBadges = showcasedBadges.length
+      ? showcasedBadges
+      : showcaseIds.map((id) => achievementList.find((a) => a.id === id && a.unlocked)).filter(Boolean);
+    const badgePalette = ["#21c787", "#7c5cff", "#ff7eb3", "#5ab6ff", "#ffb84d"];
+    const badgeList = displayBadges.map((a, index) => `
+      <span class="friend-badge-chip showcase-style" style="background:${badgePalette[index % badgePalette.length]};">
+        <i class="fa-solid ${escapeHtml(a.icon || "fa-award")}"></i>
+        <span>${escapeHtml(a.title || "成就")}</span>
+      </span>
+    `).join("");
 
     content.innerHTML = `
       <section class="friend-profile-card">
@@ -262,33 +269,16 @@
           <span><b>${unlocked}</b> 已獲得成就</span>
         </div>
         <div class="friend-profile-titles">
-          ${titleList || "<span>尚未解鎖其他稱號</span>"}
+          ${badgeList || "<span>尚未放置展示徽章</span>"}
         </div>
       </section>
     `;
 
-    // 渲染裝備中的成就徽章
     const badgesSection = $("friendBadgesSection");
     const badgesList = $("friendBadgesList");
-    const achievementList = Array.isArray(summary.achievements) ? summary.achievements : [];
-    const showcasedBadges = Array.isArray(profile.showcasedAchievements) ? profile.showcasedAchievements : [];
-    const showcaseIds = Array.isArray(profile.showcaseIds) ? profile.showcaseIds : [];
-    const displayBadges = showcasedBadges.length
-      ? showcasedBadges
-      : showcaseIds.map((id) => achievementList.find((a) => a.id === id && a.unlocked)).filter(Boolean);
-
     if (badgesSection && badgesList) {
-      if (displayBadges.length) {
-        badgesList.innerHTML = displayBadges.map((a) => `
-          <div class="friend-badge-chip">
-            <i class="fa-solid ${escapeHtml(a.icon || "fa-award")}"></i>
-            <span>${escapeHtml(a.title || "成就")}</span>
-          </div>
-        `).join("");
-        badgesSection.style.display = "";
-      } else {
-        badgesSection.style.display = "none";
-      }
+      badgesList.innerHTML = "";
+      badgesSection.style.display = "none";
     }
   }
 

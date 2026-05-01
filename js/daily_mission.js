@@ -85,11 +85,17 @@ function render(state) {
   const progress = Number(state.progress || 0);
   const streak = Number(state.currentStreak || 0);
   const totalDays = Number(state.totalCompletedDays || 0);
+  const cycleDay = Number(state.cycleDay || 0);
   $("dailyProgress").textContent = `${progress}/${required}`;
   $("dailyStreak").textContent = `${streak} 天`;
   $("dailyCompletedDays").textContent = `${totalDays} 天`;
+  if ($("dailyDayInfo")) {
+    $("dailyDayInfo").textContent = state.completedToday
+      ? `今天是連續第 ${cycleDay || Math.min(streak, 7) || 1} 天完成任務`
+      : (streak > 0 ? `目前連續 ${streak} 天，完成今日任務可延續` : "今日尚未完成");
+  }
   $("dailyReward").textContent = state.completedToday
-    ? `今日已完成，已獲得 +${Number(state.exp || EXP_PER_DAY)} EXP`
+    ? (state.titleUnlocked ? `連續 7 天完成，已獲得稱號：連勤學者` : `今日已完成，已獲得 +${Number(state.exp || EXP_PER_DAY)} EXP`)
     : `完成 ${required} 題可獲得 +${Number(state.exp || EXP_PER_DAY)} EXP`;
   renderStreakDots(state);
   renderBreakModal(state);

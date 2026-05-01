@@ -211,20 +211,42 @@ function buildUniqueStages(subject) {
     const level = index + 1;
     const difficulty = level <= 7 ? "easy" : level <= 14 ? "medium" : "hard";
     const clue = arc.clues[index % arc.clues.length];
+    const options = buildPlausibleStoryOptions(subject.title, concept, arc.goal, index);
     return {
       level,
       difficulty,
       scene: `第 ${level} 幕，${arc.place}的路徑延伸到「${concept}」房間。你取得「${clue}」，它提示下一段任務：${arc.goal}。`,
       q: `在${subject.title}的「${concept}」任務中，哪一個做法最能推進目標？`,
-      options: [
-        `先判斷${concept}的核心條件，再選擇答案`,
-        `只看題目中最短的一句話就作答`,
-        `忽略${concept}，直接依照選項順序猜`,
-        `把所有看起來熟悉的詞都當成正解`,
-      ],
-      answer: 0,
+      options: options.map((item) => item.text),
+      answer: options.findIndex((item) => item.correct),
     };
   });
+}
+
+function buildPlausibleStoryOptions(subjectTitle, concept, goal, index) {
+  const correct = `先辨認「${concept}」的關鍵條件，再用題目證據判斷`;
+  const distractorSets = [
+    [
+      `只抓「${concept}」中的單一關鍵字，不檢查題目限制`,
+      `把與「${concept}」相關但沒有證據的推論當成答案`,
+      `先套用${subjectTitle}常見規則，但忽略本題例外條件`,
+    ],
+    [
+      `選擇看起來最接近「${concept}」定義的敘述，不回到題幹比對`,
+      `把${goal}當成唯一線索，略過選項中的細節差異`,
+      `用上一題的解法處理「${concept}」，不重新確認情境`,
+    ],
+    [
+      `先排除陌生詞，再把剩下最熟悉的「${concept}」說法當正解`,
+      `把部分符合「${concept}」的選項視為完整答案`,
+      `只比較選項長短，選出最像解釋「${concept}」的一項`,
+    ],
+  ];
+  const distractors = distractorSets[index % distractorSets.length];
+  return shuffleArray([
+    { text: correct, correct: true },
+    ...distractors.map((text) => ({ text, correct: false })),
+  ]);
 }
 
 function expandStorySubjects() {
@@ -237,7 +259,21 @@ function expandStorySubjects() {
 
 expandStorySubjects();
 
-const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false };
+const state = { subjectId: SUBJECTS[0].id, branchId: SUBJECTS[0].branches[0].id, stageIndex: 0, selected: null, checked: false, hearts: 3, stageOrder: [] };
+
+function shuffleArray(items) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
+function resetStoryRun(shuffle = false) {
+  const branch = activeBranch();
+  state.stageOrder = Array.from({ length: branch.stages.length }, (_, index) => index);
+  if (shuffle) state.stageOrder = shuffleArray(state.stageOrder);
+  state.stageIndex = 0;
+  state.selected = null;
+  state.checked = false;
+  state.hearts = 3;
+}
 
 function customStoryBanksKey() {
   return `quizarena_story_custom_banks_${userKey()}`;
@@ -264,12 +300,15 @@ function addCustomStorySubject(title, questions, options = {}) {
   state.stageIndex = 0;
   state.selected = null;
   state.checked = false;
+  state.stageOrder = [];
+  state.hearts = 3;
   return subject;
 }
 
 function loadCustomStorySubjects() {
   let banks = [];
   try { banks = JSON.parse(localStorage.getItem(customStoryBanksKey()) || "[]"); } catch { banks = []; }
+  const previous = { subjectId: state.subjectId, branchId: state.branchId };
   banks.filter((bank) => Array.isArray(bank.questions) && bank.questions.length >= 5).forEach((bank) => {
     if (!SUBJECTS.some((subject) => subject.id === bank.id)) {
       addCustomStorySubject(bank.title, bank.questions, {
@@ -279,6 +318,10 @@ function loadCustomStorySubjects() {
       });
     }
   });
+  state.subjectId = previous.subjectId;
+  state.branchId = previous.branchId;
+  state.stageOrder = [];
+  state.hearts = 3;
 }
 
 function saveCustomStorySubject(subject) {
@@ -547,9 +590,7 @@ function renderSubjects() {
     button.addEventListener("click", () => {
       state.subjectId = button.dataset.subject;
       state.branchId = activeSubject().branches[0].id;
-      state.stageIndex = 0;
-      state.selected = null;
-      state.checked = false;
+      resetStoryRun(false);
       renderAll();
     });
   });
@@ -570,9 +611,7 @@ function renderBranches() {
   document.querySelectorAll("[data-branch]").forEach((button) => {
     button.addEventListener("click", () => {
       state.branchId = button.dataset.branch;
-      state.stageIndex = 0;
-      state.selected = null;
-      state.checked = false;
+      resetStoryRun(false);
       renderAll();
     });
   });
@@ -581,13 +620,17 @@ function renderBranches() {
 function renderPlayArea() {
   const subject = activeSubject();
   const branch = activeBranch();
-  const stage = branch.stages[state.stageIndex] || branch.stages[0];
+  if (!state.stageOrder.length || state.stageOrder.length !== branch.stages.length) resetStoryRun(false);
+  const stageRealIndex = state.stageOrder[state.stageIndex] ?? 0;
+  const stage = branch.stages[stageRealIndex] || branch.stages[0];
   const progress = loadProgress();
   const cleared = Number(progress[`${subject.id}:${branch.id}`] || 0);
+  const hearts = Array.from({ length: 3 }, (_, index) => `<i class="fa-solid fa-heart ${index >= state.hearts ? "lost" : ""}"></i>`).join("");
   $("storyPlayArea").innerHTML = `
     <article class="story-stage-card">
       <div class="question-meta-row">
         <h3>${escapeHtml(branch.title)}：第 ${stage.level} 關</h3>
+        <div class="story-heart-row" aria-label="剩餘生命 ${state.hearts}">${hearts}</div>
         <span class="answer-pill">${escapeHtml(stage.difficulty)}</span>
       </div>
       <p class="story-scene">${escapeHtml(stage.scene)}</p>
@@ -603,7 +646,6 @@ function renderPlayArea() {
       </div>
       <div class="practice-actions">
         <button id="checkStoryBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 確認答案</button>
-        <button id="nextStoryBtn" class="tool-btn secondary"><i class="fa-solid fa-forward"></i> 下一關</button>
       </div>
       <div class="story-clear-state">本支線已通關 ${cleared} / ${branch.stages.length} 關</div>
     </article>
@@ -616,11 +658,12 @@ function renderPlayArea() {
     });
   });
   $("checkStoryBtn")?.addEventListener("click", checkStoryAnswer);
-  $("nextStoryBtn")?.addEventListener("click", nextStoryStage);
 }
 
 function checkStoryAnswer() {
-  const stage = activeBranch().stages[state.stageIndex];
+  const branch = activeBranch();
+  const stage = branch.stages[state.stageOrder[state.stageIndex] ?? 0];
+  if (state.checked) return;
   if (state.selected === null) {
     showToast("請先選擇答案");
     return;
@@ -628,16 +671,25 @@ function checkStoryAnswer() {
   state.checked = true;
   if (state.selected === stage.answer) {
     saveProgress(state.subjectId, state.branchId, stage.level);
-    if (!checkStoryAchievements()) {
-      showStoryModal(
-        "新的支線片段",
-        `${stage.scene} 你答對後，角色取得新的線索，下一關將更接近這個科目的核心能力。`
-      );
-    }
+    checkStoryAchievements();
+    showToast("答對了，前往下一題");
+    setTimeout(nextStoryStage, 450);
   } else {
-    showToast("答錯了，可以再看一次正解");
+    addToWrongBook(stage, activeSubject().title);
+    state.hearts = Math.max(0, state.hearts - 1);
+    if (state.hearts <= 0) {
+      const progress = loadProgress();
+      delete progress[`${state.subjectId}:${state.branchId}`];
+      localStorage.setItem(progressKey(), JSON.stringify(progress));
+      showToast("三顆愛心用完，題庫重新開始並打亂順序", 2600);
+      resetStoryRun(true);
+    } else {
+      showToast(`答錯了，扣 1 顆愛心，剩下 ${state.hearts} 顆`);
+      setTimeout(nextStoryStage, 900);
+    }
+    renderAll();
+    return;
   }
-  renderAll();
 }
 
 function nextStoryStage() {
@@ -709,25 +761,6 @@ function addToWrongBook(stage, subjectTitle) {
     }).catch((error) => console.warn("[WrongBook] 伺服器寫入失敗", error));
   }
 }
-
-// ═══════════════════════════════════════════════════════
-//  單人模式：答錯加入錯題本（patch checkStoryAnswer）
-// ═══════════════════════════════════════════════════════
-const _origCheckStoryAnswer = checkStoryAnswer;
-window._patchedStoryAnswer = function checkStoryAnswerPatched() {
-  const stage = activeBranch().stages[state.stageIndex];
-  if (state.selected !== null && state.selected !== stage.answer) {
-    addToWrongBook(stage, activeSubject().title);
-  }
-  _origCheckStoryAnswer();
-};
-// 重新綁定
-document.addEventListener("click", (e) => {
-  if (e.target?.closest?.("#checkStoryBtn")) {
-    e.stopImmediatePropagation();
-    window._patchedStoryAnswer();
-  }
-}, true);
 
 // ═══════════════════════════════════════════════════════
 //  模式選擇系統

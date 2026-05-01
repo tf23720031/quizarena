@@ -1029,7 +1029,8 @@ def build_title_options(achievement_summary):
         wins = get_user_wins_map([achievement_summary.get('username')]).get(achievement_summary.get('username'), 0)
         if wins >= 3:
             options.append({'id': '常勝玩家', 'label': '常勝玩家'})
-    if not any(opt['id'] == '連勤學者' for opt in options):
+    username = achievement_summary.get('username')
+    if not any(opt['id'] == '連勤學者' for opt in options) and get_daily_streak(username) >= 7:
         options.append({'id': '連勤學者', 'label': '連勤學者'})
     return options
 
@@ -1430,6 +1431,209 @@ def build_friend_request_summary(username):
         'pendingCount': len(requests),
         'requests': requests,
     }
+
+
+DAILY_REQUIRED = 3
+DAILY_EXP = 60
+DAILY_QUESTIONS = [
+    {
+        'q': '哪一種做法最能幫助你穩定複習？',
+        'options': ['每天安排固定短時間練習', '只在考前熬夜讀完', '完全依靠猜題', '遇到錯題就跳過'],
+        'answer': 0,
+    },
+    {
+        'q': '答錯題目後，最有效的訂正方式是什麼？',
+        'options': ['看解析並寫下錯因', '立刻刪掉題目', '只記答案字母', '完全不再複習'],
+        'answer': 0,
+    },
+    {
+        'q': '多人測驗時，哪個行為最能提升學習效果？',
+        'options': ['結束後討論不同解法', '只比較分數不看題目', '故意亂答加快速度', '忽略隊友想法'],
+        'answer': 0,
+    },
+    {
+        'q': '遇到不確定的題目，應該優先怎麼做？',
+        'options': ['先找題幹關鍵字再排除選項', '直接選最長的選項', '完全看運氣', '跳過所有類似題'],
+        'answer': 0,
+    },
+    {
+        'q': '想維持連續任務紀錄，最好的策略是什麼？',
+        'options': ['每天完成少量但固定的目標', '累積到週末一次做完', '只做自己已經會的題', '忘記時直接放棄整週'],
+        'answer': 0,
+    },
+]
+
+
+def today_key(ts=None):
+    return time.strftime('%Y-%m-%d', time.localtime(ts or now_ts()))
+
+
+def date_to_epoch(date_text):
+    try:
+        return int(time.mktime(time.strptime(date_text, '%Y-%m-%d')))
+    except Exception:
+        return 0
+
+
+def days_between(old_date, new_date):
+    old_ts = date_to_epoch(old_date)
+    new_ts = date_to_epoch(new_date)
+    if not old_ts or not new_ts:
+        return 0
+    return int((new_ts - old_ts) // 86400)
+
+
+def get_daily_row(username):
+    username = str(username or '').strip()
+    if not username:
+        return None
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('SELECT * FROM user_daily_missions WHERE username=%s', (username,))
+                row = cur.fetchone()
+        return row
+    with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+        conn.row_factory = dict_factory
+        return conn.execute('SELECT * FROM user_daily_missions WHERE username=?', (username,)).fetchone()
+
+
+def get_daily_streak(username):
+    row = get_daily_row(username)
+    if not row:
+        return 0
+    last_date = str(row.get('last_completed_date') or '')
+    if not last_date:
+        return 0
+    gap = days_between(last_date, today_key())
+    if gap > 1:
+        return 0
+    return int(row.get('current_streak') or 0)
+
+
+def daily_questions_for_user(username, date_text):
+    seed = int(hashlib.sha256(f'{username}:{date_text}:daily'.encode('utf-8')).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+    pool = [dict(item) for item in DAILY_QUESTIONS]
+    rng.shuffle(pool)
+    return pool[:DAILY_REQUIRED]
+
+
+def parse_done_indexes(row, date_text):
+    if not row or row.get('mission_date') != date_text:
+        return []
+    try:
+        data = json.loads(row.get('completed_questions_json') or '[]')
+    except Exception:
+        data = []
+    if not isinstance(data, list):
+        return []
+    return sorted({int(item) for item in data if str(item).isdigit() or isinstance(item, int)})
+
+
+def build_daily_mission_state(username):
+    username = str(username or '').strip()
+    today = today_key()
+    row = get_daily_row(username) or {}
+    last_completed = str(row.get('last_completed_date') or '')
+    gap = days_between(last_completed, today) if last_completed else 0
+    show_broken = bool(last_completed and gap > 1 and not row.get('streak_break_ack_date') == today)
+    current_streak = 0 if gap > 1 else int(row.get('current_streak') or 0)
+    done_indexes = parse_done_indexes(row, today)
+    questions = daily_questions_for_user(username, today)
+    completed_today = len(done_indexes) >= DAILY_REQUIRED and last_completed == today
+    cycle_day = min(7, current_streak) if current_streak else 0
+    return {
+        'success': True,
+        'username': username,
+        'date': today,
+        'required': DAILY_REQUIRED,
+        'exp': DAILY_EXP,
+        'progress': min(DAILY_REQUIRED, len(done_indexes)),
+        'completedToday': completed_today,
+        'currentStreak': current_streak,
+        'cycleDay': cycle_day,
+        'totalCompletedDays': int(row.get('total_completed_days') or 0),
+        'titleUnlocked': current_streak >= 7,
+        'showStreakBroken': show_broken,
+        'brokenStreak': int(row.get('current_streak') or 0) if show_broken else 0,
+        'questions': [
+            {
+                'q': item['q'],
+                'options': item['options'],
+                'answer': item['answer'],
+                'done': idx in done_indexes,
+            }
+            for idx, item in enumerate(questions)
+        ],
+    }
+
+
+def save_daily_answer(username, question_index):
+    username = str(username or '').strip()
+    today = today_key()
+    row = get_daily_row(username) or {}
+    done = parse_done_indexes(row, today)
+    before_completed = len(done) >= DAILY_REQUIRED and row.get('last_completed_date') == today
+    if question_index not in done:
+        done.append(question_index)
+    done = sorted(set(done))
+    rewarded = False
+    current_streak = int(row.get('current_streak') or 0)
+    total_days = int(row.get('total_completed_days') or 0)
+    last_completed = str(row.get('last_completed_date') or '')
+    if len(done) >= DAILY_REQUIRED and not before_completed:
+        gap = days_between(last_completed, today) if last_completed else 0
+        current_streak = current_streak + 1 if gap == 1 else 1
+        total_days += 1
+        last_completed = today
+        rewarded = True
+    payload = (
+        username,
+        today,
+        json.dumps(done, ensure_ascii=False),
+        last_completed,
+        current_streak,
+        total_days,
+        '',
+        now_ts(),
+    )
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as cur:
+                cur.execute('''
+                    INSERT INTO user_daily_missions
+                    (username, mission_date, completed_questions_json, last_completed_date,
+                     current_streak, total_completed_days, streak_break_ack_date, updated_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT(username)
+                    DO UPDATE SET mission_date=EXCLUDED.mission_date,
+                        completed_questions_json=EXCLUDED.completed_questions_json,
+                        last_completed_date=EXCLUDED.last_completed_date,
+                        current_streak=EXCLUDED.current_streak,
+                        total_completed_days=EXCLUDED.total_completed_days,
+                        streak_break_ack_date=EXCLUDED.streak_break_ack_date,
+                        updated_at=EXCLUDED.updated_at
+                ''', payload)
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute('''
+                INSERT INTO user_daily_missions
+                (username, mission_date, completed_questions_json, last_completed_date,
+                 current_streak, total_completed_days, streak_break_ack_date, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(username)
+                DO UPDATE SET mission_date=excluded.mission_date,
+                    completed_questions_json=excluded.completed_questions_json,
+                    last_completed_date=excluded.last_completed_date,
+                    current_streak=excluded.current_streak,
+                    total_completed_days=excluded.total_completed_days,
+                    streak_break_ack_date=excluded.streak_break_ack_date,
+                    updated_at=excluded.updated_at
+            ''', payload)
+            conn.commit()
+    return rewarded
 
 
 def build_user_win_rate(username):
@@ -2249,6 +2453,19 @@ def init_postgres_users_db():
             ''')
             c.execute('CREATE INDEX IF NOT EXISTS idx_user_match_players_username ON user_match_players(username)')
             c.execute('''
+                CREATE TABLE IF NOT EXISTS user_daily_missions (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    mission_date TEXT,
+                    completed_questions_json TEXT DEFAULT '[]',
+                    last_completed_date TEXT,
+                    current_streak INTEGER DEFAULT 0,
+                    total_completed_days INTEGER DEFAULT 0,
+                    streak_break_ack_date TEXT DEFAULT '',
+                    updated_at BIGINT
+                )
+            ''')
+            c.execute('''
                 CREATE TABLE IF NOT EXISTS teacher_report_history (
                     id SERIAL PRIMARY KEY,
                     pin TEXT UNIQUE NOT NULL,
@@ -2384,6 +2601,19 @@ def init_users_db():
                 is_winner INTEGER DEFAULT 0,
                 recorded_at INTEGER,
                 UNIQUE(room_pin, username)
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS user_daily_missions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                mission_date TEXT,
+                completed_questions_json TEXT DEFAULT '[]',
+                last_completed_date TEXT,
+                current_streak INTEGER DEFAULT 0,
+                total_completed_days INTEGER DEFAULT 0,
+                streak_break_ack_date TEXT DEFAULT '',
+                updated_at INTEGER
             )
         ''')
         c.execute('''
@@ -2735,6 +2965,79 @@ def achievements_summary_api():
     if not username:
         return jsonify(success=False, message='缺少使用者帳號'), 400
     return jsonify(success=True, **build_achievement_summary(username))
+
+
+@app.route('/daily_mission_status')
+def daily_mission_status_api():
+    username = str(request.args.get('username', '')).strip()
+    if not username:
+        return jsonify(success=False, message='缺少使用者帳號'), 400
+    if not get_user_exists(username):
+        return jsonify(success=False, message='找不到使用者'), 404
+    return jsonify(build_daily_mission_state(username))
+
+
+@app.route('/daily_mission_answer', methods=['POST'])
+def daily_mission_answer_api():
+    try:
+        data = request.get_json() or {}
+        username = str(data.get('username', '')).strip()
+        question_index = int(data.get('questionIndex', -1))
+        answer_index = int(data.get('answerIndex', -1))
+        if not username:
+            return jsonify(success=False, message='缺少使用者帳號'), 400
+        if not get_user_exists(username):
+            return jsonify(success=False, message='找不到使用者'), 404
+        questions = daily_questions_for_user(username, today_key())
+        if question_index < 0 or question_index >= len(questions):
+            return jsonify(success=False, message='題目不存在'), 400
+        correct = answer_index == int(questions[question_index].get('answer') or 0)
+        if not correct:
+            state = build_daily_mission_state(username)
+            state['correct'] = False
+            state['rewarded'] = False
+            return jsonify(state)
+        rewarded = save_daily_answer(username, question_index)
+        state = build_daily_mission_state(username)
+        state['correct'] = True
+        state['rewarded'] = rewarded
+        return jsonify(state)
+    except Exception as e:
+        return jsonify(success=False, message=f'每日任務作答失敗：{e}'), 500
+
+
+@app.route('/daily_mission_ack_break', methods=['POST'])
+def daily_mission_ack_break_api():
+    try:
+        data = request.get_json() or {}
+        username = str(data.get('username', '')).strip()
+        if not username:
+            return jsonify(success=False, message='缺少使用者帳號'), 400
+        today = today_key()
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute('''
+                        INSERT INTO user_daily_missions (username, streak_break_ack_date, updated_at)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT(username)
+                        DO UPDATE SET streak_break_ack_date=EXCLUDED.streak_break_ack_date,
+                                      updated_at=EXCLUDED.updated_at
+                    ''', (username, today, now_ts()))
+                conn.commit()
+        else:
+            with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+                conn.execute('''
+                    INSERT INTO user_daily_missions (username, streak_break_ack_date, updated_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(username)
+                    DO UPDATE SET streak_break_ack_date=excluded.streak_break_ack_date,
+                                  updated_at=excluded.updated_at
+                ''', (username, today, now_ts()))
+                conn.commit()
+        return jsonify(build_daily_mission_state(username))
+    except Exception as e:
+        return jsonify(success=False, message=f'更新連續任務狀態失敗：{e}'), 500
 
 
 @app.route('/wrong_book_summary')
