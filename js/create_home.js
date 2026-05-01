@@ -126,7 +126,6 @@ function firstEditableBankIndex() {
 
 function mergeLoadedBanks(userBanks = [], systemBanks = [], wrongBook = null) {
   const merged = [];
-  if (wrongBook?.questions?.length) merged.push({ ...wrongBook, readonly: true, isWrongBook: true });
   userBanks.forEach((bank) => merged.push(bank));
   systemBanks.forEach((bank) => merged.push({ ...bank, readonly: true, isSystem: true }));
   return merged;
@@ -213,7 +212,7 @@ function selectBank(index) {
 function renderBankList() {
   const myWrap = $('myQuizBankList');
   const suggestedWrap = $('suggestedBankList');
-  const myBanks = state.quizBanks.filter((bank) => !bank.isSystem);
+  const myBanks = state.quizBanks.filter((bank) => !bank.isSystem && !bank.isWrongBook);
   const suggestedBanks = state.quizBanks.filter((bank) => bank.isSystem);
   if (!state.quizBanks.length) {
     myWrap.innerHTML = '<div class="no-title">還沒有題庫，先建立一個吧。</div>';
@@ -252,8 +251,8 @@ function renderBankList() {
   myWrap.innerHTML = myBanks.length ? renderCards(myBanks) : '<div class="no-title">你目前還沒有自訂題庫。</div>';
   suggestedWrap.innerHTML = suggestedBanks.length ? renderCards(suggestedBanks) : '<div class="no-title">目前沒有系統建議題庫。</div>';
 
-  const wrongBook = state.quizBanks.find((bank) => bank.isWrongBook);
-  $('wrongBookQuickWrap').style.display = wrongBook?.questions?.length ? 'block' : 'none';
+  const wrongBookQuickWrap = $('wrongBookQuickWrap');
+  if (wrongBookQuickWrap) wrongBookQuickWrap.style.display = 'none';
 
   document.querySelectorAll('.bank-card').forEach((el) => {
     el.addEventListener('click', (e) => {
@@ -709,10 +708,7 @@ async function generateAiBank() {
 }
 
 function openWrongBookChallenge() {
-  const wrongBookIndex = state.quizBanks.findIndex((bank) => bank.isWrongBook && (bank.questions || []).length);
-  if (wrongBookIndex < 0) { showToast('目前還沒有錯題可以挑戰'); return; }
-  selectBank(wrongBookIndex);
-  showToast('已切換到錯題本，直接選題後就能開房複習');
+  window.location.href = 'wrong_book.html';
 }
 
 // ── 事件綁定 ──────────────────────────────────────
@@ -738,7 +734,8 @@ $('pasteQuestionBtn').addEventListener('click', pasteQuestion);
 $('clearQuestionBtn').addEventListener('click', resetQuestionForm);
 $('deleteQuestionBtn').addEventListener('click', handleDeleteQuestion);
 $('generateAiBankBtn').addEventListener('click', generateAiBank);
-$('openWrongBookBtn').addEventListener('click', openWrongBookChallenge);
+const openWrongBookBtn = $('openWrongBookBtn');
+if (openWrongBookBtn) openWrongBookBtn.addEventListener('click', openWrongBookChallenge);
 
 $('openRoomSettingsBtn').addEventListener('click', () => {
   const bank = getCurrentBank();

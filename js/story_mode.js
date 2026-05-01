@@ -732,6 +732,14 @@ function wrongBookKey() {
 
 function addToWrongBook(stage, subjectTitle) {
   if (!stage) return;
+  const username = userKey();
+  if (username && username !== "guest") {
+    api("/story_wrong_question", {
+      method: "POST",
+      body: JSON.stringify({ username, sourceTitle: `故事模式 - ${subjectTitle}`, question: stage }),
+    }).catch((error) => console.warn("[WrongBook] story sync failed", error));
+    return;
+  }
   try {
     const book = JSON.parse(localStorage.getItem(wrongBookKey()) || "[]");
     const existing = book.findIndex((item) => item.q === stage.q);
@@ -752,13 +760,6 @@ function addToWrongBook(stage, subjectTitle) {
     localStorage.setItem(wrongBookKey(), JSON.stringify(book));
   } catch (e) {
     console.warn("[WrongBook] 寫入失敗", e);
-  }
-  const username = userKey();
-  if (username && username !== "guest") {
-    api("/story_wrong_question", {
-      method: "POST",
-      body: JSON.stringify({ username, sourceTitle: `故事模式 · ${subjectTitle}`, question: stage }),
-    }).catch((error) => console.warn("[WrongBook] 伺服器寫入失敗", error));
   }
 }
 

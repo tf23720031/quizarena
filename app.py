@@ -2884,7 +2884,7 @@ def load_quiz_banks_api():
         success=True,
         quizBanks=load_quiz_banks_for_user(username),
         systemQuizBanks=load_default_quiz_banks(),
-        wrongBook=build_wrong_book_for_user(username)
+        wrongBook=None
     )
 
 
