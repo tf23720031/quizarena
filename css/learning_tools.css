@@ -1986,728 +1986,640 @@ body.dark-mode .showcase-toggle-btn {
   color: #fff;
 }
 
+
+
 /* =========================================================
-   QuizArena learning pages visual upgrade
-   Pages: story_mode / daily_mission / teacher_report / wrong_book / profile
-   CSS only: pastel glassmorphism + dark-mode readability + story interaction mood
+   QuizArena Visual Upgrade v3 - RPG Glass Theme
+   針對 story_mode / daily_mission / teacher_report / wrong_book / profile
+   只改 CSS，不動 HTML
    ========================================================= */
-:root {
-  --qa-pink: #ff7eb3;
-  --qa-pink-2: #ffb3d6;
-  --qa-purple: #8d6cff;
-  --qa-blue: #5fc7ff;
-  --qa-mint: #48d8c2;
-  --qa-ink: #24304f;
-  --qa-muted: #66709b;
-  --qa-glass: rgba(255,255,255,.72);
-  --qa-glass-strong: rgba(255,255,255,.88);
-  --qa-border: rgba(255,255,255,.72);
-  --qa-shadow: 0 24px 60px rgba(83, 92, 143, .18);
-  --qa-glow: 0 0 34px rgba(255, 126, 179, .16), 0 0 46px rgba(124, 123, 255, .12);
+
+:root{
+  --qa-v3-pink:#ff6faf;
+  --qa-v3-hot:#ff4f9e;
+  --qa-v3-purple:#8b5cf6;
+  --qa-v3-violet:#5b2bd6;
+  --qa-v3-blue:#3aa8ff;
+  --qa-v3-cyan:#39d9e8;
+  --qa-v3-green:#32c98b;
+  --qa-v3-gold:#f8b84e;
+  --qa-v3-ink:#321848;
+  --qa-v3-text:#3a1d4f;
+  --qa-v3-muted:#755f86;
+  --qa-v3-card:rgba(255,255,255,.62);
+  --qa-v3-card-strong:rgba(255,255,255,.78);
+  --qa-v3-border:rgba(255,255,255,.72);
+  --qa-v3-shadow:0 22px 55px rgba(126,56,170,.22);
+  --qa-v3-glow:0 0 22px rgba(255,111,175,.28),0 0 40px rgba(139,92,246,.18);
 }
 
-html { scroll-behavior: smooth; }
-
-body {
-  position: relative;
-  overflow-x: hidden;
-  background-color: #fff7fc;
-  background-image:
-    linear-gradient(120deg, rgba(255,255,255,.62), rgba(255,255,255,.36)),
-    radial-gradient(circle at 10% 12%, rgba(255,126,179,.42), transparent 28%),
-    radial-gradient(circle at 86% 8%, rgba(95,199,255,.28), transparent 28%),
-    radial-gradient(circle at 56% 92%, rgba(141,108,255,.18), transparent 34%),
-    url('../images/create_bg.png'),
-    linear-gradient(135deg, #fff7fb 0%, #f2f0ff 50%, #eef9ff 100%);
-  background-size: auto, auto, auto, auto, 520px auto, cover;
-  background-position: center, left top, right top, center bottom, right 40px bottom 30px, center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+html{
+  scroll-behavior:smooth;
 }
 
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-}
-
-body::before {
+body:has(.tool-shell){
+  min-height:100vh !important;
+  color:var(--qa-v3-text) !important;
   background:
-    radial-gradient(circle at 8% 18%, rgba(255,255,255,.85) 0 1px, transparent 2px),
-    radial-gradient(circle at 20% 38%, rgba(255,126,179,.42) 0 1px, transparent 2px),
-    radial-gradient(circle at 38% 14%, rgba(141,108,255,.32) 0 1px, transparent 2px),
-    radial-gradient(circle at 78% 20%, rgba(95,199,255,.35) 0 1px, transparent 2px),
-    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.5));
-  background-size: 160px 160px, 220px 220px, 190px 190px, 240px 240px, auto;
-  animation: qaFloatSparkles 18s linear infinite;
+    radial-gradient(circle at 12% 10%, rgba(255,137,195,.38) 0 18%, transparent 35%),
+    radial-gradient(circle at 88% 7%, rgba(118,222,255,.34) 0 16%, transparent 36%),
+    radial-gradient(circle at 70% 82%, rgba(255,218,121,.28) 0 18%, transparent 38%),
+    linear-gradient(135deg,#fff3fb 0%,#f6ecff 42%,#e9fbff 100%) !important;
+  background-attachment:fixed !important;
+  overflow-x:hidden;
 }
 
-body::after {
+body:has(.tool-shell)::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-3;
+  pointer-events:none;
   background:
-    radial-gradient(circle at 50% -12%, rgba(255,255,255,.8), transparent 42%),
-    linear-gradient(180deg, transparent 0%, rgba(255,255,255,.42) 100%);
+    linear-gradient(115deg, transparent 0 18%, rgba(255,255,255,.42) 19%, transparent 21% 48%, rgba(255,255,255,.22) 50%, transparent 52%),
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 72% 18%, rgba(255,255,255,.8) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 72%, rgba(255,255,255,.8) 0 2px, transparent 3px);
+  background-size:260px 260px,140px 140px,180px 180px,210px 210px;
+  animation:qaV3BgDrift 16s linear infinite;
 }
 
-@keyframes qaFloatSparkles {
-  from { transform: translate3d(0,0,0); }
-  to { transform: translate3d(0,-22px,0); }
+body:has(.tool-shell)::after{
+  content:"";
+  position:fixed;
+  inset:auto -8% -18% -8%;
+  height:46vh;
+  z-index:-2;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at 25% 65%, rgba(255,121,184,.28), transparent 58%),
+    radial-gradient(ellipse at 70% 45%, rgba(139,92,246,.24), transparent 62%),
+    radial-gradient(ellipse at 50% 100%, rgba(255,255,255,.8), transparent 65%);
+  filter:blur(4px);
+  animation:qaV3Float 8s ease-in-out infinite alternate;
 }
 
-.tool-shell {
-  padding-top: 34px;
+@keyframes qaV3BgDrift{
+  from{background-position:0 0,0 0,0 0,0 0;}
+  to{background-position:260px 180px,140px 90px,-180px 120px,210px -90px;}
+}
+@keyframes qaV3Float{
+  from{transform:translateY(0) scale(1);}
+  to{transform:translateY(-22px) scale(1.035);}
+}
+@keyframes qaV3PulseGlow{
+  0%,100%{box-shadow:var(--qa-v3-shadow),0 0 0 rgba(255,111,175,0);}
+  50%{box-shadow:var(--qa-v3-shadow),0 0 28px rgba(255,111,175,.35),0 0 48px rgba(139,92,246,.2);}
+}
+@keyframes qaV3CardIn{
+  from{opacity:0; transform:translateY(18px) scale(.985);}
+  to{opacity:1; transform:translateY(0) scale(1);}
+}
+@keyframes qaV3Shine{
+  from{transform:translateX(-130%) rotate(12deg);}
+  to{transform:translateX(180%) rotate(12deg);}
 }
 
-.tool-topbar {
-  position: relative;
-  padding: 16px 18px;
-  border: 1px solid rgba(255,255,255,.68);
-  border-radius: 26px;
-  background: rgba(255,255,255,.52);
-  box-shadow: 0 18px 44px rgba(124,123,255,.12);
-  backdrop-filter: blur(18px) saturate(145%);
-  -webkit-backdrop-filter: blur(18px) saturate(145%);
+.tool-shell{
+  max-width:1180px !important;
+  padding:34px 18px 70px !important;
+  position:relative;
 }
 
-.tool-topbar::after {
-  content: "";
-  position: absolute;
-  right: 18px;
-  top: 14px;
-  width: 120px;
-  height: 42px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255,126,179,.18), rgba(95,199,255,.14));
-  filter: blur(2px);
-  z-index: -1;
+.tool-shell::before{
+  content:"✦";
+  position:fixed;
+  top:92px;
+  right:9vw;
+  color:rgba(255,111,175,.72);
+  font-size:42px;
+  text-shadow:0 0 20px rgba(255,111,175,.45);
+  animation:qaV3Float 4.5s ease-in-out infinite alternate;
+  pointer-events:none;
 }
 
-.tool-back,
-.tool-btn.primary,
-.profile-main-btn,
-.profile-upload-btn {
-  background: linear-gradient(135deg, #ff78b3 0%, #8d6cff 52%, #55c8ff 100%) !important;
-  box-shadow: 0 16px 34px rgba(124,123,255,.24), 0 0 24px rgba(255,126,179,.16) !important;
+.tool-topbar{
+  position:relative !important;
+  margin-bottom:24px !important;
+  padding:22px 24px !important;
+  border:1px solid var(--qa-v3-border) !important;
+  border-radius:28px !important;
+  background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(255,255,255,.38)) !important;
+  box-shadow:var(--qa-v3-shadow) !important;
+  backdrop-filter:blur(22px) saturate(1.35) !important;
+  -webkit-backdrop-filter:blur(22px) saturate(1.35) !important;
+  overflow:hidden;
 }
 
-.tool-back:hover,
-.tool-btn:hover,
-.profile-main-btn:hover,
-.profile-upload-btn:hover,
-.story-subject-card:hover,
-.story-branch-card:hover,
-.practice-option:hover,
-.profile-title-option:hover,
-.profile-achievement-card:hover,
-.history-card:hover {
-  transform: translateY(-2px);
+.tool-topbar::after{
+  content:"";
+  position:absolute;
+  inset:-80px auto -80px -110px;
+  width:90px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.65), transparent);
+  animation:qaV3Shine 4.8s ease-in-out infinite;
 }
 
-.summary-grid article,
+.tool-back{
+  width:48px !important;
+  height:48px !important;
+  border-radius:18px !important;
+  border:1px solid rgba(255,255,255,.75) !important;
+  background:linear-gradient(135deg,#ff79b9,#9b6cff) !important;
+  color:#fff !important;
+  box-shadow:0 14px 30px rgba(255,91,165,.32) !important;
+  transition:transform .22s ease, box-shadow .22s ease !important;
+}
+
+.tool-back:hover{
+  transform:translateY(-3px) rotate(-5deg);
+  box-shadow:0 18px 36px rgba(255,91,165,.42),0 0 24px rgba(155,108,255,.32) !important;
+}
+
+.tool-kicker{
+  letter-spacing:.18em !important;
+  text-transform:uppercase;
+  font-weight:900 !important;
+  color:#ff4f9e !important;
+}
+
+.tool-topbar h1{
+  color:#2d1648 !important;
+  font-weight:1000 !important;
+  letter-spacing:.04em;
+  text-shadow:0 2px 0 rgba(255,255,255,.72);
+}
+
 .tool-card,
+.summary-grid article,
 .question-card,
 .history-card,
 .analysis-card,
 .profile-achievement-card,
 .profile-title-option,
-.report-empty,
-.wrong-insight-grid article,
-.distribution-item,
-.radar-legend span,
-.practice-box > p,
-.story-progress-card,
-.story-modal,
 .daily-break-dialog,
-.story-subject-card,
-.story-branch-card,
-.story-mode-tab,
-.story-link-display,
-.story-duel-card,
-.duel-result-overlay {
-  border: 1px solid var(--qa-border) !important;
-  background: linear-gradient(145deg, rgba(255,255,255,.84), rgba(255,255,255,.56)) !important;
-  box-shadow: var(--qa-shadow), inset 0 1px 0 rgba(255,255,255,.72) !important;
-  backdrop-filter: blur(20px) saturate(145%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(145%) !important;
+.radar-layout,
+.knowledge-map-area,
+.wrong-book-item{
+  position:relative !important;
+  border:1px solid var(--qa-v3-border) !important;
+  border-radius:26px !important;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.74),rgba(255,255,255,.42)) !important;
+  box-shadow:var(--qa-v3-shadow) !important;
+  backdrop-filter:blur(22px) saturate(1.28) !important;
+  -webkit-backdrop-filter:blur(22px) saturate(1.28) !important;
+  overflow:hidden;
+  animation:qaV3CardIn .55s ease both;
 }
 
-.tool-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 24px;
+.tool-card::before,
+.summary-grid article::before,
+.profile-achievement-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.55),transparent 36%),
+    radial-gradient(circle at 92% 10%,rgba(255,111,175,.16),transparent 36%);
 }
 
-.tool-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 78px;
-  background: linear-gradient(90deg, rgba(255,126,179,.13), rgba(141,108,255,.08), rgba(95,199,255,.12));
-  pointer-events: none;
+.tool-card:hover,
+.summary-grid article:hover,
+.question-card:hover,
+.history-card:hover,
+.profile-achievement-card:hover{
+  transform:translateY(-4px);
+  transition:transform .22s ease, box-shadow .22s ease;
+  box-shadow:0 26px 65px rgba(126,56,170,.28),var(--qa-v3-glow) !important;
 }
-
-.tool-card > * { position: relative; }
 
 .tool-card-head h2,
-.analysis-card h3,
-.story-stage-card h4,
-.profile-main h2,
-.story-hero-card h2 {
-  color: var(--qa-ink) !important;
-  letter-spacing: -.02em;
+.tool-card h2,
+.summary-grid strong{
+  color:#35164d !important;
+  font-weight:1000 !important;
 }
 
-.tool-kicker,
-.profile-kicker,
-.achievement-showcase-title,
-.story-tool-panel label,
-.report-search label {
-  color: #8b63d9 !important;
-}
-
+.tool-card p,
 .tool-note,
-.story-clear-state,
-.story-scene,
-.story-play-area > p,
-.report-empty,
-.profile-main p,
-.question-card p,
+.summary-grid span,
 .history-card span,
-.story-subject-card span,
-.story-branch-card span,
-.wrong-insight-grid span,
-.duel-progress-row,
-.duel-final-scores span {
-  color: var(--qa-muted) !important;
+.question-card p,
+.profile-main p,
+label,
+small{
+  color:#6d557e !important;
 }
 
-.question-tags span,
+.tool-btn,
+.story-mode-tab,
 .answer-pill,
 .profile-chip-row span,
-.profile-count-badge,
-.profile-title-pill,
-.friend-badge-chip {
-  border: 1px solid rgba(255,126,179,.28) !important;
-  color: #c94f8c !important;
-  background: linear-gradient(135deg, rgba(255,238,247,.95), rgba(239,236,255,.86)) !important;
+.filter-chip,
+button:not(.mobile-drawer-close):not(.hamburger-btn):not(.dark-mode-btn){
+  border:1px solid rgba(255,255,255,.72) !important;
+  border-radius:16px !important;
+  background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(255,255,255,.36)) !important;
+  box-shadow:0 12px 28px rgba(134,73,174,.16) !important;
+  color:#46225f !important;
+  backdrop-filter:blur(16px) !important;
+  -webkit-backdrop-filter:blur(16px) !important;
 }
 
-.report-search input,
-.practice-input,
-.story-link-input,
-.profile-select {
-  background: rgba(255,255,255,.82) !important;
-  border: 2px solid rgba(141,108,255,.18) !important;
-  color: var(--qa-ink) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.75), 0 12px 24px rgba(124,123,255,.08) !important;
+.tool-btn.primary,
+button.primary{
+  background:linear-gradient(135deg,#ff68ad,#9a67ff) !important;
+  color:#fff !important;
+  box-shadow:0 16px 34px rgba(255,91,165,.34) !important;
 }
 
-.report-search input:focus,
-.practice-input:focus,
-.story-link-input:focus,
-.profile-select:focus {
-  border-color: rgba(255,126,179,.65) !important;
-  box-shadow: 0 0 0 5px rgba(255,126,179,.13), 0 16px 30px rgba(124,123,255,.12) !important;
+.tool-btn.secondary{
+  background:linear-gradient(135deg,#64d7ff,#8f7cff) !important;
+  color:#fff !important;
 }
 
-/* Story mode: more story, movement, and game-like interaction */
-.story-shell .tool-topbar {
+input,
+select,
+textarea{
+  border:1px solid rgba(255,255,255,.78) !important;
+  border-radius:18px !important;
+  background:rgba(255,255,255,.66) !important;
+  color:#321848 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 10px 24px rgba(126,56,170,.10) !important;
+}
+input::placeholder,
+textarea::placeholder{color:rgba(70,34,95,.55) !important;}
+
+/* --------------------------
+   Story Mode：RPG 章節感
+   -------------------------- */
+body:has(.story-shell){
   background:
-    linear-gradient(135deg, rgba(255,255,255,.74), rgba(255,244,251,.48)),
-    radial-gradient(circle at right top, rgba(255,126,179,.2), transparent 34%);
+    radial-gradient(circle at 74% 18%, rgba(255,206,114,.42) 0 9%, transparent 25%),
+    radial-gradient(circle at 18% 14%, rgba(164,107,255,.42) 0 16%, transparent 35%),
+    linear-gradient(rgba(34,13,69,.15),rgba(34,13,69,.22)),
+    url("../images/create_bg.png"),
+    linear-gradient(135deg,#261047 0%,#5c2a8e 43%,#ff7ab8 100%) !important;
+  background-size:cover,cover,cover,cover,cover !important;
+  background-position:center !important;
+  background-attachment:fixed !important;
 }
 
-.story-hero-card {
-  min-height: 250px;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 250px);
+.story-shell::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
   background:
-    linear-gradient(135deg, rgba(255,255,255,.74), rgba(246,241,255,.58)) !important,
-    radial-gradient(circle at 94% 12%, rgba(255,126,179,.28), transparent 34%) !important;
+    radial-gradient(circle at 15% 24%, rgba(255,255,255,.9) 0 1px, transparent 2px),
+    radial-gradient(circle at 62% 18%, rgba(255,255,255,.8) 0 2px, transparent 3px),
+    radial-gradient(circle at 79% 52%, rgba(255,217,122,.9) 0 2px, transparent 3px),
+    radial-gradient(circle at 35% 78%, rgba(255,255,255,.75) 0 1px, transparent 2px);
+  background-size:150px 150px,220px 220px,180px 180px,260px 260px;
+  animation:qaV3BgDrift 20s linear infinite;
 }
 
-.story-hero-card::after {
-  content: "QUEST MAP";
-  position: absolute;
-  right: -18px;
-  bottom: 12px;
-  color: rgba(124,123,255,.08);
-  font-size: clamp(3.5rem, 9vw, 7.5rem);
-  font-weight: 1000;
-  letter-spacing: -.06em;
-  pointer-events: none;
+.story-shell .tool-topbar{
+  background:linear-gradient(135deg,rgba(52,20,91,.76),rgba(158,70,186,.42)) !important;
+  border-color:rgba(255,255,255,.32) !important;
+  color:#fff !important;
 }
 
-.story-progress-card {
-  position: relative;
-  overflow: hidden;
-  min-height: 150px;
-  display: grid;
-  align-content: center;
+.story-shell .tool-topbar h1,
+.story-shell .tool-kicker{
+  color:#fff !important;
+  text-shadow:0 0 18px rgba(255,122,196,.55);
 }
 
-.story-progress-card::before {
-  content: "";
-  position: absolute;
-  inset: -60px -40px auto auto;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: conic-gradient(from 160deg, rgba(255,126,179,.45), rgba(141,108,255,.32), rgba(95,199,255,.32), rgba(255,126,179,.45));
-  filter: blur(2px);
-  opacity: .78;
-}
-
-.story-subject-grid,
-.story-branch-list {
-  position: relative;
-}
-
-.story-subject-grid::before,
-.story-branch-list::before {
-  content: "";
-  position: absolute;
-  left: 24px;
-  right: 24px;
-  top: 50%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(141,108,255,.26), rgba(255,126,179,.28), transparent);
-  z-index: 0;
-}
-
-.story-subject-card,
-.story-branch-card,
-.story-mode-tab {
-  position: relative;
-  z-index: 1;
-  overflow: hidden;
-}
-
-.story-subject-card::after,
-.story-branch-card::after,
-.story-mode-tab::after {
-  content: "";
-  position: absolute;
-  inset: auto -40px -52px auto;
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,126,179,.22), transparent 64%);
-  transition: transform .24s ease, opacity .24s ease;
-}
-
-.story-subject-card:hover::after,
-.story-branch-card:hover::after,
-.story-mode-tab:hover::after {
-  transform: scale(1.24) translate(-8px, -6px);
-  opacity: .95;
-}
-
-.story-subject-card i {
-  box-shadow: 0 12px 26px rgba(255,126,179,.22);
-}
-
-.story-subject-card.active,
-.story-branch-card.active,
-.story-mode-tab.active {
-  border-color: rgba(255,126,179,.62) !important;
-  background: linear-gradient(135deg, rgba(255,241,248,.92), rgba(239,236,255,.86)) !important;
-  box-shadow: 0 20px 44px rgba(255,126,179,.17), 0 0 0 5px rgba(255,126,179,.08) !important;
-}
-
-.story-stage-card {
-  position: relative;
-  padding: 18px;
-  border-radius: 22px;
+.story-hero-card{
+  min-height:250px !important;
+  padding:36px !important;
+  border-radius:34px !important;
   background:
-    linear-gradient(135deg, rgba(255,255,255,.86), rgba(245,248,255,.66)),
-    linear-gradient(90deg, rgba(255,126,179,.11), rgba(141,108,255,.08));
+    linear-gradient(135deg,rgba(42,16,82,.76),rgba(129,52,177,.54)),
+    radial-gradient(circle at 83% 16%,rgba(255,218,118,.72),transparent 18%),
+    url("../images/girl-bg.png") !important;
+  background-size:cover !important;
+  background-position:center !important;
+  color:#fff !important;
+  border-color:rgba(255,255,255,.36) !important;
+  box-shadow:0 30px 80px rgba(40,12,76,.38),0 0 50px rgba(255,113,178,.28) !important;
+  animation:qaV3PulseGlow 3.6s ease-in-out infinite;
 }
 
-.story-heart-row {
-  padding: 8px 12px;
-  width: fit-content;
-  border-radius: 999px;
-  background: rgba(255,238,247,.9);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+.story-hero-card::after{
+  content:"RPG QUEST";
+  position:absolute;
+  right:26px;
+  top:22px;
+  padding:8px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.38);
+  background:rgba(255,255,255,.14);
+  color:rgba(255,255,255,.78);
+  letter-spacing:.16em;
+  font-size:.72rem;
+  font-weight:900;
 }
 
-.story-link-display,
-.story-link-input,
-.story-paste-row .tool-btn {
-  min-height: 46px;
+.story-hero-card h2{
+  max-width:660px;
+  color:#fff !important;
+  font-size:clamp(2rem,4.5vw,4.8rem) !important;
+  line-height:1.05 !important;
+  text-shadow:0 8px 22px rgba(0,0,0,.26),0 0 30px rgba(255,128,196,.35);
 }
 
-.story-link-value {
-  color: #5a4fcf !important;
+.story-hero-card p{
+  color:rgba(255,255,255,.88) !important;
+  font-size:1.05rem;
 }
 
-.duel-timer-label {
-  color: var(--qa-ink) !important;
-  text-shadow: 0 6px 18px rgba(124,123,255,.12);
+.story-progress-card{
+  background:rgba(255,255,255,.18) !important;
+  border:1px solid rgba(255,255,255,.34) !important;
+  border-radius:24px !important;
+  backdrop-filter:blur(18px) !important;
+  color:#fff !important;
 }
 
-.duel-timer-fill {
-  background: linear-gradient(90deg, #48d8c2, #8d6cff, #ff7eb3) !important;
-  box-shadow: 0 0 22px rgba(255,126,179,.24);
+.story-mode-picker-card{
+  background:linear-gradient(135deg,rgba(255,255,255,.68),rgba(246,230,255,.48)) !important;
 }
 
-.duel-player {
-  padding: 12px;
-  border-radius: 18px;
-  background: rgba(255,255,255,.54);
-  border: 1px solid rgba(255,255,255,.62);
+.story-mode-tabs{
+  gap:16px !important;
 }
 
-.duel-avatar {
-  color: #fff;
-  box-shadow: 0 12px 24px rgba(124,123,255,.22);
+.story-mode-tab{
+  min-height:132px !important;
+  padding:20px !important;
+  border-radius:24px !important;
+  overflow:hidden;
 }
 
-.duel-question-box {
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(255,255,255,.58);
-  color: #1f2b54 !important;
-  border: 1px solid rgba(124,123,255,.12);
+.story-mode-tab:nth-child(1){
+  background:linear-gradient(135deg,rgba(255,236,249,.88),rgba(255,127,185,.36)) !important;
+}
+.story-mode-tab:nth-child(2){
+  background:linear-gradient(135deg,rgba(239,229,255,.9),rgba(139,92,246,.36)) !important;
+}
+.story-mode-tab:nth-child(3){
+  background:linear-gradient(135deg,rgba(223,255,250,.92),rgba(57,217,232,.34)) !important;
 }
 
-.duel-option-btn,
-.practice-option,
-.option-list li,
-.insight-list li {
-  background: rgba(255,255,255,.66) !important;
-  border-color: rgba(124,123,255,.16) !important;
-  color: var(--qa-ink) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+.story-mode-tab i{
+  width:42px;
+  height:42px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:16px;
+  background:rgba(255,255,255,.55);
+  box-shadow:0 10px 24px rgba(126,56,170,.14);
+  color:#8b5cf6;
 }
 
-.duel-option-btn span,
-.duel-player strong,
-.duel-result-card h2 {
-  color: var(--qa-ink) !important;
+.story-mode-tab.active{
+  transform:translateY(-5px) scale(1.015);
+  outline:2px solid rgba(255,255,255,.8);
+  box-shadow:0 20px 44px rgba(255,83,160,.32),0 0 32px rgba(139,92,246,.28) !important;
 }
 
-/* Daily mission */
-.daily-streak-row {
-  padding: 14px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(255,238,247,.72), rgba(239,245,255,.7));
-  border: 1px solid rgba(255,255,255,.68);
-}
-.daily-streak-dot {
-  box-shadow: 0 0 0 4px rgba(255,143,189,.1), inset 0 0 0 2px rgba(255,255,255,.75);
-}
-.daily-streak-dot.active {
-  background: linear-gradient(135deg, #ff6ba6, #8d6cff);
-  box-shadow: 0 0 20px rgba(255,107,166,.28);
-}
-.practice-card {
-  padding: 4px;
-}
-.practice-option.selected {
-  background: linear-gradient(135deg, rgba(240,237,255,.94), rgba(255,240,248,.88)) !important;
-}
-.practice-option.correct { color: #23694e !important; }
-.practice-option.wrong { color: #9f2d42 !important; }
-
-/* Teacher report */
-.report-table th {
-  color: #745fd6 !important;
-  background: rgba(239,236,255,.72);
-}
-.report-table td {
-  color: #34405f;
-  background: rgba(255,255,255,.46);
-}
-.report-table tr:hover td {
-  background: rgba(255,240,248,.7);
-}
-.distribution-bar {
-  background: linear-gradient(180deg, rgba(255,246,251,.96), rgba(238,247,255,.94)) !important;
-}
-.report-correct-answer {
-  background: linear-gradient(135deg, rgba(239,253,245,.95), rgba(242,255,251,.82)) !important;
+.story-mode-tab strong{
+  color:#2f164a !important;
+  font-size:1.1rem;
 }
 
-/* Wrong book */
-.wrong-insight-grid article {
-  position: relative;
-  overflow: hidden;
-}
-.wrong-insight-grid article::after {
-  content: "";
-  position: absolute;
-  right: -26px;
-  bottom: -36px;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(141,108,255,.18), transparent 65%);
-}
-.explanation-box {
-  border-left-color: #ff7eb3 !important;
-  background: linear-gradient(135deg, rgba(255,246,251,.95), rgba(245,248,255,.82)) !important;
-  color: #4d5572 !important;
+.story-mode-tab span{
+  color:#765685 !important;
 }
 
-/* Profile */
-.profile-hero {
+.story-path-list,
+.story-stage-list,
+.story-room-panel,
+.story-battle-panel{
+  position:relative;
+}
+
+.story-path-card,
+.story-stage-card,
+.story-room-card,
+.story-battle-card,
+.story-link-panel,
+.story-current-challenge{
+  border:1px solid rgba(255,255,255,.7) !important;
+  border-radius:24px !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.74),rgba(255,255,255,.38)) !important;
+  box-shadow:0 16px 36px rgba(76,32,126,.18) !important;
+  backdrop-filter:blur(18px) !important;
+}
+
+.story-path-card:hover,
+.story-stage-card:hover{
+  transform:translateY(-6px) rotate(.4deg);
+  box-shadow:0 26px 55px rgba(98,44,144,.28),0 0 28px rgba(255,111,175,.2) !important;
+}
+
+.story-stage-card::before,
+.story-path-card::before{
+  content:"✦";
+  position:absolute;
+  right:18px;
+  top:14px;
+  color:rgba(255,111,175,.62);
+  text-shadow:0 0 16px rgba(255,111,175,.45);
+}
+
+.answer-pill{
+  background:linear-gradient(135deg,#ffd36f,#ff6faf) !important;
+  color:#fff !important;
+  font-weight:900 !important;
+}
+
+/* --------------------------
+   Daily：任務公告板感
+   -------------------------- */
+body:has(.daily-summary-grid){
   background:
-    linear-gradient(135deg, rgba(255,255,255,.8), rgba(246,241,255,.58)) !important,
-    radial-gradient(circle at right top, rgba(255,126,179,.24), transparent 35%) !important;
-}
-.profile-hero-avatar,
-.avatar-stage {
-  border-color: rgba(255,255,255,.95) !important;
-  box-shadow: 0 20px 42px rgba(124,123,255,.2), 0 0 0 8px rgba(255,255,255,.42) !important;
-}
-.avatar-stage,
-.profile-composite-avatar {
-  background: linear-gradient(135deg, #fff8fb, #f0edff) !important;
-}
-.profile-achievements,
-.profile-title-list {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(141,108,255,.42) rgba(255,255,255,.4);
-}
-.profile-achievement-card,
-.profile-title-option {
-  min-height: 72px;
-}
-.profile-achievement-card strong,
-.profile-title-option strong {
-  color: #2b3362 !important;
-}
-.profile-achievement-card span,
-.profile-title-option span {
-  color: #747da2 !important;
-}
-.avatar-tabs button,
-.profile-soft-btn {
-  color: #6756c9 !important;
-  background: linear-gradient(135deg, rgba(243,240,255,.95), rgba(255,240,248,.82)) !important;
-  border: 1px solid rgba(124,123,255,.14) !important;
-}
-.avatar-tabs button.active {
-  color: #fff !important;
-  background: linear-gradient(135deg, #7c7bff, #48c0d8) !important;
+    linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,.22)),
+    url("../images/waiting.jpg"),
+    linear-gradient(135deg,#dffcf4,#fff1c8 52%,#ffe2f1) !important;
+  background-size:cover !important;
+  background-position:center !important;
+  background-attachment:fixed !important;
 }
 
-/* Dark mode override for the same pages */
-body.dark-mode {
-  --qa-ink: #f7f2ff;
-  --qa-muted: rgba(247,242,255,.74);
-  --qa-border: rgba(255,255,255,.16);
-  --qa-shadow: 0 24px 70px rgba(0,0,0,.42);
-  background-image:
-    radial-gradient(circle at 12% 10%, rgba(255,126,179,.23), transparent 30%),
-    radial-gradient(circle at 86% 8%, rgba(95,199,255,.18), transparent 28%),
-    radial-gradient(circle at 50% 92%, rgba(141,108,255,.20), transparent 34%),
-    linear-gradient(135deg, #080b1b 0%, #141832 52%, #201b3d 100%) !important;
+body:has(.daily-summary-grid) .tool-topbar{
+  background:linear-gradient(135deg,rgba(51,201,139,.78),rgba(69,207,232,.46)) !important;
 }
+body:has(.daily-summary-grid) .tool-topbar h1,
+body:has(.daily-summary-grid) .tool-kicker{
+  color:#fff !important;
+  text-shadow:0 3px 16px rgba(0,95,86,.25);
+}
+.daily-summary-grid article:nth-child(1){background:linear-gradient(135deg,rgba(229,255,247,.82),rgba(50,201,139,.28)) !important;}
+.daily-summary-grid article:nth-child(2){background:linear-gradient(135deg,rgba(255,249,224,.86),rgba(248,184,78,.30)) !important;}
+.daily-summary-grid article:nth-child(3){background:linear-gradient(135deg,rgba(232,247,255,.86),rgba(58,168,255,.28)) !important;}
 
-body.dark-mode::before {
+/* --------------------------
+   Teacher：藍色分析儀表板
+   -------------------------- */
+body:has(.report-search){
   background:
-    radial-gradient(circle at 8% 18%, rgba(255,255,255,.22) 0 1px, transparent 2px),
-    radial-gradient(circle at 20% 38%, rgba(255,126,179,.24) 0 1px, transparent 2px),
-    radial-gradient(circle at 38% 14%, rgba(141,108,255,.23) 0 1px, transparent 2px),
-    radial-gradient(circle at 78% 20%, rgba(95,199,255,.22) 0 1px, transparent 2px),
-    linear-gradient(180deg, rgba(8,11,27,.24), rgba(8,11,27,.62)) !important;
-  background-size: 160px 160px, 220px 220px, 190px 190px, 240px 240px, auto;
+    radial-gradient(circle at 82% 16%, rgba(57,217,232,.36), transparent 30%),
+    radial-gradient(circle at 15% 80%, rgba(139,92,246,.28), transparent 38%),
+    linear-gradient(135deg,#eaf7ff 0%,#eef1ff 40%,#dbeaff 100%) !important;
+  background-attachment:fixed !important;
+}
+body:has(.report-search) .tool-topbar{
+  background:linear-gradient(135deg,rgba(34,120,255,.78),rgba(71,213,255,.42)) !important;
+}
+body:has(.report-search) .tool-topbar h1,
+body:has(.report-search) .tool-kicker{color:#fff !important;}
+.report-search{
+  background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(222,240,255,.48)) !important;
+}
+.report-search-row .tool-btn:nth-of-type(1){background:linear-gradient(135deg,#3aa8ff,#7367ff) !important;color:#fff !important;}
+.report-search-row .tool-btn:nth-of-type(2){background:linear-gradient(135deg,#39d9e8,#32c98b) !important;color:#fff !important;}
+.report-search-row .tool-btn:nth-of-type(3){background:linear-gradient(135deg,#32c98b,#f8b84e) !important;color:#fff !important;}
+.report-search-row .tool-btn:nth-of-type(4){background:linear-gradient(135deg,#8b5cf6,#ff6faf) !important;color:#fff !important;}
+
+/* --------------------------
+   Wrong Book：錯題魔法書
+   -------------------------- */
+body:has(#wrongItemCount){
+  background:
+    linear-gradient(rgba(255,230,242,.36),rgba(255,220,240,.28)),
+    url("../images/modal-bg.jpg"),
+    linear-gradient(135deg,#ffe7f2,#f6e2ff) !important;
+  background-size:cover !important;
+  background-position:center !important;
+  background-attachment:fixed !important;
+}
+body:has(#wrongItemCount) .tool-topbar{
+  background:linear-gradient(135deg,rgba(255,79,158,.82),rgba(139,92,246,.42)) !important;
+}
+body:has(#wrongItemCount) .tool-topbar h1,
+body:has(#wrongItemCount) .tool-kicker{color:#fff !important;}
+
+/* --------------------------
+   Profile：金色冒險者檔案
+   -------------------------- */
+body:has(.profile-hero){
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,223,136,.36), transparent 30%),
+    radial-gradient(circle at 83% 20%, rgba(255,111,175,.24), transparent 34%),
+    linear-gradient(rgba(255,255,255,.34),rgba(255,255,255,.22)),
+    url("../images/bannerbg2.jpg"),
+    linear-gradient(135deg,#fff8df,#ffe6f5) !important;
+  background-size:cover !important;
+  background-position:center !important;
+  background-attachment:fixed !important;
+}
+.profile-hero{
+  background:linear-gradient(135deg,rgba(255,246,220,.82),rgba(255,255,255,.52)) !important;
+}
+.profile-hero-avatar{
+  border:3px solid rgba(255,255,255,.85) !important;
+  background:linear-gradient(135deg,#fff1b8,#ff8fc2) !important;
+  box-shadow:0 16px 40px rgba(255,171,64,.28),0 0 24px rgba(255,111,175,.22) !important;
+}
+.profile-achievement-card{
+  background:linear-gradient(145deg,rgba(255,255,255,.75),rgba(255,246,220,.48)) !important;
 }
 
-body.dark-mode::after {
-  background: radial-gradient(circle at center top, rgba(255,255,255,.06), transparent 42%), radial-gradient(circle at center, transparent 45%, rgba(0,0,0,.45) 100%) !important;
+/* --------------------------
+   深色模式：所有淺底改深玻璃，字強制可讀
+   -------------------------- */
+body.dark-mode:has(.tool-shell),
+body.dark-mode:has(.profile-hero){
+  color:#f8f1ff !important;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(255,111,175,.22), transparent 34%),
+    radial-gradient(circle at 82% 20%, rgba(57,217,232,.18), transparent 34%),
+    linear-gradient(135deg,#080716 0%,#151333 44%,#281647 100%) !important;
+  background-attachment:fixed !important;
 }
 
 body.dark-mode .tool-topbar,
-body.dark-mode .summary-grid article,
 body.dark-mode .tool-card,
+body.dark-mode .summary-grid article,
 body.dark-mode .question-card,
 body.dark-mode .history-card,
 body.dark-mode .analysis-card,
 body.dark-mode .profile-achievement-card,
 body.dark-mode .profile-title-option,
-body.dark-mode .report-empty,
-body.dark-mode .wrong-insight-grid article,
-body.dark-mode .distribution-item,
-body.dark-mode .radar-legend span,
-body.dark-mode .practice-box > p,
-body.dark-mode .story-progress-card,
-body.dark-mode .story-modal,
 body.dark-mode .daily-break-dialog,
-body.dark-mode .story-subject-card,
-body.dark-mode .story-branch-card,
+body.dark-mode .radar-layout,
+body.dark-mode .wrong-book-item,
 body.dark-mode .story-mode-tab,
-body.dark-mode .story-link-display,
-body.dark-mode .story-duel-card,
-body.dark-mode .duel-result-overlay,
-body.dark-mode .duel-player,
-body.dark-mode .duel-question-box,
-body.dark-mode .daily-streak-row {
-  background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.055)) !important;
-  border-color: rgba(255,255,255,.17) !important;
-  color: #f7f2ff !important;
-  box-shadow: 0 24px 70px rgba(0,0,0,.42), 0 0 32px rgba(255,126,179,.12), inset 0 1px 0 rgba(255,255,255,.10) !important;
-  backdrop-filter: blur(20px) saturate(130%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(130%) !important;
+body.dark-mode .story-path-card,
+body.dark-mode .story-stage-card,
+body.dark-mode .story-room-card,
+body.dark-mode .story-battle-card,
+body.dark-mode .story-link-panel{
+  background:linear-gradient(145deg,rgba(24,22,48,.78),rgba(33,27,66,.48)) !important;
+  border-color:rgba(255,255,255,.18) !important;
+  color:#f8f1ff !important;
+  box-shadow:0 24px 58px rgba(0,0,0,.45),0 0 32px rgba(255,111,175,.12) !important;
 }
 
-body.dark-mode .tool-card::before {
-  background: linear-gradient(90deg, rgba(255,126,179,.14), rgba(141,108,255,.11), rgba(95,199,255,.12));
+body.dark-mode .story-hero-card{
+  background:
+    linear-gradient(135deg,rgba(24,9,52,.82),rgba(101,38,150,.55)),
+    radial-gradient(circle at 83% 16%,rgba(255,218,118,.36),transparent 18%),
+    url("../images/girl-bg.png") !important;
+  background-size:cover !important;
 }
 
 body.dark-mode h1,
 body.dark-mode h2,
 body.dark-mode h3,
 body.dark-mode h4,
-body.dark-mode h5,
+body.dark-mode strong,
+body.dark-mode .tool-topbar h1,
 body.dark-mode .tool-card-head h2,
-body.dark-mode .analysis-card h3,
-body.dark-mode .story-stage-card h4,
-body.dark-mode .profile-main h2,
-body.dark-mode .story-hero-card h2,
-body.dark-mode .profile-achievement-card strong,
-body.dark-mode .profile-title-option strong,
-body.dark-mode .story-subject-card strong,
-body.dark-mode .story-branch-card strong,
 body.dark-mode .story-mode-tab strong,
-body.dark-mode .duel-player strong,
-body.dark-mode .duel-question-box,
-body.dark-mode .duel-option-btn span,
-body.dark-mode .duel-result-card h2,
-body.dark-mode .duel-timer-label,
-body.dark-mode .report-table td,
-body.dark-mode .question-card h3,
-body.dark-mode .history-card strong {
-  color: #f7f2ff !important;
-  -webkit-text-fill-color: currentColor !important;
+body.dark-mode .summary-grid strong,
+body.dark-mode .profile-main h2{
+  color:#fff8ff !important;
+  text-shadow:0 0 18px rgba(255,143,196,.16);
 }
 
 body.dark-mode p,
 body.dark-mode span,
-body.dark-mode label,
 body.dark-mode small,
+body.dark-mode label,
 body.dark-mode .tool-note,
-body.dark-mode .story-clear-state,
-body.dark-mode .story-scene,
-body.dark-mode .story-play-area > p,
-body.dark-mode .report-empty,
-body.dark-mode .profile-main p,
-body.dark-mode .question-card p,
-body.dark-mode .history-card span,
-body.dark-mode .story-subject-card span,
-body.dark-mode .story-branch-card span,
-body.dark-mode .story-mode-tab span,
-body.dark-mode .wrong-insight-grid span,
-body.dark-mode .duel-progress-row,
-body.dark-mode .duel-final-scores span,
-body.dark-mode .profile-achievement-card span,
-body.dark-mode .profile-title-option span,
-body.dark-mode .daily-day-info {
-  color: rgba(247,242,255,.74) !important;
-}
-
 body.dark-mode .tool-kicker,
-body.dark-mode .profile-kicker,
-body.dark-mode .achievement-showcase-title,
-body.dark-mode .story-tool-panel label,
-body.dark-mode .report-search label,
-body.dark-mode .eye-slider-label,
-body.dark-mode .profile-language-row {
-  color: #ffd2e6 !important;
+body.dark-mode .story-mode-tab span,
+body.dark-mode .summary-grid span,
+body.dark-mode .history-card span,
+body.dark-mode .question-card p,
+body.dark-mode .profile-main p{
+  color:rgba(248,241,255,.78) !important;
 }
 
-body.dark-mode .question-tags span,
-body.dark-mode .answer-pill,
-body.dark-mode .profile-chip-row span,
-body.dark-mode .profile-count-badge,
-body.dark-mode .profile-title-pill,
-body.dark-mode .friend-badge-chip,
-body.dark-mode .story-heart-row {
-  color: #ffd2e6 !important;
-  background: linear-gradient(135deg, rgba(255,126,179,.16), rgba(141,108,255,.14)) !important;
-  border-color: rgba(255,255,255,.16) !important;
-}
-
-body.dark-mode .report-search input,
-body.dark-mode .practice-input,
-body.dark-mode .story-link-input,
-body.dark-mode .profile-select,
 body.dark-mode input,
-body.dark-mode textarea,
-body.dark-mode select {
-  background: rgba(8,12,30,.72) !important;
-  border-color: rgba(255,255,255,.18) !important;
-  color: #f7f2ff !important;
+body.dark-mode select,
+body.dark-mode textarea{
+  background:rgba(255,255,255,.10) !important;
+  border-color:rgba(255,255,255,.22) !important;
+  color:#fff !important;
+}
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder{
+  color:rgba(255,255,255,.48) !important;
 }
 
-body.dark-mode .report-search input::placeholder,
-body.dark-mode .practice-input::placeholder,
-body.dark-mode .story-link-input::placeholder {
-  color: rgba(247,242,255,.44) !important;
-}
-
-body.dark-mode .duel-option-btn,
-body.dark-mode .practice-option,
-body.dark-mode .option-list li,
-body.dark-mode .insight-list li,
-body.dark-mode .report-table td,
-body.dark-mode .report-table th,
-body.dark-mode .distribution-bar,
-body.dark-mode .explanation-box,
-body.dark-mode .report-correct-answer,
-body.dark-mode .avatar-stage,
-body.dark-mode .profile-composite-avatar,
-body.dark-mode .avatar-tabs button,
-body.dark-mode .profile-soft-btn {
-  background: rgba(255,255,255,.075) !important;
-  border-color: rgba(255,255,255,.14) !important;
-  color: #f7f2ff !important;
-}
-
-body.dark-mode .avatar-tabs button.active,
-body.dark-mode .tool-btn.primary,
-body.dark-mode .profile-main-btn,
-body.dark-mode .profile-upload-btn {
-  color: #fff !important;
-  background: linear-gradient(135deg, #ff78b3, #8d6cff, #55c8ff) !important;
-}
-
-body.dark-mode .story-subject-card.active,
-body.dark-mode .story-branch-card.active,
-body.dark-mode .story-mode-tab.active,
-body.dark-mode .practice-option.selected,
-body.dark-mode .profile-title-option.active {
-  background: linear-gradient(135deg, rgba(255,126,179,.18), rgba(141,108,255,.14), rgba(95,199,255,.10)) !important;
-  border-color: rgba(255,126,179,.45) !important;
-}
-
-body.dark-mode .practice-option.correct,
-body.dark-mode .duel-option-btn.duel-correct,
-body.dark-mode .coop-answered-msg {
-  background: rgba(67,160,71,.22) !important;
-  border-color: rgba(67,210,132,.46) !important;
-  color: #c9ffe0 !important;
-}
-
-body.dark-mode .practice-option.wrong,
-body.dark-mode .duel-option-btn.duel-wrong {
-  background: rgba(229,57,53,.22) !important;
-  border-color: rgba(255,107,134,.5) !important;
-  color: #ffd3dc !important;
-}
-
-@media (max-width: 720px) {
-  .tool-shell { width: min(100% - 20px, 1100px); padding-top: 18px; }
-  .tool-topbar { border-radius: 20px; padding: 14px; }
-  .story-hero-card { min-height: unset; }
-  .story-subject-grid::before,
-  .story-branch-list::before { display: none; }
-  .duel-score-row { align-items: stretch; flex-direction: column; }
-  .duel-player-left,
-  .duel-player-right { align-items: center; }
-  .duel-vs-badge { text-align: center; }
+@media (max-width:768px){
+  .tool-shell{padding:18px 12px 44px !important;}
+  .tool-topbar{border-radius:22px !important;padding:16px !important;}
+  .story-hero-card{min-height:220px !important;padding:24px !important;}
+  .story-hero-card h2{font-size:2rem !important;}
+  .story-mode-tab{min-height:112px !important;}
 }
