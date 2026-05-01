@@ -134,12 +134,21 @@ function renderProfile(profile) {
     return m[icon] || 'linear-gradient(135deg,#6366f1,#8b5cf6)';
   }
 
+  function achievementRarity(item) {
+    const target = Number(item?.target || 1);
+    const icon = String(item?.icon || "");
+    if (target >= 50 || icon.includes("crown") || icon.includes("gem") || icon.includes("bolt")) return "legendary";
+    if (target >= 20 || icon.includes("trophy") || icon.includes("medal")) return "epic";
+    if (target >= 5 || icon.includes("chart") || icon.includes("route")) return "rare";
+    return "common";
+  }
+
   function renderShowcase() {
     const wrap = $("achievementShowcase"); if (!wrap) return;
     const showcased = showcaseIds.map(id => unlocked.find(a => a.id === id)).filter(Boolean);
     if (!showcased.length) { wrap.innerHTML = `<div class="showcase-empty"><i class="fa-regular fa-star"></i> 從下方點選 3～5 個成就放上展示牆</div>`; return; }
     wrap.innerHTML = showcased.map(item => `
-      <div class="showcase-badge" title="${escapeHtml(item.title)}" style="background:${getBadgeGradient(item.icon || 'fa-award')};">
+      <div class="showcase-badge rarity-${achievementRarity(item)}" title="${escapeHtml(item.title)}" style="background:${getBadgeGradient(item.icon || 'fa-award')};">
         <i class="fa-solid ${escapeHtml(item.icon || 'fa-award')} showcase-badge-icon"></i>
         <span class="showcase-badge-label">${escapeHtml(item.title)}</span>
         <button class="showcase-remove" data-id="${escapeHtml(item.id)}" type="button" title="移除"><i class="fa-solid fa-xmark"></i></button>
@@ -152,7 +161,7 @@ function renderProfile(profile) {
   function renderAchievementList() {
     $("profileAchievementsList").innerHTML = unlocked.length ? unlocked.map((item) => {
       const inShowcase = showcaseIds.includes(item.id);
-      return `<article class="profile-achievement-card">
+      return `<article class="profile-achievement-card rarity-${achievementRarity(item)}">
         <div class="achievement-badge-icon" style="background:${getBadgeGradient(item.icon || 'fa-award')};"><i class="fa-solid ${escapeHtml(item.icon || 'fa-award')}"></i></div>
         <div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.description)}</span></div>
         <button class="showcase-toggle-btn ${inShowcase ? 'active' : ''}" data-id="${escapeHtml(item.id)}" type="button">${inShowcase ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>'}</button>

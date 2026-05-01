@@ -238,6 +238,92 @@
     flex-shrink: 0;
   }
   body.dark-mode .unav-footer { color: #7a4060; }
+
+  /* Kawaii fantasy drawer final override */
+  .unav-fab,
+  .unav-dark-fab {
+    border: 1px solid rgba(255,255,255,.55) !important;
+    backdrop-filter: blur(16px) saturate(145%);
+    -webkit-backdrop-filter: blur(16px) saturate(145%);
+    transition: all .35s ease !important;
+  }
+  .unav-fab {
+    background: linear-gradient(135deg, #ff75ad 0%, #a78bfa 58%, #64d2ff 100%) !important;
+    box-shadow: 0 0 24px rgba(255,117,173,.34), 0 14px 28px rgba(124,123,255,.20) !important;
+  }
+  .unav-dark-fab {
+    background: linear-gradient(135deg, #ffd166 0%, #ff8fbd 52%, #a78bfa 100%) !important;
+    box-shadow: 0 0 24px rgba(255,209,102,.32), 0 14px 28px rgba(255,117,173,.20) !important;
+  }
+  .unav-fab:hover,
+  .unav-dark-fab:hover {
+    transform: scale(1.08) translateY(-2px) !important;
+    box-shadow: 0 0 30px rgba(255,105,180,.46), 0 0 18px rgba(100,210,255,.28) !important;
+  }
+  .unav-drawer {
+    width: 324px;
+    background:
+      radial-gradient(circle at 16% 10%, rgba(255,255,255,.76), transparent 26%),
+      radial-gradient(circle at 88% 18%, rgba(100,210,255,.22), transparent 28%),
+      linear-gradient(160deg, rgba(255,240,248,.86) 0%, rgba(248,240,255,.76) 58%, rgba(239,251,255,.78) 100%) !important;
+    border-left: 1px solid rgba(255,255,255,.48) !important;
+    box-shadow: -18px 0 52px rgba(255,95,168,.18), -4px 0 26px rgba(124,123,255,.12) !important;
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+  }
+  .unav-link,
+  .unav-btn,
+  .unav-dark-row,
+  .unav-lang-wrap {
+    border: 1px solid rgba(255,255,255,.48) !important;
+    border-radius: 16px !important;
+    font-weight: 900 !important;
+    background: linear-gradient(135deg, rgba(255,255,255,.70), rgba(255,234,247,.56)) !important;
+    box-shadow: 0 10px 24px rgba(255,126,179,.10), inset 0 1px 0 rgba(255,255,255,.72);
+    transition: all .35s ease !important;
+  }
+  .unav-link:nth-of-type(1) { background: linear-gradient(135deg, rgba(255,117,173,.24), rgba(167,139,250,.22)) !important; }
+  .unav-link:nth-of-type(2) { background: linear-gradient(135deg, rgba(255,209,102,.28), rgba(255,117,173,.18)) !important; }
+  .unav-link:nth-of-type(3) { background: linear-gradient(135deg, rgba(167,139,250,.28), rgba(100,210,255,.20)) !important; }
+  .unav-link:nth-of-type(4) { background: linear-gradient(135deg, rgba(255,95,130,.22), rgba(255,209,102,.18)) !important; }
+  .unav-link:nth-of-type(5) { background: linear-gradient(135deg, rgba(114,224,189,.26), rgba(255,255,255,.38)) !important; }
+  .unav-link:nth-of-type(6) { background: linear-gradient(135deg, rgba(255,209,102,.24), rgba(114,224,189,.18)) !important; }
+  .unav-link:nth-of-type(7) { background: linear-gradient(135deg, rgba(100,210,255,.28), rgba(167,139,250,.16)) !important; }
+  .unav-link:nth-of-type(8) { background: linear-gradient(135deg, rgba(255,209,102,.30), rgba(255,143,189,.20)) !important; }
+  .unav-link:hover,
+  .unav-btn:hover,
+  .unav-dark-row:hover {
+    transform: translateX(4px) scale(1.015) !important;
+    color: #b93c87 !important;
+    box-shadow: 0 0 24px rgba(255,105,180,.28), 0 12px 26px rgba(124,123,255,.14) !important;
+  }
+  .unav-link.active {
+    color: #9b3ac7 !important;
+    border-color: rgba(255,117,173,.54) !important;
+    box-shadow: 0 0 26px rgba(255,117,173,.32), inset 0 1px 0 rgba(255,255,255,.82) !important;
+  }
+  .unav-link i,
+  .unav-btn i,
+  .unav-dark-row i,
+  .unav-lang-wrap i {
+    color: #ff5fa8 !important;
+    filter: drop-shadow(0 0 8px rgba(255,95,168,.42));
+  }
+  body.dark-mode .unav-drawer {
+    background:
+      radial-gradient(circle at 12% 12%, rgba(255,95,168,.18), transparent 30%),
+      radial-gradient(circle at 90% 20%, rgba(100,210,255,.15), transparent 28%),
+      linear-gradient(160deg, rgba(18,14,38,.88), rgba(38,24,59,.84)) !important;
+    border-left-color: rgba(255,255,255,.16) !important;
+  }
+  body.dark-mode .unav-link,
+  body.dark-mode .unav-btn,
+  body.dark-mode .unav-dark-row,
+  body.dark-mode .unav-lang-wrap {
+    color: #fff2fb !important;
+    border-color: rgba(255,255,255,.16) !important;
+    background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.06)) !important;
+  }
   `;
 
   function injectCSS() {
