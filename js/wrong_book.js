@@ -531,7 +531,7 @@ async function loadWrongBook() {
   }
   try {
     // Use api_client QA if available for consistency
-    const endpoint = window.QA ? \`/api/wrong-book?username=\${encodeURIComponent(username)}\` : \`/wrong_book_summary?username=\${encodeURIComponent(username)}\`;
+    const endpoint = `/wrong_book_summary?username=${encodeURIComponent(username)}`;
     const data = await api(endpoint);
     const localItems = loadLocalStoryWrongItems(username);
     if (localItems.length) {

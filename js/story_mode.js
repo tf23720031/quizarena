@@ -825,16 +825,7 @@ function checkStoryAnswer() {
     setTimeout(nextStoryStage, 450);
   } else {
     // 答錯：記入錯題本
-    // Write to DB via QA client (with chapter/level metadata)
-    if (window.QA) {
-      QA.addWrongAnswer(stage, activeSubject().title, {
-        chapter: activeBranch().title,
-        level: stage.level,
-        userAnswer: state.selected,
-      });
-    } else {
-      addToWrongBook(stage, activeSubject().title);
-    }
+    addToWrongBook(stage, activeSubject().title);
 
     if (state.retryMode) {
       // 回補模式答錯：扣心，但仍把題目留在隊列尾繼續回補
@@ -942,36 +933,51 @@ function wrongBookKey() {
 function addToWrongBook(stage, subjectTitle) {
   if (!stage) return;
   const username = userKey();
+  // Always save to localStorage as backup
+  saveWrongBookFallback(stage, subjectTitle);
+  // Also sync to DB if logged in
   if (username && username !== "guest") {
     api("/story_wrong_question", {
       method: "POST",
-      body: JSON.stringify({ username, sourceTitle: `故事模式 - ${subjectTitle}`, question: stage }),
-    }).catch((error) => {
-      console.warn("[WrongBook] story sync failed", error);
-      saveWrongBookFallback(stage, subjectTitle);
+      body: JSON.stringify({
+        username,
+        sourceTitle: "故事模式 - " + subjectTitle,
+        question: stage,
+      }),
+    }).catch(function(error) {
+      console.warn("[WrongBook] story sync failed:", error);
     });
-    return;
   }
-  saveWrongBookFallback(stage, subjectTitle);
 }
 
 function saveWrongBookFallback(stage, subjectTitle) {
   if (!stage) return;
   try {
     const book = JSON.parse(localStorage.getItem(wrongBookKey()) || "[]");
-    const existing = book.findIndex((item) => item.q === stage.q);
+    // Use content OR q as the unique key
+    const stageContent = String(stage.content || stage.q || "");
+    const existing = book.findIndex(function(item) {
+      return item.content === stageContent || item.q === stageContent;
+    });
     if (existing >= 0) {
       book[existing].wrongCount = (book[existing].wrongCount || 1) + 1;
       book[existing].lastWrongAt = Date.now();
     } else {
       book.push({
-        q: stage.q,
-        options: stage.options,
-        answer: stage.answer,
+        // Fields expected by wrong_book.js loadLocalStoryWrongItems
+        q:         stageContent,
+        content:   stageContent,
+        title:     String(stage.title || ("故事模式 - " + subjectTitle)),
+        options:   stage.options || [],
+        answer:    typeof stage.answer === "number" ? stage.answer : 0,
         difficulty: stage.difficulty || "medium",
-        source: `故事模式 · ${subjectTitle}`,
+        category:  subjectTitle || "故事模式",
+        source:    "故事模式 · " + subjectTitle,
+        sourceBankTitle: "故事模式 · " + subjectTitle,
+        explanation: stage.explanation || stage.scene || "",
         wrongCount: 1,
         lastWrongAt: Date.now(),
+        isStoryMode: true,
       });
     }
     localStorage.setItem(wrongBookKey(), JSON.stringify(book));

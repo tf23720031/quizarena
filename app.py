@@ -2874,7 +2874,7 @@ def api_save_story_progress():
 @app.route('/api/story/wrong-answer', methods=['POST'])
 def api_story_wrong_answer():
     """Alias for /story_wrong_question with extra fields."""
-    return story_wrong_question()
+    return story_wrong_question_api()
 
 
 # ═══════════════════════════════════════════════════════════════════════
