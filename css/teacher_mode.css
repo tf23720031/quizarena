@@ -3,3 +3,129 @@ body:not(.dark-mode) .teacher-report-page .tool-kicker,
 body:not(.dark-mode) #storyTopKicker { color:#ff66ab !important; -webkit-text-fill-color:#ff66ab !important; }
 body:not(.dark-mode) .teacher-report-page .tool-card::before,
 body:not(.dark-mode) .teacher-report-page .tool-card::after { display:none !important; content:none !important; }
+
+/* =========================================================
+   2026-05 teacher mode polish: title readability + animated bg
+   ========================================================= */
+.teacher-report-page,
+body:has(#studentReportList) {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+}
+
+body:has(#studentReportList)::before,
+body:has(#studentReportList)::after {
+  content: "";
+  position: fixed;
+  inset: -18% -10%;
+  z-index: -2;
+  pointer-events: none;
+}
+
+body:has(#studentReportList)::before {
+  background:
+    radial-gradient(circle at 12% 20%, rgba(255, 102, 171, .28), transparent 24%),
+    radial-gradient(circle at 82% 16%, rgba(124, 123, 255, .23), transparent 26%),
+    radial-gradient(circle at 72% 82%, rgba(72, 192, 216, .20), transparent 28%),
+    linear-gradient(120deg, #fff6fb, #eef6ff, #fff0f8, #f5f2ff);
+  background-size: 120% 120%;
+  animation: teacherGradientDrift 16s ease-in-out infinite alternate;
+}
+
+body:has(#studentReportList)::after {
+  z-index: -1;
+  opacity: .46;
+  background:
+    linear-gradient(rgba(255,255,255,.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.16) 1px, transparent 1px),
+    radial-gradient(circle, rgba(255,255,255,.72) 0 2px, transparent 3px);
+  background-size: 52px 52px, 52px 52px, 88px 88px;
+  animation: teacherGridFloat 22s linear infinite;
+}
+
+body.dark-mode:has(#studentReportList)::before {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 102, 171, .22), transparent 24%),
+    radial-gradient(circle at 84% 12%, rgba(124, 123, 255, .25), transparent 26%),
+    radial-gradient(circle at 72% 84%, rgba(72, 192, 216, .16), transparent 28%),
+    linear-gradient(120deg, #111426, #1e2143, #291936, #121a2e);
+}
+body.dark-mode:has(#studentReportList)::after { opacity: .24; }
+
+.tool-topbar,
+.tool-topbar > *,
+.tool-topbar h1,
+.tool-topbar .tool-kicker,
+.teacher-title,
+.teacher-subtitle {
+  position: relative;
+  z-index: 10;
+}
+
+body:has(#studentReportList) .tool-topbar h1,
+body:has(#studentReportList) .teacher-title,
+body:has(#studentReportList) #storyTopTitle {
+  color: #ff66ab !important;
+  -webkit-text-fill-color: #ff66ab !important;
+  text-shadow: 0 2px 0 rgba(255,255,255,.82), 0 10px 26px rgba(255,102,171,.24) !important;
+  filter: none !important;
+}
+
+body.dark-mode:has(#studentReportList) .tool-topbar h1,
+body.dark-mode:has(#studentReportList) .teacher-title,
+body.dark-mode:has(#studentReportList) #storyTopTitle {
+  color: #ff8ec5 !important;
+  -webkit-text-fill-color: #ff8ec5 !important;
+  text-shadow: 0 0 16px rgba(255,142,197,.34), 0 2px 10px rgba(0,0,0,.65) !important;
+}
+
+body:has(#studentReportList) .tool-kicker,
+body:has(#studentReportList) .teacher-subtitle {
+  color: #ff66ab !important;
+  -webkit-text-fill-color: #ff66ab !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.8), 0 8px 18px rgba(255,102,171,.20) !important;
+}
+body.dark-mode:has(#studentReportList) .tool-kicker,
+body.dark-mode:has(#studentReportList) .teacher-subtitle {
+  color: #ff8ec5 !important;
+  -webkit-text-fill-color: #ff8ec5 !important;
+}
+
+body:has(#studentReportList) .tool-card::before,
+body:has(#studentReportList) .tool-card::after {
+  pointer-events: none !important;
+}
+
+body:has(#studentReportList) .teacher-bg-bubble {
+  position: fixed;
+  width: var(--s, 90px);
+  height: var(--s, 90px);
+  left: var(--x, 10%);
+  top: var(--y, 20%);
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.86), rgba(255,102,171,.16) 58%, transparent 70%);
+  filter: blur(.5px);
+  animation: teacherBubbleFloat var(--d, 12s) ease-in-out infinite alternate;
+}
+
+body:has(#studentReportList) .teacher-sparkle-particle {
+  position: fixed;
+  left: var(--x, 50%);
+  top: var(--y, 50%);
+  z-index: -1;
+  width: 7px;
+  height: 7px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 0 18px rgba(255,102,171,.72);
+  animation: teacherSparklePulse var(--d, 3.6s) ease-in-out infinite;
+}
+
+@keyframes teacherGradientDrift { from { transform: translate3d(-2%, -1%, 0) scale(1); background-position: 0% 30%; } to { transform: translate3d(2%, 1%, 0) scale(1.03); background-position: 100% 70%; } }
+@keyframes teacherGridFloat { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 52px 52px, -52px 52px, 88px -88px; } }
+@keyframes teacherBubbleFloat { from { transform: translate3d(0, 0, 0) scale(.95); opacity: .44; } to { transform: translate3d(18px, -32px, 0) scale(1.08); opacity: .72; } }
+@keyframes teacherSparklePulse { 0%, 100% { transform: scale(.65); opacity: .22; } 50% { transform: scale(1.35); opacity: .82; } }

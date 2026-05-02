@@ -4336,3 +4336,165 @@ body:not(.dark-mode) .teacher-report-page .tool-card::after {
   .duel-vs-badge { margin: 2px auto !important; }
   .story-shell { padding-inline: 14px !important; }
 }
+
+/* =========================================================
+   2026-05 story mode UI fixes: icons, hero spacing, modal
+   ========================================================= */
+.icon-box,
+.mode-icon,
+.story-mode-card .icon-wrap,
+.story-mode-tab > i,
+.story-subject-card > i,
+.story-route-node,
+.story-picker-header h3 > i {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  flex: 0 0 56px !important;
+  border-radius: 50% !important;
+  background: rgba(255,255,255,0.92) !important;
+  color: #ff66ab !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  box-shadow: 0 12px 28px rgba(124,123,255,.16) !important;
+}
+
+.icon-box i,
+.mode-icon i,
+.story-mode-card .icon-wrap i,
+.story-mode-tab > i::before,
+.story-subject-card > i::before,
+.story-route-node i,
+.story-route-node i::before {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  transform: none !important;
+  text-align: center !important;
+}
+
+.story-mode-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px !important;
+}
+
+.story-mode-tab {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  text-align: center !important;
+  min-width: 0 !important;
+}
+
+.challenge-badge,
+.story-hero-badge,
+.story-hero-card .answer-pill,
+#storyModePill {
+  display: inline-flex !important;
+  width: fit-content !important;
+  margin-bottom: 18px !important;
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+.story-hero-content,
+.story-hero-card > div:first-child {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+  min-width: 0 !important;
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+.story-hero-title,
+.story-hero-card h2 {
+  margin-top: 12px !important;
+  margin-bottom: 0 !important;
+  line-height: 1.08 !important;
+  overflow-wrap: anywhere !important;
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+.story-hero-card p { position: relative !important; z-index: 3 !important; }
+
+.story-modal-backdrop { z-index: 5000 !important; }
+.story-modal {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transform-origin: center;
+  animation: storyModalBounceIn .42s cubic-bezier(.18,.89,.32,1.28);
+}
+.story-modal::before,
+.story-modal::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+.story-modal::before {
+  inset: -40%;
+  background:
+    radial-gradient(circle at 22% 26%, rgba(255,102,171,.28), transparent 24%),
+    radial-gradient(circle at 80% 18%, rgba(124,123,255,.24), transparent 24%),
+    radial-gradient(circle at 70% 78%, rgba(72,192,216,.18), transparent 28%);
+  animation: storyModalGlowMove 7s ease-in-out infinite alternate;
+}
+.story-modal::after {
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,.9) 0 2px, transparent 3px);
+  background-size: 42px 42px;
+  opacity: .46;
+  animation: storySparkleDrift 5s linear infinite;
+}
+.story-modal-icon {
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 2rem;
+  background: linear-gradient(135deg, #ff75ad, #8d6cff);
+  box-shadow: 0 18px 42px rgba(255,102,171,.30);
+  animation: storyIconPulse 1.55s ease-in-out infinite;
+}
+.story-modal-reward {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 12px 0 2px;
+  padding: 8px 12px;
+  color: #8a3fe0;
+  font-weight: 900;
+  border-radius: 999px;
+  background: rgba(255,255,255,.78);
+}
+@keyframes storyModalBounceIn { from { transform: translateY(16px) scale(.92); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes storyModalGlowMove { from { transform: translate3d(-2%, -1%, 0); } to { transform: translate3d(2%, 1%, 0); } }
+@keyframes storySparkleDrift { from { background-position: 0 0; } to { background-position: 42px -42px; } }
+@keyframes storyIconPulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.06); } }
+
+@media (max-width: 780px) {
+  .story-mode-tabs { grid-template-columns: 1fr !important; }
+  .story-hero-card { grid-template-columns: 1fr !important; gap: 16px !important; }
+  .story-hero-card h2 { font-size: clamp(1.65rem, 8vw, 2.4rem) !important; }
+  .story-link-row,
+  .story-paste-row { flex-direction: column !important; align-items: stretch !important; }
+  .story-link-input,
+  .story-link-value { min-width: 0 !important; width: 100% !important; }
+}

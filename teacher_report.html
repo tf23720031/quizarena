@@ -8,17 +8,18 @@
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/learning_tools.css">
   <link rel="stylesheet" href="css/dark_mode.css">
+  <link rel="stylesheet" href="css/teacher_mode.css">
 </head>
 <body>
   <script>
     document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');
   </script>
-  <main class="tool-shell">
+  <main class="tool-shell teacher-report-page">
     <header class="tool-topbar">
       <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
       <div>
-        <p class="tool-kicker">Teacher</p>
-        <h1 style="color:#ff66ab;">老師模式</h1>
+        <p class="tool-kicker teacher-subtitle" data-i18n="Teacher">TEACHER</p>
+        <h1 class="teacher-title" data-i18n="老師模式">老師模式</h1>
       </div>
     </header>
 
@@ -67,9 +68,33 @@
   </main>
 
   <div class="toast-qa" id="toast"></div>
+  <script src="js/i18n.js"></script>
   <script src="js/teacher_report.js"></script>
   <script src="js/Audio_manager.js"></script>
   <script src="js/nav_drawer.js"></script>
   <script src="js/music_drawer.js"></script>
+  <script>
+    (function(){
+      if (document.querySelector('.teacher-bg-bubble')) return;
+      const bubbles = [
+        ['8%','28%','84px','11s'], ['78%','18%','118px','15s'], ['88%','70%','72px','13s'], ['18%','78%','96px','17s']
+      ];
+      bubbles.forEach(([x,y,s,d]) => {
+        const el = document.createElement('span');
+        el.className = 'teacher-bg-bubble';
+        el.style.setProperty('--x', x); el.style.setProperty('--y', y);
+        el.style.setProperty('--s', s); el.style.setProperty('--d', d);
+        document.body.appendChild(el);
+      });
+      for (let i = 0; i < 16; i++) {
+        const el = document.createElement('span');
+        el.className = 'teacher-sparkle-particle';
+        el.style.setProperty('--x', `${8 + Math.random() * 84}%`);
+        el.style.setProperty('--y', `${10 + Math.random() * 78}%`);
+        el.style.setProperty('--d', `${2.8 + Math.random() * 2.8}s`);
+        document.body.appendChild(el);
+      }
+    })();
+  </script>
 </body>
 </html>

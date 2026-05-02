@@ -225,13 +225,22 @@ function buildUniqueStages(subject) {
     const difficulty = level <= 7 ? "easy" : level <= 14 ? "medium" : "hard";
     const clue = arc.clues[index % arc.clues.length];
     const options = buildPlausibleStoryOptions(subject.title, concept, arc.goal, index);
+    const correctIndex = options.findIndex((item) => item.correct);
+    const scene = `第 ${level} 幕，${arc.place}的路徑延伸到「${concept}」房間。你取得「${clue}」，它提示下一段任務：${arc.goal}。`;
+    const question = `在${subject.title}的「${concept}」任務中，哪一個做法最能推進目標？`;
+    const explanation = `正確做法是先確認「${concept}」的條件，再回到題幹找證據。其他選項看起來也有相關詞，但漏洞通常是只抓關鍵字、忽略限制，或把部分符合誤當完整答案。`;
     return {
       level,
       difficulty,
-      scene: `第 ${level} 幕，${arc.place}的路徑延伸到「${concept}」房間。你取得「${clue}」，它提示下一段任務：${arc.goal}。`,
-      q: `在${subject.title}的「${concept}」任務中，哪一個做法最能推進目標？`,
+      scene,
+      story_context: scene,
+      q: question,
+      question,
       options: options.map((item) => item.text),
-      answer: options.findIndex((item) => item.correct),
+      correct_answer: String.fromCharCode(65 + correctIndex),
+      answer: correctIndex,
+      explanation,
+      category: subject.title,
     };
   });
 }
@@ -447,11 +456,57 @@ function storyClearedTotal() {
   return Object.values(progress).reduce((sum, value) => sum + Number(value || 0), 0);
 }
 
-function showStoryModal(title, text, badge = "劇情推進") {
+function showStoryModal(title, text, badge = "劇情推進", options = {}) {
+  const backdrop = $("storyModalBackdrop");
+  const modal = backdrop?.querySelector(".story-modal");
+  if (!backdrop || !modal) return Promise.resolve();
+  const reward = options.reward || "獲得 1 枚星光徽章 + 角色好感度";
+  const icon = options.icon || "fa-wand-magic-sparkles";
   $("storyModalBadge").textContent = badge;
   $("storyModalTitle").textContent = title;
   $("storyModalText").textContent = text;
-  $("storyModalBackdrop").classList.add("show");
+  let rewardEl = modal.querySelector(".story-modal-reward");
+  if (!modal.querySelector(".story-modal-icon")) {
+    const iconEl = document.createElement("div");
+    iconEl.className = "story-modal-icon";
+    iconEl.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+    modal.insertBefore(iconEl, modal.firstElementChild);
+  } else {
+    modal.querySelector(".story-modal-icon").innerHTML = `<i class="fa-solid ${icon}"></i>`;
+  }
+  if (!rewardEl) {
+    rewardEl = document.createElement("div");
+    rewardEl.className = "story-modal-reward";
+    const closeBtn = $("storyModalCloseBtn");
+    modal.insertBefore(rewardEl, closeBtn);
+  }
+  rewardEl.innerHTML = `<i class="fa-solid fa-gift fa-bounce"></i><span>${escapeHtml(reward)}</span>`;
+  backdrop.classList.add("show");
+  return new Promise((resolve) => {
+    const closeBtn = $("storyModalCloseBtn");
+    const done = () => {
+      backdrop.classList.remove("show");
+      closeBtn?.removeEventListener("click", done);
+      resolve();
+    };
+    closeBtn?.addEventListener("click", done, { once: true });
+  });
+}
+
+function buildCorrectStoryModal(stage, subject) {
+  const rewardPool = ["星光徽章", "勇氣碎片", "元氣糖果", "智慧羽毛", "冒險地圖貼紙"];
+  const reward = `獲得「${rewardPool[(stage.level - 1) % rewardPool.length]}」＋${20 + stage.level * 3} EXP`;
+  const context = stage.story_context || stage.scene || "角色沿著新的線索前進，下一段冒險已經亮起。";
+  const encourage = "角色鼓勵你：這題不是靠猜，是你真的看出選項漏洞了。繼續衝，下一關別讓 Boss 以為你只會按確認鍵。";
+  return {
+    title: `${subject.title}支線推進！`,
+    text: `${context}
+
+${encourage}
+
+解析：${stage.explanation || "正確答案符合題幹限制，其他選項只有部分合理。"}`,
+    reward,
+  };
 }
 
 function checkStoryAchievements() {
@@ -825,7 +880,7 @@ function renderPlayArea() {
   $("checkStoryBtn")?.addEventListener("click", checkStoryAnswer);
 }
 
-function checkStoryAnswer() {
+async function checkStoryAnswer() {
   const branch = activeBranch();
   const stageRealIndex = state.stageOrder[state.stageIndex] ?? 0;
   const stage = branch.stages[stageRealIndex];
@@ -844,9 +899,15 @@ function checkStoryAnswer() {
     if (!state.retrySet.size) {
       saveProgress(state.subjectId, state.branchId, stage.level);
     }
-    checkStoryAchievements();
-    showToast("答對了，前往下一題");
-    setTimeout(nextStoryStage, 450);
+    const achievementShown = checkStoryAchievements();
+    showToast("答對了，劇情推進中");
+    if (!achievementShown && currentStoryMode === "solo") {
+      const modal = buildCorrectStoryModal(stage, activeSubject());
+      await showStoryModal(modal.title, modal.text, "答對獎勵", { reward: modal.reward, icon: "fa-wand-magic-sparkles" });
+      nextStoryStage();
+    } else {
+      setTimeout(nextStoryStage, 450);
+    }
   } else {
     // 答錯：記入錯題本
     addToWrongBook(stage, activeSubject().title);

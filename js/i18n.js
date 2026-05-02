@@ -30,6 +30,8 @@ const I18N = (() => {
     '故事模式':       { en:'Story Mode',          ja:'ストーリーモード',    ko:'스토리 모드',         es:'Modo historia' },
     '每日任務':       { en:'Daily Quest',         ja:'デイリー任務',        ko:'일일 미션',           es:'Misión diaria' },
     '老師模式':       { en:'Teacher Mode',        ja:'先生モード',          ko:'교사 모드',           es:'Modo profesor' },
+    'Teacher':        { en:'Teacher',             ja:'Teacher',             ko:'Teacher',             es:'Teacher' },
+    'TEACHER':        { en:'TEACHER',             ja:'TEACHER',             ko:'TEACHER',             es:'TEACHER' },
     '重新整理大廳':   { en:'Refresh Lobby',       ja:'ロビー更新',          ko:'로비 새로고침',       es:'Actualizar sala' },
     '好友排行':       { en:'Friend Ranking',      ja:'友達ランキング',      ko:'친구 랭킹',           es:'Ranking amigos' },
     '好友戰績榜':     { en:'Friend Records',      ja:'友達成績表',          ko:'친구 전적',           es:'Historial amigos' },
@@ -207,7 +209,16 @@ const I18N = (() => {
 
   let lang = localStorage.getItem('quizLang') || 'zh';
   const aiCache = new Map();
+  const AI_CACHE_KEY = 'quizarena_i18n_ai_cache_v2';
+  try {
+    const saved = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || '{}');
+    Object.entries(saved).forEach(([key, value]) => { if (value) aiCache.set(key, String(value)); });
+  } catch (_) {}
   let aiTimer = null;
+
+  function persistAiCache() {
+    try { localStorage.setItem(AI_CACHE_KEY, JSON.stringify(Object.fromEntries(aiCache.entries()))); } catch (_) {}
+  }
 
   function tr(key) {
     key = normalizeKey(key);
@@ -293,6 +304,7 @@ const I18N = (() => {
       Object.entries(translations).forEach(([key, value]) => {
         if (value) aiCache.set(`${targetLang}:${key}`, String(value));
       });
+      persistAiCache();
       document.querySelectorAll('[data-i18n]').forEach(el => {
         if (!inSkipZone(el)) translateEl(el, targetLang);
       });
@@ -345,6 +357,43 @@ const I18N = (() => {
   }
 
   /* 切換語言：重翻所有已標記元素 */
+  function translatePage(newLang) {
+    scanDOM(document.body);
+    applyLang(newLang || lang);
+  }
+
+  async function translateDynamicContent(text, targetLang = lang) {
+    const source = String(text ?? '').trim();
+    if (!source || targetLang === 'zh') return source;
+    const dictValue = D[normalizeKey(source)]?.[targetLang];
+    if (dictValue) return dictValue;
+    const cacheKey = `${targetLang}:${source}`;
+    if (aiCache.has(cacheKey)) return aiCache.get(cacheKey);
+    try {
+      const res = await fetch('/translate_texts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetLang, texts: [source] })
+      });
+      const data = await res.json();
+      const translated = data?.translations?.[source];
+      if (translated) {
+        aiCache.set(cacheKey, String(translated));
+        persistAiCache();
+        return String(translated);
+      }
+    } catch (_) {}
+    return source;
+  }
+
+  async function translateDynamicObject(obj, targetLang = lang, fields = []) {
+    const out = { ...(obj || {}) };
+    await Promise.all(fields.map(async (field) => {
+      if (out[field]) out[field] = await translateDynamicContent(out[field], targetLang);
+    }));
+    return out;
+  }
+
   function applyLang(newLang) {
     lang = newLang;
     localStorage.setItem('quizLang', newLang);
@@ -416,7 +465,9 @@ const I18N = (() => {
     setTimeout(init, 30);
   }
 
-  return { applyLang, makeSwitcher, scan: scanDOM, currentLang: () => lang, tr };
+  return { applyLang, translatePage, translateDynamicContent, translateDynamicObject, makeSwitcher, scan: scanDOM, currentLang: () => lang, tr };
 })();
 
 window.I18N = I18N;
+window.translatePage = (language) => I18N.translatePage(language);
+window.translateDynamicContent = (text, targetLang) => I18N.translateDynamicContent(text, targetLang);
