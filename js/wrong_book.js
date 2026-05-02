@@ -1,14 +1,27 @@
 const $ = (id) => document.getElementById(id);
 
 function getCurrentUser() {
-  const direct = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
-  if (direct) return direct;
-  try {
-    const profile = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
-    return String(profile?.username || "").trim();
-  } catch {
-    return "";
+  // Check all possible keys used across the app
+  const keys = ["currentUser", "qa_current_user", "quizarena_user", "username", "playerName"];
+  for (const key of keys) {
+    const v = String(localStorage.getItem(key) || sessionStorage.getItem(key) || "").trim();
+    if (v && v !== "undefined" && v !== "null" && v !== "guest") return v;
   }
+  // Try profile objects
+  const profileKeys = ["currentUserProfile", "qa_profile_cache", "roomPlayerProfile", "currentUserProfileData"];
+  for (const key of profileKeys) {
+    try {
+      const p = JSON.parse(localStorage.getItem(key) || "null");
+      if (!p) continue;
+      const u = String(p.username || p.account || p.name || p.playerName || "").trim();
+      if (u && u !== "undefined" && u !== "null" && u !== "guest") {
+        // Backfill the primary key so future checks are faster
+        localStorage.setItem("currentUser", u);
+        return u;
+      }
+    } catch {}
+  }
+  return "";
 }
 
 function loadLocalStoryWrongItems(username) {
@@ -524,24 +537,58 @@ function renderWrongBook(data) {
 
 async function loadWrongBook() {
   const username = getCurrentUser();
+
+  // Show username immediately (even before API responds)
+  if ($("wrongUserName")) $("wrongUserName").textContent = username || "(未登入)";
+  // Show/hide login warning
+  const wbWarn = $("wbLoginWarn");
+  if (wbWarn) wbWarn.style.display = username ? "none" : "";
+
   if (!username) {
-    showToast("請先登入");
-    $("wrongBookList").innerHTML = `<article class="question-card"><h3>請先登入</h3><p>登入後就能查看自己的錯題本。</p></article>`;
+    // Still try to show local story wrong items for guest users
+    const localItems = loadLocalStoryWrongItems("guest");
+    if (localItems.length) {
+      renderWrongBook({ username: "guest", items: localItems, totalWrongCount: localItems.reduce((s, i) => s + (i.wrongCount || 1), 0) });
+    } else {
+      $("wrongBookList").innerHTML = `<article class="question-card"><h3>請先登入</h3><p>登入後就能查看自己的錯題本。在故事模式答錯的題目也會在這裡出現。</p></article>`;
+    }
     return;
   }
+
   try {
-    // Use api_client QA if available for consistency
-    const endpoint = `/wrong_book_summary?username=${encodeURIComponent(username)}`;
-    const data = await api(endpoint);
+    // Load from server
+    let data = { username, items: [], totalWrongCount: 0 };
+    try {
+      data = await api(`/wrong_book_summary?username=${encodeURIComponent(username)}`);
+    } catch (apiErr) {
+      console.warn("[WrongBook] API failed, using localStorage only:", apiErr.message);
+      data = { username, items: [], totalWrongCount: 0, success: true };
+    }
+
+    // Merge localStorage story wrong items (always, as safety net)
     const localItems = loadLocalStoryWrongItems(username);
     if (localItems.length) {
-      const seen = new Set((data.items || []).map((item) => String(item.content || item.title || "")));
-      const mergedLocal = localItems.filter((item) => !seen.has(String(item.content || item.title || "")));
-      data.items = [...(data.items || []), ...mergedLocal];
-      data.totalWrongCount = Number(data.totalWrongCount || 0) + mergedLocal.reduce((sum, item) => sum + Number(item.wrongCount || 1), 0);
+      const seen = new Set((data.items || []).map((item) => String(item.content || item.title || "").trim()));
+      const newLocal = localItems.filter((item) => {
+        const key = String(item.content || item.title || "").trim();
+        return key && !seen.has(key);
+      });
+      if (newLocal.length) {
+        data.items = [...(data.items || []), ...newLocal];
+        data.totalWrongCount = Number(data.totalWrongCount || 0) + newLocal.reduce((s, i) => s + Number(i.wrongCount || 1), 0);
+      }
     }
+
     renderWrongBook(data);
-  } catch (error) { showToast(error.message); }
+  } catch (error) {
+    console.error("[WrongBook] load failed:", error);
+    showToast("錯題本載入失敗：" + error.message);
+    // Last resort: render whatever is in localStorage
+    const localItems = loadLocalStoryWrongItems(username);
+    if (localItems.length) {
+      renderWrongBook({ username, items: localItems, totalWrongCount: localItems.reduce((s, i) => s + (i.wrongCount || 1), 0) });
+    }
+  }
 }
 
 $("refreshWrongBookBtn")?.addEventListener("click", loadWrongBook);

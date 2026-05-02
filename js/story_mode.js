@@ -389,13 +389,24 @@ async function api(url, options = {}) {
 }
 
 function userKey() {
-  const direct = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
-  if (direct) return direct;
-  try {
-    const profile = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
-    const username = String(profile?.username || "").trim();
-    if (username) return username;
-  } catch {}
+  // Check all possible login keys (match wrong_book.js logic)
+  const keys = ["currentUser", "qa_current_user", "quizarena_user", "username", "playerName"];
+  for (const key of keys) {
+    const v = String(localStorage.getItem(key) || sessionStorage.getItem(key) || "").trim();
+    if (v && v !== "undefined" && v !== "null" && v !== "guest") return v;
+  }
+  const profileKeys = ["currentUserProfile", "qa_profile_cache", "roomPlayerProfile"];
+  for (const key of profileKeys) {
+    try {
+      const p = JSON.parse(localStorage.getItem(key) || "null");
+      if (!p) continue;
+      const u = String(p.username || p.account || p.name || "").trim();
+      if (u && u !== "undefined" && u !== "null") {
+        localStorage.setItem("currentUser", u);
+        return u;
+      }
+    } catch {}
+  }
   return "guest";
 }
 
