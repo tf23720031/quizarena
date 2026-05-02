@@ -544,12 +544,13 @@ async function loadWrongBook() {
   // ── Step 1: Resolve username using every possible method ────────────
   let username = getCurrentUser();
 
-  // Debug: log all localStorage keys to console
+  // Debug: log all relevant localStorage keys
   console.group("[WrongBook] localStorage dump");
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && (k.includes("user") || k.includes("User") || k.includes("profile") || k.includes("Profile") || k.includes("player"))) {
-      console.log(k, "=", localStorage.getItem(k));
+    if (k && (k.includes("user") || k.includes("User") || k.includes("profile") || k.includes("Profile") || k.includes("player") || k.includes("wrong_book"))) {
+      const v = localStorage.getItem(k);
+      console.log(k, "=", k.includes("wrong_book") ? `[${JSON.parse(v||"[]").length} items]` : v);
     }
   }
   console.log("Resolved username:", username || "(empty)");

@@ -944,20 +944,30 @@ function wrongBookKey() {
 function addToWrongBook(stage, subjectTitle) {
   if (!stage) return;
   const username = userKey();
-  // Always save to localStorage as backup
+  console.log("[WrongBook] addToWrongBook called, user:", username, "stage.q:", stage.q || stage.content);
+
+  // Always save to localStorage first (instant, no network needed)
   saveWrongBookFallback(stage, subjectTitle);
-  // Also sync to DB if logged in
+  console.log("[WrongBook] saved to localStorage key:", wrongBookKey());
+
+  // Sync to DB
   if (username && username !== "guest") {
+    const payload = {
+      username,
+      sourceTitle: "故事模式 - " + subjectTitle,
+      question: stage,
+    };
+    console.log("[WrongBook] sending to API:", JSON.stringify(payload).slice(0, 200));
     api("/story_wrong_question", {
       method: "POST",
-      body: JSON.stringify({
-        username,
-        sourceTitle: "故事模式 - " + subjectTitle,
-        question: stage,
-      }),
+      body: JSON.stringify(payload),
+    }).then(function(res) {
+      console.log("[WrongBook] API success:", res);
     }).catch(function(error) {
-      console.warn("[WrongBook] story sync failed:", error);
+      console.error("[WrongBook] API failed:", error.message || error);
     });
+  } else {
+    console.log("[WrongBook] no API call (username:", username, ")");
   }
 }
 
