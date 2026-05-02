@@ -64,6 +64,17 @@ h2 {
   font-weight: 900;
 }
 
+/* Teacher mode kicker color - light mode */
+.tool-topbar .tool-kicker {
+  color: #ff66ab;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+body.dark-mode .tool-topbar .tool-kicker {
+  color: #ff8ec5;
+}
+
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2856,14 +2867,11 @@ body:has(#dailyMissionList) .practice-option.correct::after {
   animation: sparkleFloat 8s ease-in-out infinite alternate;
 }
 
+/* story-hero-card light-mode: dark bg with RPG feel, no overlay */
 .story-hero-card {
   position: relative;
   overflow: hidden;
   border-radius: 32px !important;
-  background:
-    radial-gradient(circle at 92% 18%, rgba(255,209,102,.32), transparent 28%),
-    radial-gradient(circle at 12% 90%, rgba(114,224,189,.24), transparent 32%),
-    linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,230,243,.62)) !important;
 }
 
 .story-hero-card::after {
@@ -2877,6 +2885,8 @@ body:has(#dailyMissionList) .practice-option.correct::after {
   font-weight: 900;
   letter-spacing: .14em;
   animation: qaFloat 4.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .story-branch-list { position: relative; gap: 18px; }
@@ -4117,4 +4127,38 @@ body.dark-mode:has(.story-shell) .story-hero-card{
 .question-card,
 .history-card{
   position:relative !important;
+}
+
+/* ── Story mode tab icon fix ─────────────────────────────────────── */
+.story-mode-tab {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+.story-mode-tab > i {
+  font-size: 1.5rem !important;
+  display: block !important;
+  margin-bottom: 2px !important;
+}
+.story-mode-tab > strong {
+  display: block !important;
+  font-size: .95rem !important;
+}
+.story-mode-tab > span {
+  display: block !important;
+  font-size: .76rem !important;
+  opacity: .75 !important;
+  line-height: 1.3 !important;
+}
+
+/* ── Tool kicker - pink in light mode ─── */
+.tool-kicker {
+  color: #ff66ab !important;
+  font-weight: 800 !important;
+  letter-spacing: .14em !important;
+}
+body.dark-mode .tool-kicker {
+  color: #ff8ec5 !important;
 }

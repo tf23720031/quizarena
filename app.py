@@ -159,7 +159,8 @@ def validate_session(username, session_token, device_id=''):
 
 
 
-def host_alive_cutoff(seconds=80):
+def host_alive_cutoff(seconds=600):
+    # Rooms expire after 10 minutes of host inactivity
     return now_ts() - seconds
 
 
@@ -3933,6 +3934,26 @@ def validate_session_api():
         return jsonify(success=False, valid=False, message=str(e)), 500
 
 
+@app.route('/host_checkin', methods=['POST'])
+def host_checkin():
+    # Host calls this every 60s to keep the room alive
+    try:
+        data = request.get_json() or {}
+        pin = str(data.get('pin', '')).strip()
+        player_name = str(data.get('playerName', '')).strip()
+        if not pin:
+            return jsonify(success=False), 400
+        with closing(get_conn()) as conn:
+            conn.execute(
+                'UPDATE room_players SET last_seen=? WHERE room_pin=? AND player_name=? AND is_host=1',
+                (now_ts(), pin, player_name)
+            )
+            conn.commit()
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+
 @app.route('/logout_session', methods=['POST'])
 def logout_session_api():
     try:
@@ -4200,6 +4221,48 @@ def story_wrong_question_api():
         return jsonify(success=False, message=f'故事錯題儲存失敗：{e}'), 500
 
 
+# ── Story Match DB helpers ───────────────────────────────────────────
+def _sm_db_path():
+    return ROOMS_DB_PATH  # reuse rooms.db for persistence
+
+def _ensure_story_matches_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS story_matches (
+            token TEXT PRIMARY KEY,
+            data TEXT NOT NULL,
+            created_at INTEGER,
+            updated_at INTEGER
+        )
+    """)
+    conn.commit()
+
+def _sm_load(token):
+    with closing(sqlite3.connect(_sm_db_path())) as conn:
+        conn.row_factory = dict_factory
+        _ensure_story_matches_table(conn)
+        row = conn.execute('SELECT data FROM story_matches WHERE token=?', (token,)).fetchone()
+    return json.loads(row['data']) if row else None
+
+def _sm_save(token, match):
+    ts = now_ts()
+    payload = json.dumps(match, ensure_ascii=False)
+    with closing(sqlite3.connect(_sm_db_path())) as conn:
+        _ensure_story_matches_table(conn)
+        conn.execute("""
+            INSERT INTO story_matches (token, data, created_at, updated_at)
+            VALUES (?,?,?,?)
+            ON CONFLICT(token) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at
+        """, (token, payload, ts, ts))
+        conn.commit()
+
+def _sm_cleanup():
+    cutoff = now_ts() - 3600  # remove matches older than 1 hour
+    with closing(sqlite3.connect(_sm_db_path())) as conn:
+        _ensure_story_matches_table(conn)
+        conn.execute('DELETE FROM story_matches WHERE created_at < ?', (cutoff,))
+        conn.commit()
+
+
 @app.route('/story_match_create', methods=['POST'])
 def story_match_create_api():
     try:
@@ -4208,6 +4271,7 @@ def story_match_create_api():
         if mode not in {'pvp', 'coop'}:
             mode = 'pvp'
         host_name = str(data.get('hostName') or '玩家 1').strip() or '玩家 1'
+        host_avatar = str(data.get('hostAvatar') or '').strip()
         stages = data.get('stages', [])
         if not isinstance(stages, list) or len(stages) < 1:
             return jsonify(success=False, message='缺少故事題目'), 400
@@ -4219,13 +4283,13 @@ def story_match_create_api():
             'branchId': str(data.get('branchId') or '').strip(),
             'subjectTitle': str(data.get('subjectTitle') or '故事題庫').strip(),
             'stages': stages[:20],
-            'players': [{'name': host_name, 'role': 'host', 'joinedAt': now_ts()}],
+            'players': [{'name': host_name, 'role': 'host', 'avatar': host_avatar, 'joinedAt': now_ts()}],
             'status': 'waiting',
             'createdAt': now_ts(),
             'startedAt': 0,
         }
-        with _story_match_lock:
-            STORY_MATCHES[token] = match
+        _sm_save(token, match)
+        _sm_cleanup()
         return jsonify(success=True, match=match)
     except Exception as e:
         return jsonify(success=False, message=f'建立故事邀請失敗：{e}'), 500
@@ -4237,16 +4301,21 @@ def story_match_join_api():
         data = request.get_json() or {}
         token = str(data.get('token') or '').strip().upper()
         player_name = str(data.get('playerName') or '玩家 2').strip() or '玩家 2'
-        with _story_match_lock:
-            match = STORY_MATCHES.get(token)
-            if not match:
-                return jsonify(success=False, message='找不到故事邀請，請重新建立連結'), 404
-            if not any(p.get('name') == player_name for p in match['players']):
-                role = 'guest' if not any(p.get('role') == 'guest' for p in match['players']) else 'viewer'
-                match['players'].append({'name': player_name, 'role': role, 'joinedAt': now_ts()})
-            if len(match['players']) >= 2 and match['status'] == 'waiting':
-                match['status'] = 'ready'
-                match['startedAt'] = now_ts()
+        player_avatar = str(data.get('playerAvatar') or '').strip()
+        match = _sm_load(token)
+        if not match:
+            return jsonify(success=False, message='找不到故事邀請，請重新建立連結'), 404
+        # Prevent host from joining as guest
+        host_names = [p['name'] for p in match['players'] if p.get('role') == 'host']
+        if player_name in host_names:
+            # Host rejoining — just return current state
+            return jsonify(success=True, match=match)
+        if not any(p.get('name') == player_name for p in match['players']):
+            match['players'].append({'name': player_name, 'role': 'guest', 'avatar': player_avatar, 'joinedAt': now_ts()})
+        if len(match['players']) >= 2 and match['status'] == 'waiting':
+            match['status'] = 'ready'
+            match['startedAt'] = now_ts()
+        _sm_save(token, match)
         return jsonify(success=True, match=match)
     except Exception as e:
         return jsonify(success=False, message=f'加入故事邀請失敗：{e}'), 500
@@ -4255,8 +4324,7 @@ def story_match_join_api():
 @app.route('/story_match_state/<token>')
 def story_match_state_api(token):
     token = str(token or '').strip().upper()
-    with _story_match_lock:
-        match = STORY_MATCHES.get(token)
+    match = _sm_load(token)
     if not match:
         return jsonify(success=False, message='找不到故事邀請'), 404
     return jsonify(success=True, match=match)

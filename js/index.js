@@ -755,6 +755,18 @@
       });
 
       setCurrentUser(data.username, data.sessionToken, data.deviceId);
+    // Handle post-login redirect (e.g. from challenge invite)
+    const urlParams = new URLSearchParams(location.search);
+    const redirectTo = urlParams.get('redirect');
+    if (redirectTo) {
+      const extraParams = Array.from(urlParams.entries())
+        .filter(([k]) => k !== 'redirect')
+        .map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+      setTimeout(() => {
+        window.location.href = extraParams ? `${redirectTo}?${extraParams}` : redirectTo;
+      }, 500);
+      return;
+    }
       setCachedProfile({
         username: data.username,
         avatar: data.avatar || "",

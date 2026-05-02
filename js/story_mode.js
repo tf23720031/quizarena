@@ -1094,11 +1094,16 @@ function startMatchWhenReady(match, roleName = userKey()) {
   clearStoryMatchPoll();
   const waitingMsg = $("storyWaitingMsg");
   if (waitingMsg) waitingMsg.style.display = "none";
-  const names = match.players.slice(0, 2).map((player) => player.name);
+  const players = match.players.slice(0, 2);
+  const names = players.map((p) => p.name);
   const me = String(roleName || userKey() || names[0]).trim();
   const other = names.find((name) => name !== me) || names[1] || "玩家 2";
+  const mePlayer = players.find(p => p.name === me) || players[0] || {};
+  const otherPlayer = players.find(p => p.name === other) || players[1] || {};
+  const myAvatar = mePlayer.avatar || "";
+  const otherAvatar = otherPlayer.avatar || "";
   currentStoryMode = match.mode || currentStoryMode;
-  startDuelGame(me, other, currentStoryMode, match.stages || activeBranch().stages);
+  startDuelGame(me, other, currentStoryMode, match.stages || activeBranch().stages, myAvatar, otherAvatar);
   return true;
 }
 
@@ -1123,11 +1128,19 @@ $("createChallengeBtn")?.addEventListener("click", async () => {
   const waitingMsg = $("storyWaitingMsg");
   const hostName = userKey() === "guest" ? "玩家 1" : userKey();
   try {
+    // Get host avatar from profile
+    const hostAvatarRaw = (() => {
+      try {
+        const p = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
+        return p?.avatar || "";
+      } catch { return ""; }
+    })();
     const data = await api("/story_match_create", {
       method: "POST",
       body: JSON.stringify({
         mode: currentStoryMode,
         hostName,
+        hostAvatar: hostAvatarRaw,
         subjectId: state.subjectId,
         branchId: state.branchId,
         subjectTitle: subject.title,
@@ -1175,9 +1188,12 @@ $("joinChallengeBtn")?.addEventListener("click", async () => {
   currentStoryMode = mode;
   const playerName = userKey() === "guest" ? "玩家 2" : userKey();
   try {
+    const joinAvatarRaw = (() => {
+      try { const p = JSON.parse(localStorage.getItem("currentUserProfile") || "null"); return p?.avatar || ""; } catch { return ""; }
+    })();
     const data = await api("/story_match_join", {
       method: "POST",
-      body: JSON.stringify({ token: parsed.token, playerName }),
+      body: JSON.stringify({ token: parsed.token, playerName, playerAvatar: joinAvatarRaw }),
     });
     showToast("已加入，雙方到齊後開始");
     if (!startMatchWhenReady(data.match, playerName)) pollStoryMatch(parsed.token, playerName);
@@ -1197,20 +1213,37 @@ $("joinChallengeBtn")?.addEventListener("click", async () => {
   if (subjectId) state.subjectId = subjectId;
   if (branchId) state.branchId = branchId;
   if (mode) currentStoryMode = mode;
+
+  // ── Must be logged in to join a challenge invite ─────────────────
+  const currentUser = userKey();
+  if (!currentUser || currentUser === "guest") {
+    // Store invite params so we can rejoin after login
+    sessionStorage.setItem("pendingChallenge", JSON.stringify({ token, mode, subjectId, branchId }));
+    // Redirect to index with login prompt
+    showToast("請先登入才能加入邀請房間", 3000);
+    setTimeout(() => {
+      window.location.href = `index.html?redirect=story_mode.html&challenge=${token}&mode=${mode||"pvp"}&sub=${subjectId||""}&branch=${branchId||""}`;
+    }, 1200);
+    return;
+  }
+
   setTimeout(async () => {
     setStoryMode(mode || "pvp");
-    const playerName = userKey() === "guest" ? "玩家 2" : userKey();
+    const playerName = currentUser;
     try {
+      const autoAvatar = (() => {
+        try { const p = JSON.parse(localStorage.getItem("currentUserProfile") || "null"); return p?.avatar || ""; } catch { return ""; }
+      })();
       const data = await api("/story_match_join", {
         method: "POST",
-        body: JSON.stringify({ token, playerName }),
+        body: JSON.stringify({ token, playerName, playerAvatar: autoAvatar }),
       });
       showToast("已加入故事邀請，準備開始");
       if (!startMatchWhenReady(data.match, playerName)) pollStoryMatch(token, playerName);
     } catch (error) {
       showToast(error.message || "加入邀請失敗");
     }
-  }, 600);
+  }, 800);
 })();
 
 // ═══════════════════════════════════════════════════════
@@ -1231,7 +1264,16 @@ const duelState = {
   timeLeft: DUEL_TIME,
 };
 
-function startDuelGame(nameLeft, nameRight, mode, stages) {
+function renderDuelAvatar(el, avatarUrl, fallbackEmoji) {
+  if (!el) return;
+  if (avatarUrl && (avatarUrl.startsWith('data:') || avatarUrl.startsWith('http'))) {
+    el.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.textContent='${fallbackEmoji}'">`;
+  } else {
+    el.textContent = fallbackEmoji;
+  }
+}
+
+function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRight) {
   duelState.mode = mode;
   duelState.stages = stages.slice(0, DUEL_TOTAL);
   // 若題目不足 20 題，循環補足
@@ -1241,6 +1283,8 @@ function startDuelGame(nameLeft, nameRight, mode, stages) {
   duelState.index = 0;
   duelState.scores = [0, 0];
   duelState.names = [nameLeft, nameRight];
+  duelState.avatarLeft = avatarLeft || "";
+  duelState.avatarRight = avatarRight || "";
 
   // 顯示雙人區塊，隱藏單人
   $("storySoloSection").style.display = "none";
@@ -1251,6 +1295,10 @@ function startDuelGame(nameLeft, nameRight, mode, stages) {
   if ($("duelNameLeft")) $("duelNameLeft").textContent = nameLeft;
   if ($("duelNameRight")) $("duelNameRight").textContent = nameRight;
   if ($("duelModeLabel")) $("duelModeLabel").textContent = mode === "pvp" ? "挑戰模式" : "合作模式";
+
+  // Render avatars with real images or emoji fallback
+  renderDuelAvatar($("duelAvatarLeft"),  avatarLeft || "", "🧑");
+  renderDuelAvatar($("duelAvatarRight"), avatarRight || "", "🤖");
 
   renderDuelQuestion();
 }
