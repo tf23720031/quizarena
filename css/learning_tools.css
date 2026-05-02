@@ -3675,3 +3675,444 @@ body.dark-mode .story-picker-bank-card { background: rgba(40,20,70,.65); border-
 body.dark-mode .story-picker-bank-card:hover { background: rgba(55,28,90,.75); border-color: rgba(147,51,234,.45); }
 body.dark-mode .story-picker-bank-info strong { color: #e8d8ff; }
 body.dark-mode .story-picker-close { background: rgba(147,51,234,.2); color: #c0a0e0; }
+
+
+/* =========================================================
+   QA PATCH 2026-05 — non-lobby learning pages polish
+   目標：格內 padding、格與格 margin、玻璃漸層、明暗模式可讀、故事 RPG、手機排版
+   不影響：首頁大廳、創建題庫、等待室、正式開始房間頁面
+   ========================================================= */
+:root{
+  --qa-page-gap: clamp(14px, 2vw, 22px);
+  --qa-card-pad: clamp(16px, 2.2vw, 26px);
+  --qa-radius-xl: 28px;
+  --qa-light-text: #271640;
+  --qa-light-muted: #67536f;
+  --qa-glass-light: linear-gradient(145deg, rgba(255,255,255,.80), rgba(255,255,255,.46));
+  --qa-glass-light-2: linear-gradient(135deg, rgba(255,241,249,.84), rgba(236,245,255,.58));
+  --qa-glass-border: rgba(255,255,255,.78);
+  --qa-dark-text-final: #fff8ff;
+  --qa-dark-muted-final: rgba(255,248,255,.76);
+  --qa-glass-dark: linear-gradient(145deg, rgba(25,22,52,.84), rgba(42,31,78,.56));
+  --qa-glass-dark-2: linear-gradient(135deg, rgba(51,28,94,.82), rgba(22,38,73,.58));
+}
+
+body:has(.tool-shell) .tool-shell{
+  display:flex;
+  flex-direction:column;
+  gap:var(--qa-page-gap);
+}
+
+body:has(.tool-shell) .tool-topbar,
+body:has(.tool-shell) .tool-card,
+body:has(.tool-shell) .summary-grid article,
+body:has(.tool-shell) .question-card,
+body:has(.tool-shell) .history-card,
+body:has(.tool-shell) .analysis-card,
+body:has(.tool-shell) .profile-achievement-card,
+body:has(.tool-shell) .profile-title-option,
+body:has(.tool-shell) .story-subject-card,
+body:has(.tool-shell) .story-branch-card,
+body:has(.tool-shell) .story-stage-card,
+body:has(.tool-shell) .distribution-item,
+body:has(.tool-shell) .radar-legend span,
+body:has(.tool-shell) .practice-box > p,
+body:has(.tool-shell) .practice-option,
+body:has(.tool-shell) .daily-break-dialog,
+body:has(.tool-shell) .report-empty,
+body:has(.tool-shell) .insight-list li,
+body:has(.tool-shell) .profile-language-row,
+body:has(.tool-shell) .achievement-showcase-row,
+body:has(.tool-shell) .avatar-studio,
+body:has(.tool-shell) .story-picker-bank-card{
+  padding:var(--qa-card-pad) !important;
+  margin:0 !important;
+  color:var(--qa-light-text) !important;
+  border:1px solid var(--qa-glass-border) !important;
+  border-radius:var(--qa-radius-xl) !important;
+  background:var(--qa-glass-light) !important;
+  box-shadow:0 20px 52px rgba(95,72,150,.16), inset 0 1px 0 rgba(255,255,255,.86) !important;
+  backdrop-filter:blur(22px) saturate(1.35) !important;
+  -webkit-backdrop-filter:blur(22px) saturate(1.35) !important;
+}
+
+body:has(.tool-shell) .summary-grid,
+body:has(.tool-shell) .question-list,
+body:has(.tool-shell) .history-list,
+body:has(.tool-shell) .analysis-panel,
+body:has(.tool-shell) .story-subject-grid,
+body:has(.tool-shell) .story-branch-list,
+body:has(.tool-shell) .story-mode-tabs,
+body:has(.tool-shell) .story-bank-tools,
+body:has(.tool-shell) .profile-edit-grid,
+body:has(.tool-shell) .profile-achievements,
+body:has(.tool-shell) .profile-title-list,
+body:has(.tool-shell) .practice-options,
+body:has(.tool-shell) .insight-list,
+body:has(.tool-shell) .bar-list,
+body:has(.tool-shell) .distribution-grid{
+  gap:var(--qa-page-gap) !important;
+}
+
+body:has(.tool-shell) .tool-card + .tool-card,
+body:has(.tool-shell) .summary-grid + .tool-card,
+body:has(.tool-shell) .tool-card + .summary-grid,
+body:has(.tool-shell) .profile-edit-grid + .tool-card{
+  margin-top:0 !important;
+}
+
+body:has(.tool-shell) h1,
+body:has(.tool-shell) h2,
+body:has(.tool-shell) h3,
+body:has(.tool-shell) h4,
+body:has(.tool-shell) strong,
+body:has(.tool-shell) .tool-card-head h2,
+body:has(.tool-shell) .story-mode-tab strong,
+body:has(.tool-shell) .story-subject-card strong,
+body:has(.tool-shell) .story-branch-card strong,
+body:has(.tool-shell) .profile-main h2{
+  color:var(--qa-light-text) !important;
+}
+
+body:has(.tool-shell) p,
+body:has(.tool-shell) span,
+body:has(.tool-shell) small,
+body:has(.tool-shell) label,
+body:has(.tool-shell) .tool-note,
+body:has(.tool-shell) .story-mode-tab span,
+body:has(.tool-shell) .story-subject-card span,
+body:has(.tool-shell) .story-branch-card span,
+body:has(.tool-shell) .history-card span,
+body:has(.tool-shell) .question-card p,
+body:has(.tool-shell) .profile-main p,
+body:has(.tool-shell) .daily-subtitle{
+  color:var(--qa-light-muted) !important;
+}
+
+body:has(.tool-shell) .tool-btn,
+body:has(.tool-shell) .profile-soft-btn,
+body:has(.tool-shell) .profile-main-btn,
+body:has(.tool-shell) .profile-upload-btn,
+body:has(.tool-shell) .avatar-tabs button,
+body:has(.tool-shell) .avatar-arrow{
+  min-height:44px;
+  padding:10px 16px !important;
+  border-radius:18px !important;
+  border:1px solid rgba(255,255,255,.72) !important;
+  background:linear-gradient(135deg, rgba(255,255,255,.76), rgba(255,255,255,.38)) !important;
+  color:#3a1f58 !important;
+  box-shadow:0 12px 26px rgba(118,72,170,.14) !important;
+}
+
+body:has(.tool-shell) .tool-btn:hover,
+body:has(.tool-shell) .story-subject-card:hover,
+body:has(.tool-shell) .story-branch-card:hover,
+body:has(.tool-shell) .question-card:hover,
+body:has(.tool-shell) .history-card:hover,
+body:has(.tool-shell) .profile-achievement-card:hover{
+  transform:translateY(-4px) !important;
+  box-shadow:0 26px 64px rgba(116,70,170,.24), 0 0 30px rgba(255,118,180,.16) !important;
+}
+
+body:has(.tool-shell) input,
+body:has(.tool-shell) textarea,
+body:has(.tool-shell) select,
+body:has(.tool-shell) .story-link-input,
+body:has(.tool-shell) .profile-select,
+body:has(.tool-shell) .practice-input,
+body:has(.tool-shell) .report-search input{
+  min-height:46px;
+  padding:10px 16px !important;
+  color:#241334 !important;
+  background:rgba(255,255,255,.76) !important;
+  border:1px solid rgba(255,255,255,.86) !important;
+  border-radius:18px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.82), 0 10px 22px rgba(88,60,130,.10) !important;
+}
+
+/* Story RPG emphasis */
+body:has(.story-shell){
+  background:
+    radial-gradient(circle at 76% 14%, rgba(255,210,105,.42), transparent 24%),
+    radial-gradient(circle at 16% 18%, rgba(173,112,255,.50), transparent 34%),
+    linear-gradient(rgba(24,8,47,.20), rgba(24,8,47,.30)),
+    url('../images/create_bg.png'),
+    linear-gradient(135deg,#20103f 0%,#56308a 52%,#ff7db7 100%) !important;
+  background-size:cover !important;
+  background-position:center !important;
+  background-attachment:fixed !important;
+}
+
+.story-shell .tool-card{
+  border-color:rgba(255,255,255,.40) !important;
+  background:linear-gradient(145deg, rgba(255,255,255,.76), rgba(255,234,248,.44)) !important;
+}
+
+.story-shell .story-hero-card{
+  position:relative;
+  min-height:260px !important;
+  padding:clamp(24px, 4vw, 44px) !important;
+  color:#fff !important;
+  background:
+    linear-gradient(135deg,rgba(35,13,75,.82),rgba(128,54,172,.58)),
+    radial-gradient(circle at 85% 14%, rgba(255,218,118,.72), transparent 21%),
+    url('../images/girl-bg.png') !important;
+  background-size:cover !important;
+  background-position:center !important;
+  border-color:rgba(255,255,255,.38) !important;
+  box-shadow:0 34px 90px rgba(42,12,78,.42),0 0 54px rgba(255,115,184,.28) !important;
+  overflow:hidden;
+}
+
+.story-shell .story-hero-card::before{
+  content:'\f0d0  RPG QUEST';
+  position:absolute;
+  right:22px;
+  top:20px;
+  z-index:2;
+  padding:8px 14px;
+  border-radius:999px;
+  font-family:'Font Awesome 6 Free','Noto Sans TC',sans-serif;
+  font-weight:900;
+  letter-spacing:.12em;
+  font-size:.72rem;
+  color:#fff;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.32);
+  backdrop-filter:blur(12px);
+}
+
+.story-shell .story-hero-card h2,
+.story-shell .story-hero-card .answer-pill,
+.story-shell .story-hero-card .story-progress-card,
+.story-shell .story-hero-card .story-progress-card strong,
+.story-shell .story-hero-card .story-progress-card span{
+  color:#fff !important;
+}
+
+.story-shell .story-hero-card h2{
+  font-size:clamp(2rem, 5vw, 4.6rem) !important;
+  line-height:1.06 !important;
+  text-shadow:0 8px 28px rgba(0,0,0,.28),0 0 28px rgba(255,136,198,.32);
+}
+
+.story-shell .story-hero-card p{
+  display:inline-block;
+  max-width:680px;
+  padding:8px 14px !important;
+  color:#fff7ff !important;
+  background:rgba(20,8,45,.26) !important;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:16px;
+  text-shadow:0 2px 8px rgba(0,0,0,.32) !important;
+}
+
+.story-subject-card,
+.story-branch-card,
+.story-mode-tab{
+  isolation:isolate;
+  overflow:hidden;
+}
+.story-subject-card::after,
+.story-branch-card::after,
+.story-mode-tab::after{
+  content:'';
+  position:absolute;
+  inset:-40% auto -40% -70%;
+  width:42%;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.62), transparent);
+  transform:rotate(18deg);
+  transition:left .55s ease;
+  pointer-events:none;
+}
+.story-subject-card:hover::after,
+.story-branch-card:hover::after,
+.story-mode-tab:hover::after{ left:120%; }
+
+.story-subject-card i{
+  margin-bottom:4px;
+  box-shadow:0 12px 28px rgba(143,92,246,.25),0 0 22px rgba(255,118,180,.18);
+}
+
+.story-play-area,
+.story-stage-card{
+  gap:16px !important;
+}
+
+/* Dark readable glass */
+body.dark-mode:has(.tool-shell),
+body.dark-mode:has(.profile-hero){
+  color:var(--qa-dark-text-final) !important;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(255,111,175,.20), transparent 34%),
+    radial-gradient(circle at 82% 20%, rgba(90,215,255,.18), transparent 34%),
+    linear-gradient(135deg,#070714 0%,#14142e 48%,#281548 100%) !important;
+  background-attachment:fixed !important;
+}
+
+body.dark-mode:has(.tool-shell) .tool-topbar,
+body.dark-mode:has(.tool-shell) .tool-card,
+body.dark-mode:has(.tool-shell) .summary-grid article,
+body.dark-mode:has(.tool-shell) .question-card,
+body.dark-mode:has(.tool-shell) .history-card,
+body.dark-mode:has(.tool-shell) .analysis-card,
+body.dark-mode:has(.tool-shell) .profile-achievement-card,
+body.dark-mode:has(.tool-shell) .profile-title-option,
+body.dark-mode:has(.tool-shell) .story-subject-card,
+body.dark-mode:has(.tool-shell) .story-branch-card,
+body.dark-mode:has(.tool-shell) .story-stage-card,
+body.dark-mode:has(.tool-shell) .story-mode-tab,
+body.dark-mode:has(.tool-shell) .distribution-item,
+body.dark-mode:has(.tool-shell) .radar-legend span,
+body.dark-mode:has(.tool-shell) .practice-box > p,
+body.dark-mode:has(.tool-shell) .practice-option,
+body.dark-mode:has(.tool-shell) .daily-break-dialog,
+body.dark-mode:has(.tool-shell) .insight-list li,
+body.dark-mode:has(.tool-shell) .profile-language-row,
+body.dark-mode:has(.tool-shell) .avatar-studio,
+body.dark-mode:has(.tool-shell) .story-picker-bank-card{
+  color:var(--qa-dark-text-final) !important;
+  background:var(--qa-glass-dark) !important;
+  border-color:rgba(255,255,255,.18) !important;
+  box-shadow:0 24px 58px rgba(0,0,0,.44), 0 0 36px rgba(255,111,175,.12) !important;
+}
+
+body.dark-mode:has(.tool-shell) h1,
+body.dark-mode:has(.tool-shell) h2,
+body.dark-mode:has(.tool-shell) h3,
+body.dark-mode:has(.tool-shell) h4,
+body.dark-mode:has(.tool-shell) strong,
+body.dark-mode:has(.tool-shell) .tool-card-head h2,
+body.dark-mode:has(.tool-shell) .summary-grid strong,
+body.dark-mode:has(.tool-shell) .story-mode-tab strong,
+body.dark-mode:has(.tool-shell) .story-subject-card strong,
+body.dark-mode:has(.tool-shell) .story-branch-card strong,
+body.dark-mode:has(.tool-shell) .profile-main h2{
+  color:var(--qa-dark-text-final) !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+
+body.dark-mode:has(.tool-shell) p,
+body.dark-mode:has(.tool-shell) span,
+body.dark-mode:has(.tool-shell) small,
+body.dark-mode:has(.tool-shell) label,
+body.dark-mode:has(.tool-shell) .tool-note,
+body.dark-mode:has(.tool-shell) .tool-kicker,
+body.dark-mode:has(.tool-shell) .story-mode-tab span,
+body.dark-mode:has(.tool-shell) .story-subject-card span,
+body.dark-mode:has(.tool-shell) .story-branch-card span,
+body.dark-mode:has(.tool-shell) .history-card span,
+body.dark-mode:has(.tool-shell) .question-card p,
+body.dark-mode:has(.tool-shell) .profile-main p,
+body.dark-mode:has(.tool-shell) .daily-subtitle{
+  color:var(--qa-dark-muted-final) !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+
+body.dark-mode:has(.tool-shell) input,
+body.dark-mode:has(.tool-shell) textarea,
+body.dark-mode:has(.tool-shell) select,
+body.dark-mode:has(.tool-shell) .story-link-input,
+body.dark-mode:has(.tool-shell) .profile-select,
+body.dark-mode:has(.tool-shell) .practice-input,
+body.dark-mode:has(.tool-shell) .report-search input{
+  color:#fff !important;
+  background:rgba(10,12,32,.62) !important;
+  border-color:rgba(255,255,255,.22) !important;
+}
+
+body.dark-mode:has(.tool-shell) input::placeholder,
+body.dark-mode:has(.tool-shell) textarea::placeholder{ color:rgba(255,255,255,.50) !important; }
+body.dark-mode:has(.tool-shell) .tool-btn,
+body.dark-mode:has(.tool-shell) .profile-soft-btn,
+body.dark-mode:has(.tool-shell) .profile-main-btn,
+body.dark-mode:has(.tool-shell) .profile-upload-btn,
+body.dark-mode:has(.tool-shell) .avatar-tabs button,
+body.dark-mode:has(.tool-shell) .avatar-arrow{
+  color:#fff !important;
+  background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.07)) !important;
+  border-color:rgba(255,255,255,.20) !important;
+}
+
+body.dark-mode:has(.story-shell) .story-hero-card{
+  background:
+    linear-gradient(135deg,rgba(20,8,48,.86),rgba(89,32,137,.62)),
+    radial-gradient(circle at 85% 14%, rgba(255,218,118,.36), transparent 21%),
+    url('../images/girl-bg.png') !important;
+  background-size:cover !important;
+}
+
+/* Mobile: cards no貼邊、按鈕/卡片單欄 */
+@media (max-width: 820px){
+  body:has(.tool-shell) .tool-shell{
+    width:calc(100% - 20px) !important;
+    padding:18px 0 42px !important;
+    gap:14px !important;
+  }
+  body:has(.tool-shell) .tool-topbar{
+    align-items:flex-start !important;
+    padding:16px !important;
+    border-radius:22px !important;
+  }
+  body:has(.tool-shell) .tool-card,
+  body:has(.tool-shell) .summary-grid article,
+  body:has(.tool-shell) .question-card,
+  body:has(.tool-shell) .history-card,
+  body:has(.tool-shell) .analysis-card,
+  body:has(.tool-shell) .profile-achievement-card,
+  body:has(.tool-shell) .profile-title-option,
+  body:has(.tool-shell) .story-subject-card,
+  body:has(.tool-shell) .story-branch-card{
+    padding:16px !important;
+    border-radius:22px !important;
+  }
+  body:has(.tool-shell) .summary-grid,
+  body:has(.tool-shell) .summary-grid.business-grid,
+  body:has(.tool-shell) .daily-summary-grid,
+  body:has(.tool-shell) .analysis-panel,
+  body:has(.tool-shell) .profile-edit-grid,
+  body:has(.tool-shell) .story-bank-tools,
+  body:has(.tool-shell) .story-mode-tabs,
+  body:has(.tool-shell) .story-subject-grid,
+  body:has(.tool-shell) .story-branch-list{
+    grid-template-columns:1fr !important;
+  }
+  body:has(.tool-shell) .tool-card-head,
+  body:has(.tool-shell) .report-search-row,
+  body:has(.tool-shell) .question-meta-row,
+  body:has(.tool-shell) .story-link-row,
+  body:has(.tool-shell) .story-paste-row,
+  body:has(.tool-shell) .story-inline-form,
+  body:has(.tool-shell) .profile-action-row,
+  body:has(.tool-shell) .practice-actions{
+    flex-direction:column !important;
+    align-items:stretch !important;
+  }
+  body:has(.tool-shell) .tool-btn,
+  body:has(.tool-shell) .profile-soft-btn,
+  body:has(.tool-shell) .profile-main-btn,
+  body:has(.tool-shell) .profile-upload-btn{
+    width:100% !important;
+  }
+  .story-shell .story-hero-card{
+    grid-template-columns:1fr !important;
+    min-height:230px !important;
+    padding:22px !important;
+  }
+  .story-shell .story-hero-card h2{ font-size:clamp(1.7rem, 9vw, 2.5rem) !important; }
+  .story-shell .story-hero-card::before{ position:static; display:inline-flex; width:max-content; margin-bottom:10px; }
+  .duel-score-row{ gap:8px !important; }
+  .duel-player-left,.duel-player-right{ align-items:center !important; }
+  .duel-options{ grid-template-columns:1fr !important; }
+}
+
+/* QA PATCH micro fix: ensure RPG shine pseudo elements stay inside their own cards */
+.story-subject-card,
+.story-branch-card,
+.story-mode-tab,
+.story-stage-card,
+.profile-achievement-card,
+.question-card,
+.history-card{
+  position:relative !important;
+}
