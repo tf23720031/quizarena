@@ -55,7 +55,9 @@ body.dark-mode {
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
-
+.tool-kicker h1{
+  color:#FF44AA;
+}
 h1,
 h2 {
   margin: 0;
