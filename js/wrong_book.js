@@ -362,7 +362,7 @@ function renderPractice() {
       <div class="practice-actions">
         <button id="checkPracticeBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 檢查答案</button>
         <button id="nextPracticeBtn" class="tool-btn secondary"><i class="fa-solid fa-forward"></i> 下一題</button>
-        <button id="aiTutorBtn" class="tool-btn tutor" style="${practiceState.checked ? "" : "display:none;}"><i class="fa-solid fa-chalkboard-user"></i> AI 家教講解</button>
+        <button id="aiTutorBtn" class="tool-btn tutor" style="${practiceState.checked ? "" : "display:none;"}"><i class="fa-solid fa-chalkboard-user"></i> AI 家教講解</button>
       </div>
       <div id="aiTutorBox" class="ai-tutor-box"></div>
       ${practiceState.checked ? `<div class="explanation-box">
