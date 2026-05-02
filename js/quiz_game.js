@@ -1,3 +1,16 @@
+// ── Taiwan Taipei Time Display ─────────────────────────────────────────
+function toTaipeiTimeStr(ts) {
+  if (!ts) return '';
+  return new Date(Number(ts) * 1000).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei', year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hour12: false,
+  });
+}
+function toTaipeiDateStr(ts) {
+  if (!ts) return '';
+  return new Date(Number(ts) * 1000).toLocaleDateString('zh-TW', {timeZone:'Asia/Taipei'});
+}
+
 /* ================================================================
    quiz_game.js
    ─ 房主：看選項(唯讀+正解標記)、監控、全答完可提早結束
@@ -136,12 +149,19 @@ async function api(url, opts = {}) {
 }
 
 function avatarHtml(p, size = 48) {
-  const face = p.face || 'images/face/face.png';
+  // Resolve face/avatar with fallback
+  const resolveUrl = (url) => {
+    if (!url || url === 'undefined') return 'images/face/face.png';
+    if (url.startsWith('data:') || url.startsWith('http')) return url;
+    if (url.startsWith('images/')) return url;
+    return 'images/face/face.png';
+  };
+  const face = resolveUrl(p.avatar || p.face);
   const hair = p.hair || 'images/hair/hair01.png';
   const eyes = p.eyes || 'images/face/eyes01.png';
   const oy   = Number(p.eyes_offset_y ?? p.eyesOffsetY ?? 0);
   return `<div class="mini-avatar" style="width:${size}px;height:${size}px;">
-    <img src="${face}" class="ma-layer ma-face">
+    <img src="${face}" class="ma-layer ma-face" onerror="this.src='images/face/face.png'">
     <img src="${eyes}" class="ma-layer ma-eyes" style="transform:translateX(-50%) translateY(${oy}px)">
     <img src="${hair}" class="ma-layer ma-hair">
   </div>`;

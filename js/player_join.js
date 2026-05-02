@@ -285,11 +285,19 @@ async function joinRoom() {
     roomKey: context.roomKey || "",
     player: {
       name: playerName,
-      face: state.useProfileAvatar && state.profileAvatar ? state.profileAvatar : "images/face/face.png",
-      hair: state.useProfileAvatar && state.profileAvatar ? TRANSPARENT_PIXEL : HAIRS[state.hairIndex],
-      eyes: state.useProfileAvatar && state.profileAvatar ? TRANSPARENT_PIXEL : EYES[state.eyeIndex],
-      eyesOffsetY: state.useProfileAvatar && state.profileAvatar ? 0 : state.eyesOffsetY,
-      isHost: isHost
+      // Use absolute URL for face images to avoid path issues
+      face: state.useProfileAvatar && state.profileAvatar
+        ? state.profileAvatar
+        : (window.location.origin + '/' + 'images/face/face.png'),
+      hair: state.useProfileAvatar && state.profileAvatar
+        ? TRANSPARENT_PIXEL
+        : (HAIRS[state.hairIndex] || TRANSPARENT_PIXEL),
+      eyes: state.useProfileAvatar && state.profileAvatar
+        ? TRANSPARENT_PIXEL
+        : (EYES[state.eyeIndex] || TRANSPARENT_PIXEL),
+      eyesOffsetY: state.useProfileAvatar && state.profileAvatar ? 0 : (state.eyesOffsetY || 0),
+      isHost: isHost,
+      avatar: state.useProfileAvatar && state.profileAvatar ? state.profileAvatar : '',
     }
   };
 

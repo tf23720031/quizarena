@@ -1,5 +1,7 @@
 from flask import Flask, send_from_directory, request, jsonify
 import os, sqlite3, json, hashlib, random, time, threading, shutil, html, re
+from datetime import datetime, timezone, timedelta
+TZ_TAIPEI = timezone(timedelta(hours=8))  # Asia/Taipei UTC+8
 import urllib.parse, urllib.request
 
 try:
@@ -64,7 +66,97 @@ ALLOW_AI_FALLBACK = os.environ.get('ALLOW_AI_FALLBACK', '1').strip() != '0'
 
 
 def now_ts():
-    return int(time.time())
+    return int(time.time())  # Always UTC epoch — timezone only affects display
+
+
+def taipei_now():
+    return datetime.now(TZ_TAIPEI)
+
+
+def taipei_today_str():
+    return taipei_now().strftime('%Y-%m-%d')
+
+
+def taipei_fmt(ts=None):
+    if ts is None:
+        ts = now_ts()
+    dt = datetime.fromtimestamp(int(ts or 0), tz=TZ_TAIPEI)
+    return dt.strftime('%Y-%m-%d %H:%M')
+
+
+# ── Session Token Helpers ─────────────────────────────────────────────────
+def generate_session_token():
+    return hashlib.sha256(f"{now_ts()}_{random.randint(100000,999999)}".encode()).hexdigest()
+
+def save_session(username, session_token, device_id='', ip=''):
+    ts = now_ts()
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("""
+                    INSERT INTO user_sessions (username, session_token, device_id, ip_address, login_at, last_seen)
+                    VALUES (%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT(username) DO UPDATE SET
+                        session_token=EXCLUDED.session_token,
+                        device_id=EXCLUDED.device_id,
+                        ip_address=EXCLUDED.ip_address,
+                        login_at=EXCLUDED.login_at,
+                        last_seen=EXCLUDED.last_seen
+                """, (username, session_token, device_id, ip, ts, ts))
+                c.execute("UPDATE users SET session_token=%s, device_id=%s, last_login_ip=%s, last_login_at=%s WHERE username=%s",
+                          (session_token, device_id, ip, ts, username))
+            conn.commit()
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO user_sessions
+                  (username, session_token, device_id, ip_address, login_at, last_seen)
+                VALUES (?,?,?,?,?,?)
+            """, (username, session_token, device_id, ip, ts, ts))
+            conn.execute("UPDATE users SET session_token=?, device_id=?, last_login_ip=?, last_login_at=? WHERE username=?",
+                         (session_token, device_id, ip, ts, username))
+            conn.commit()
+
+def get_active_session(username):
+    """Returns current session info for a user."""
+    if use_postgres_user_store():
+        with closing(get_pg_conn()) as conn:
+            with conn.cursor() as c:
+                c.execute("SELECT * FROM user_sessions WHERE username=%s", (username,))
+                row = c.fetchone()
+        return dict(row) if row else None
+    else:
+        with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+            conn.row_factory = dict_factory
+            return conn.execute("SELECT * FROM user_sessions WHERE username=?", (username,)).fetchone()
+
+def validate_session(username, session_token, device_id=''):
+    """Returns True if session matches, False if conflict."""
+    if not session_token:
+        return False, None
+    sess = get_active_session(username)
+    if not sess:
+        return True, None  # No session on record, allow
+    if sess.get('session_token') == session_token:
+        # Refresh last_seen
+        ts = now_ts()
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as c:
+                    c.execute("UPDATE user_sessions SET last_seen=%s WHERE username=%s", (ts, username))
+                conn.commit()
+        else:
+            with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+                conn.execute("UPDATE user_sessions SET last_seen=? WHERE username=?", (ts, username))
+                conn.commit()
+        return True, None
+    # Session conflict — return info about previous session
+    return False, {
+        'conflicting_device': sess.get('device_id') or '未知裝置',
+        'conflicting_ip': sess.get('ip_address') or '未知 IP',
+        'login_at': taipei_fmt(sess.get('login_at')),
+    }
+
 
 
 def host_alive_cutoff(seconds=80):
@@ -185,6 +277,24 @@ def language_name(value):
 def normalize_options(question_type, options):
     if not isinstance(options, list):
         options = []
+
+    # ── Matching type: preserve {left, right} pairs ──────────────────
+    if question_type == 'matching':
+        normalized = []
+        for opt in options:
+            if isinstance(opt, dict):
+                left  = str(opt.get('left', opt.get('text', ''))).strip()
+                right = str(opt.get('right', '')).strip()
+                if left:
+                    normalized.append({'left': left, 'right': right, 'text': left, 'correct': True})
+            elif isinstance(opt, str):
+                # Fallback: split on → or |
+                parts = re.split(r'→|\|', str(opt))
+                left  = parts[0].strip() if parts else str(opt).strip()
+                right = parts[1].strip() if len(parts) > 1 else ''
+                normalized.append({'left': left, 'right': right, 'text': left, 'correct': True})
+        return normalized
+
     normalized = []
     for idx, opt in enumerate(options):
         if isinstance(opt, dict):
@@ -216,11 +326,15 @@ def normalize_question(raw_question):
     if question_type not in VALID_QUESTION_TYPES:
         question_type = 'single'
     options = normalize_options(question_type, q.get('options', []))
-    answer_indexes = [i for i, opt in enumerate(options) if opt.get('correct')]
-    if question_type in {'single', 'tf'} and len(answer_indexes) > 1:
-        first = answer_indexes[0]
-        for idx, opt in enumerate(options):
-            opt['correct'] = idx == first
+    if question_type == 'matching':
+        # For matching: answer is list of right-side values in order
+        answer_indexes = list(range(len(options)))
+    else:
+        answer_indexes = [i for i, opt in enumerate(options) if opt.get('correct')]
+        if question_type in {'single', 'tf'} and len(answer_indexes) > 1:
+            first = answer_indexes[0]
+            for idx, opt in enumerate(options):
+                opt['correct'] = idx == first
 
     return {
         'id': str(q.get('id') or uid('question')).strip() or uid('question'),
@@ -1465,7 +1579,7 @@ DAILY_QUESTIONS = [
 
 
 def today_key(ts=None):
-    return time.strftime('%Y-%m-%d', time.localtime(ts or now_ts()))
+    return taipei_today_str()
 
 
 def date_to_epoch(date_text):
@@ -2375,6 +2489,23 @@ def init_postgres_users_db():
                     created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
                 )
             ''')
+            # Session tokens for single-device enforcement
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    session_token TEXT UNIQUE NOT NULL,
+                    device_id TEXT,
+                    ip_address TEXT DEFAULT '',
+                    login_at BIGINT,
+                    last_seen BIGINT,
+                    UNIQUE(username)
+                )
+            """)
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip TEXT DEFAULT ''")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at BIGINT DEFAULT 0")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token TEXT DEFAULT ''")
+            c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS device_id TEXT DEFAULT ''")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT ''")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_title TEXT DEFAULT '新手挑戰者'")
             c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'zh'")
@@ -2653,6 +2784,18 @@ def init_extended_sqlite_tables():
     """SQLite version of extended tables."""
     with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
         c = conn.cursor()
+        # User sessions (single device login)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS user_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                session_token TEXT UNIQUE NOT NULL,
+                device_id TEXT,
+                ip_address TEXT DEFAULT '',
+                login_at INTEGER,
+                last_seen INTEGER
+            )
+        """)
         # Story Progress
         c.execute("""
             CREATE TABLE IF NOT EXISTS story_progress (
@@ -3736,11 +3879,18 @@ def login():
                     user = cur.fetchone()
             if not user:
                 return jsonify(success=False, message='帳號或密碼錯誤'), 401
+            # Issue session token
+            session_token = generate_session_token()
+            device_id = str(data.get('deviceId', '')).strip()
+            client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+            save_session(user['username'], session_token, device_id, client_ip)
             return jsonify(success=True, username=user['username'], email=user['email'],
                            avatar=user.get('avatar') or '',
                            displayTitle=user.get('display_title') or '新手挑戰者',
                            language=normalize_profile_language(user.get('preferred_language')),
                            county=normalize_profile_county(user.get('county')),
+                           sessionToken=session_token,
+                           deviceId=device_id,
                            message='登入成功')
         with closing(get_conn(USERS_DB_PATH)) as conn:
             user = conn.execute(
@@ -3749,14 +3899,58 @@ def login():
             ).fetchone()
         if not user:
             return jsonify(success=False, message='帳號或密碼錯誤'), 401
+        session_token = generate_session_token()
+        device_id = str(data.get('deviceId', '')).strip()
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+        save_session(user['username'], session_token, device_id, client_ip)
         return jsonify(success=True, username=user['username'], email=user['email'],
                        avatar=user.get('avatar') or '',
                        displayTitle=user.get('display_title') or '新手挑戰者',
                        language=normalize_profile_language(user.get('preferred_language')),
                        county=normalize_profile_county(user.get('county')),
+                       sessionToken=session_token,
+                       deviceId=device_id,
                        message='登入成功')
     except Exception as e:
         return jsonify(success=False, message=f'登入失敗：{e}'), 500
+
+
+@app.route('/validate_session', methods=['POST'])
+def validate_session_api():
+    try:
+        data = request.get_json() or {}
+        username = str(data.get('username', '')).strip()
+        session_token = str(data.get('sessionToken', '')).strip()
+        device_id = str(data.get('deviceId', '')).strip()
+        if not username or not session_token:
+            return jsonify(success=False, valid=False, message='缺少參數'), 400
+        valid, conflict = validate_session(username, session_token, device_id)
+        if valid:
+            return jsonify(success=True, valid=True)
+        return jsonify(success=True, valid=False, conflict=conflict,
+                       message='此帳號已在其他裝置登入')
+    except Exception as e:
+        return jsonify(success=False, valid=False, message=str(e)), 500
+
+
+@app.route('/logout_session', methods=['POST'])
+def logout_session_api():
+    try:
+        data = request.get_json() or {}
+        username = str(data.get('username', '')).strip()
+        if username:
+            if use_postgres_user_store():
+                with closing(get_pg_conn()) as conn:
+                    with conn.cursor() as c:
+                        c.execute("DELETE FROM user_sessions WHERE username=%s", (username,))
+                    conn.commit()
+            else:
+                with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+                    conn.execute("DELETE FROM user_sessions WHERE username=?", (username,))
+                    conn.commit()
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
 
 
 @app.route('/user_profile')

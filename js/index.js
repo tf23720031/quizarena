@@ -65,8 +65,10 @@
     return "";
   }
 
-  function setCurrentUser(username) {
+  function setCurrentUser(username, sessionToken, deviceId) {
     localStorage.setItem("currentUser", username);
+    if (sessionToken) localStorage.setItem("sessionToken", sessionToken);
+    if (deviceId) localStorage.setItem("deviceId", deviceId);
   }
 
   function clearCurrentUser() {
@@ -752,7 +754,7 @@
         }),
       });
 
-      setCurrentUser(data.username);
+      setCurrentUser(data.username, data.sessionToken, data.deviceId);
       setCachedProfile({
         username: data.username,
         avatar: data.avatar || "",
