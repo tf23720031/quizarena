@@ -525,3 +525,90 @@ body.dark-mode:has(#mktBankList) .tool-note{
   body:has(#mktBankList) .mkt-rpg-shop-icons{ gap:14px !important; }
   body:has(#mktBankList) .mkt-rpg-icon i{ font-size:1.55rem !important; }
 }
+
+/* =========================================================
+   QA HOTFIX 2026-05-02 — marketplace remove excessive mobile blank
+   原因：learning_tools.css 對 .tool-shell / body:has(.tool-shell) 加了 100vh 與底部裝飾層，
+   在 marketplace 最後一張 RPG 卡片後會看起來像大片留白。
+   ========================================================= */
+html:has(#mktBankList),
+body:has(#mktBankList){
+  min-height:0 !important;
+  height:auto !important;
+  overflow-x:hidden !important;
+}
+
+body:has(#mktBankList)::after{
+  display:none !important;
+  content:none !important;
+}
+
+body:has(#mktBankList) .tool-shell{
+  min-height:0 !important;
+  height:auto !important;
+  padding-top:16px !important;
+  padding-bottom:12px !important;
+  gap:16px !important;
+}
+
+body:has(#mktBankList) .tool-card{
+  margin-bottom:0 !important;
+}
+
+body:has(#mktBankList) .mkt-rpg-market{
+  margin-top:0 !important;
+  margin-bottom:0 !important;
+  padding-block:22px !important;
+}
+
+body:has(#mktBankList) .mkt-rpg-market-inner{
+  margin:0 !important;
+  padding:0 !important;
+}
+
+body:has(#mktBankList) .mkt-rpg-shop-icons{
+  margin-bottom:8px !important;
+}
+
+body:has(#mktBankList) .mkt-rpg-market-title{
+  margin-bottom:6px !important;
+}
+
+body:has(#mktBankList) .mkt-rpg-market-desc{
+  margin:0 auto 10px !important;
+  max-width:620px !important;
+}
+
+/* 題庫還沒載入或沒有資料時，不要把清單區撐高 */
+body:has(#mktBankList) #mktBankList,
+body:has(#mktBankList) .mkt-bank-list{
+  min-height:0 !important;
+  height:auto !important;
+}
+
+body:has(#mktBankList) .mkt-empty-state{
+  min-height:0 !important;
+  padding:18px !important;
+  margin:0 !important;
+}
+
+@media (max-width:760px){
+  body:has(#mktBankList) .tool-shell{
+    width:calc(100% - 16px) !important;
+    padding:8px 0 8px !important;
+    gap:12px !important;
+  }
+
+  body:has(#mktBankList) .tool-card,
+  body:has(#mktBankList) .mkt-rpg-market{
+    border-radius:22px !important;
+  }
+
+  body:has(#mktBankList) .mkt-rpg-market{
+    padding:18px 14px !important;
+  }
+
+  body:has(#mktBankList) .mkt-rpg-cta{
+    min-height:44px !important;
+  }
+}
