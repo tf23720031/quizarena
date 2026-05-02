@@ -22,7 +22,11 @@ let _sessionCheckInterval = null;
 async function validateCurrentSession() {
   const username = localStorage.getItem('currentUser');
   const sessionToken = localStorage.getItem('sessionToken');
-  if (!username || !sessionToken) return;
+  // Don't call API if we don't have a token — old-style login, skip silently
+  if (!username || !sessionToken) {
+    console.log('[SessionGuard] skipping validate — no session token');
+    return;
+  }
 
   try {
     const res = await fetch('/validate_session', {
@@ -213,11 +217,19 @@ window.QASession = {
   toTaipeiDateStr,
 };
 
-// Auto-start if user is logged in (not a guest)
-if (localStorage.getItem('currentUser') && !localStorage.getItem('isGuestSession')) {
-  getOrCreateDeviceId(); // ensure device ID exists
-  // Delay slightly so page JS initializes first
-  setTimeout(startSessionGuard, 2000);
+// Auto-start ONLY when we have both username AND session token
+// (prevents 404 on pages where user never logged in via our new system)
+const _sgUser  = localStorage.getItem('currentUser');
+const _sgToken = localStorage.getItem('sessionToken');
+const _sgGuest = localStorage.getItem('isGuestSession') === '1';
+
+if (_sgUser && _sgToken && !_sgGuest) {
+  getOrCreateDeviceId();
+  setTimeout(startSessionGuard, 3000); // slight delay to let page settle
+} else if (_sgUser && !_sgToken) {
+  // Logged in via old flow (no token yet) — skip session validation, just set device ID
+  getOrCreateDeviceId();
+  console.log('[SessionGuard] no session token yet — skipping validation until next login');
 }
 
 console.log('[SessionGuard] loaded. user:', localStorage.getItem('currentUser') || '(guest/none)');

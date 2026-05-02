@@ -4256,10 +4256,15 @@ def _sm_save(token, match):
         conn.commit()
 
 def _sm_cleanup():
-    cutoff = now_ts() - 3600  # remove matches older than 1 hour
+    # Remove: waiting matches older than 30min, or ready/started matches older than 3h
+    ts = now_ts()
     with closing(sqlite3.connect(_sm_db_path())) as conn:
         _ensure_story_matches_table(conn)
-        conn.execute('DELETE FROM story_matches WHERE created_at < ?', (cutoff,))
+        # Delete old waiting matches
+        # Delete old waiting matches (won't have 'ready' in data JSON)
+        conn.execute('DELETE FROM story_matches WHERE created_at < ?', (ts - 1800,))
+        # Delete very old matches regardless of status
+        conn.execute('DELETE FROM story_matches WHERE created_at < ?', (ts - 10800,))
         conn.commit()
 
 
@@ -4315,6 +4320,7 @@ def story_match_join_api():
         if len(match['players']) >= 2 and match['status'] == 'waiting':
             match['status'] = 'ready'
             match['startedAt'] = now_ts()
+            match['readyAt'] = now_ts()  # Extra field so host poll detects the change
         _sm_save(token, match)
         return jsonify(success=True, match=match)
     except Exception as e:

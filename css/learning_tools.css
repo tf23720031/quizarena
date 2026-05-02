@@ -612,23 +612,8 @@ body.dark-mode .tool-btn.primary {
   grid-template-columns: minmax(0, 1fr) 220px;
   align-items: center;
   gap: 18px;
-  background:
-    linear-gradient(135deg, rgba(255, 238, 247, 0.95), rgba(241, 245, 255, 0.96)),
-    radial-gradient(circle at 92% 12%, rgba(124, 123, 255, 0.22), transparent 35%);
-}
-
-.story-hero-card h2 {
-  margin: 12px 0 8px;
-  color: #293150;
-  font-size: clamp(1.7rem, 4vw, 3rem);
-  font-weight: 900;
-}
-
-.story-hero-card p,
-.story-clear-state,
-.story-scene {
-  color: #66709b;
-  font-weight: 800;
+  position: relative;
+  overflow: hidden;
 }
 
 .story-progress-card {
@@ -2307,57 +2292,7 @@ body:has(.story-shell){
   text-shadow:0 0 18px rgba(255,122,196,.55);
 }
 
-.story-hero-card{
-  min-height:250px !important;
-  padding:36px !important;
-  border-radius:34px !important;
-  background:
-    linear-gradient(135deg,rgba(42,16,82,.76),rgba(129,52,177,.54)),
-    radial-gradient(circle at 83% 16%,rgba(255,218,118,.72),transparent 18%),
-    url("../images/girl-bg.png") !important;
-  background-size:cover !important;
-  background-position:center !important;
-  color:#fff !important;
-  border-color:rgba(255,255,255,.36) !important;
-  box-shadow:0 30px 80px rgba(40,12,76,.38),0 0 50px rgba(255,113,178,.28) !important;
-  animation:qaV3PulseGlow 3.6s ease-in-out infinite;
-}
-
-.story-hero-card::after{
-  content:"RPG QUEST";
-  position:absolute;
-  right:26px;
-  top:22px;
-  padding:8px 14px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.38);
-  background:rgba(255,255,255,.14);
-  color:rgba(255,255,255,.78);
-  letter-spacing:.16em;
-  font-size:.72rem;
-  font-weight:900;
-}
-
-.story-hero-card h2{
-  max-width:660px;
-  color:#fff !important;
-  font-size:clamp(2rem,4.5vw,4.8rem) !important;
-  line-height:1.05 !important;
-  text-shadow:0 8px 22px rgba(0,0,0,.26),0 0 30px rgba(255,128,196,.35);
-}
-
-.story-hero-card p{
-  color:rgba(255,255,255,.88) !important;
-  font-size:1.05rem;
-}
-
-.story-progress-card{
-  background:rgba(255,255,255,.18) !important;
-  border:1px solid rgba(255,255,255,.34) !important;
-  border-radius:24px !important;
-  backdrop-filter:blur(18px) !important;
-  color:#fff !important;
-}
+/* [removed conflicting hero block] */
 
 .story-mode-picker-card{
   background:linear-gradient(135deg,rgba(255,255,255,.68),rgba(246,230,255,.48)) !important;
@@ -2867,27 +2802,7 @@ body:has(#dailyMissionList) .practice-option.correct::after {
   animation: sparkleFloat 8s ease-in-out infinite alternate;
 }
 
-/* story-hero-card light-mode: dark bg with RPG feel, no overlay */
-.story-hero-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 32px !important;
-}
-
-.story-hero-card::after {
-  content: "\f6be  \f1b0  \f004";
-  position: absolute;
-  right: 26px;
-  bottom: 18px;
-  color: rgba(255,126,179,.24);
-  font-family: "Font Awesome 6 Free";
-  font-size: 4.8rem;
-  font-weight: 900;
-  letter-spacing: .14em;
-  animation: qaFloat 4.8s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
+/* [removed conflicting hero block 2870] */
 
 .story-branch-list { position: relative; gap: 18px; }
 
@@ -3411,19 +3326,7 @@ body:has(#profileAchievementsList) .tool-card {
   box-shadow: 0 0 24px rgba(255,143,189,.36), 0 0 16px rgba(255,207,112,.22);
 }
 
-body:has(.story-shell) .story-hero-card,
-body:has(.story-shell) .story-hero-card h2,
-body:has(.story-shell) .story-hero-card p,
-body:has(.story-shell) .story-progress-card,
-body:has(.story-shell) .story-progress-card span,
-body:has(.story-shell) .story-progress-card strong {
-  color: #2c2445 !important;
-  text-shadow: none !important;
-}
-
-body:has(.story-shell) .story-hero-card p {
-  font-weight: 900;
-}
+/* [removed conflicting body:has hero text] */
 
 .daily-question-card {
   padding: 26px 28px !important;
@@ -3542,16 +3445,7 @@ body:has(#dailyMissionList) .tool-topbar {
   }
 }
 
-/* ── Story hero card paragraph → dark readable text ── */
-.story-hero-card p {
-  color: #1a0a30 !important;
-  text-shadow: 0 1px 4px rgba(255,255,255,.45) !important;
-  font-weight: 700 !important;
-  background: rgba(255,255,255,.32);
-  border-radius: 12px;
-  display: inline-block;
-  padding: 4px 12px;
-}
+/* [removed conflicting p override 3546] */
 
 /* ══════════════════════════════════════════════════
    Story Mode — My Banks Picker Modal (RPG Glass)
@@ -4161,4 +4055,167 @@ body.dark-mode:has(.story-shell) .story-hero-card{
 }
 body.dark-mode .tool-kicker {
   color: #ff8ec5 !important;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   DEFINITIVE story-hero-card — one source of truth
+   Light mode: deep purple RPG gradient + white text
+   Dark mode:  slightly deeper, same feel
+   ════════════════════════════════════════════════════════════════ */
+.story-shell .story-hero-card {
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 240px !important;
+  padding: clamp(24px, 4vw, 44px) !important;
+  border-radius: 32px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) minmax(140px,200px) !important;
+  align-items: center !important;
+  gap: 18px !important;
+  background:
+    linear-gradient(135deg, rgba(32,10,72,.84), rgba(122,50,168,.62)),
+    radial-gradient(circle at 84% 14%, rgba(255,215,115,.72), transparent 22%),
+    url('../images/girl-bg.png') center/cover no-repeat !important;
+  border-color: rgba(255,255,255,.36) !important;
+  box-shadow: 0 30px 80px rgba(40,12,76,.38), 0 0 50px rgba(255,113,184,.22) !important;
+  animation: qaV3PulseGlow 4s ease-in-out infinite !important;
+}
+
+/* RPG badge top-right */
+.story-shell .story-hero-card::before {
+  content: '✦ RPG QUEST';
+  position: absolute;
+  right: 18px;
+  top: 16px;
+  z-index: 2;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: rgba(255,255,255,.85);
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.28);
+  pointer-events: none;
+}
+
+/* Remove ALL other ::after noise on hero */
+.story-shell .story-hero-card::after { display: none !important; }
+
+/* White text on dark gradient */
+.story-shell .story-hero-card,
+.story-shell .story-hero-card h2,
+.story-shell .story-hero-card span,
+.story-shell .story-hero-card strong {
+  color: #fff !important;
+  text-shadow: none !important;
+}
+
+.story-shell .story-hero-card h2 {
+  font-size: clamp(1.6rem, 4.5vw, 3.6rem) !important;
+  line-height: 1.08 !important;
+  text-shadow: 0 4px 16px rgba(0,0,0,.28) !important;
+  margin: 0 0 10px !important;
+}
+
+.story-shell .story-hero-card p {
+  display: inline-block;
+  color: rgba(255,255,255,.9) !important;
+  font-size: .92rem !important;
+  font-weight: 600 !important;
+  padding: 6px 14px !important;
+  background: rgba(20,8,45,.28) !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  border-radius: 14px !important;
+  text-shadow: 0 1px 6px rgba(0,0,0,.24) !important;
+  margin-top: 6px !important;
+}
+
+.story-shell .story-hero-card .story-progress-card {
+  background: rgba(255,255,255,.15) !important;
+  border: 1px solid rgba(255,255,255,.28) !important;
+  border-radius: 20px !important;
+  padding: 16px !important;
+  color: #fff !important;
+}
+
+.story-shell .story-hero-card .story-progress-card span { color: rgba(255,255,255,.72) !important; font-size: .8rem !important; }
+.story-shell .story-hero-card .story-progress-card strong { color: #fff !important; font-size: 1.3rem !important; font-weight: 900 !important; }
+
+/* Dark mode: deeper purple */
+body.dark-mode .story-shell .story-hero-card {
+  background:
+    linear-gradient(135deg, rgba(18,6,46,.9), rgba(96,36,140,.7)),
+    radial-gradient(circle at 84% 14%, rgba(255,215,115,.55), transparent 22%),
+    url('../images/girl-bg.png') center/cover no-repeat !important;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .story-shell .story-hero-card {
+    grid-template-columns: 1fr !important;
+    min-height: 180px !important;
+  }
+  .story-shell .story-hero-card .story-progress-card {
+    display: none !important; /* hide on mobile to avoid clutter */
+  }
+  .story-shell .story-hero-card h2 {
+    font-size: clamp(1.4rem, 8vw, 2rem) !important;
+  }
+}
+
+/* ── tool-kicker: always pink ─── */
+.tool-topbar .tool-kicker {
+  color: #ff66ab !important;
+  font-weight: 800 !important;
+  letter-spacing: .14em !important;
+  font-size: .7rem !important;
+}
+body.dark-mode .tool-topbar .tool-kicker {
+  color: #ff9ed0 !important;
+}
+
+/* ── Story mode tab icon fix ─── */
+.story-mode-tab {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 16px 12px !important;
+}
+.story-mode-tab > i {
+  font-size: 1.6rem !important;
+  display: block !important;
+}
+.story-mode-tab > strong {
+  display: block !important;
+  font-size: .92rem !important;
+}
+.story-mode-tab > span {
+  display: block !important;
+  font-size: .73rem !important;
+  opacity: .7 !important;
+  line-height: 1.3 !important;
+  text-align: center !important;
+}
+
+/* ── Duel avatar ring ─── */
+.duel-avatar {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  border: 3px solid rgba(255,255,255,.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.6rem !important;
+  background: rgba(255,255,255,.12) !important;
+}
+.duel-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
 }

@@ -946,6 +946,21 @@ $("myBanksPickerCloseBtn")?.addEventListener("click", () => { const b = $("myBan
 $("storyModalCloseBtn")?.addEventListener("click", () => $("storyModalBackdrop").classList.remove("show"));
 renderAll();
 
+// ── Teacher mode topbar update ────────────────────────────────────
+(function updateTopbarForRole() {
+  const kicker = document.getElementById("storyTopKicker");
+  const title  = document.getElementById("storyTopTitle");
+  const role   = (localStorage.getItem("userRole") || "").toLowerCase();
+  if (!kicker) return;
+  if (role === "teacher" || role === "admin") {
+    if (kicker) { kicker.textContent = "TEACHER"; kicker.style.color = "#ff66ab"; }
+    if (title)  title.textContent = "老師模式";
+  } else {
+    if (kicker) { kicker.textContent = "Story Mode"; kicker.style.color = "#ff66ab"; }
+    if (title)  title.textContent = "故事模式";
+  }
+})();
+
 
 // ═══════════════════════════════════════════════════════
 //  錯題本整合
@@ -1109,15 +1124,21 @@ function startMatchWhenReady(match, roleName = userKey()) {
 
 function pollStoryMatch(token, roleName = userKey()) {
   clearStoryMatchPoll();
+  let failCount = 0;
   storyMatchPoll = setInterval(async () => {
     try {
       const data = await api(`/story_match_state/${encodeURIComponent(token)}`);
-      startMatchWhenReady(data.match, roleName);
+      failCount = 0;
+      if (startMatchWhenReady(data.match, roleName)) return; // match started, poll stopped inside
     } catch (error) {
-      clearStoryMatchPoll();
-      showToast(error.message || "邀請狀態讀取失敗");
+      failCount++;
+      if (failCount >= 5) {
+        clearStoryMatchPoll();
+        showToast(error.message || "邀請狀態讀取失敗，請重新建立連結");
+      }
+      // else silently retry
     }
-  }, 1200);
+  }, 800); // 800ms for snappier sync
 }
 
 $("createChallengeBtn")?.addEventListener("click", async () => {
@@ -1155,8 +1176,8 @@ $("createChallengeBtn")?.addEventListener("click", async () => {
       waitingMsg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 題庫已選定，等待另一位玩家加入...';
       waitingMsg.style.display = "";
     }
-    showToast("邀請連結已建立，另一位玩家加入後才會開始");
-    pollStoryMatch(token, hostName);
+    showToast("邀請連結已建立，等待玩家加入...");
+    pollStoryMatch(token, hostName); // host polls at 800ms
   } catch (error) {
     showToast(error.message || "建立邀請失敗");
   }
@@ -1188,15 +1209,17 @@ $("joinChallengeBtn")?.addEventListener("click", async () => {
   currentStoryMode = mode;
   const playerName = userKey() === "guest" ? "玩家 2" : userKey();
   try {
-    const joinAvatarRaw = (() => {
-      try { const p = JSON.parse(localStorage.getItem("currentUserProfile") || "null"); return p?.avatar || ""; } catch { return ""; }
-    })();
+    const joinAvatarRaw = getMyAvatar();
     const data = await api("/story_match_join", {
       method: "POST",
       body: JSON.stringify({ token: parsed.token, playerName, playerAvatar: joinAvatarRaw }),
     });
-    showToast("已加入，雙方到齊後開始");
-    if (!startMatchWhenReady(data.match, playerName)) pollStoryMatch(parsed.token, playerName);
+    if (startMatchWhenReady(data.match, playerName)) {
+      showToast("雙方都到齊了！開始對戰");
+    } else {
+      showToast("已加入，等待房主確認...");
+      pollStoryMatch(parsed.token, playerName);
+    }
   } catch (error) {
     showToast(error.message || "加入邀請失敗");
   }
@@ -1231,15 +1254,17 @@ $("joinChallengeBtn")?.addEventListener("click", async () => {
     setStoryMode(mode || "pvp");
     const playerName = currentUser;
     try {
-      const autoAvatar = (() => {
-        try { const p = JSON.parse(localStorage.getItem("currentUserProfile") || "null"); return p?.avatar || ""; } catch { return ""; }
-      })();
+      const autoAvatar = getMyAvatar();
       const data = await api("/story_match_join", {
         method: "POST",
         body: JSON.stringify({ token, playerName, playerAvatar: autoAvatar }),
       });
-      showToast("已加入故事邀請，準備開始");
-      if (!startMatchWhenReady(data.match, playerName)) pollStoryMatch(token, playerName);
+      if (startMatchWhenReady(data.match, playerName)) {
+        showToast("雙方都到齊了，開始對戰！");
+      } else {
+        showToast("已加入，等待對方確認後開始...");
+        pollStoryMatch(token, playerName);
+      }
     } catch (error) {
       showToast(error.message || "加入邀請失敗");
     }
@@ -1267,10 +1292,31 @@ const duelState = {
 function renderDuelAvatar(el, avatarUrl, fallbackEmoji) {
   if (!el) return;
   if (avatarUrl && (avatarUrl.startsWith('data:') || avatarUrl.startsWith('http'))) {
-    el.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.textContent='${fallbackEmoji}'">`;
+    el.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='<span style=\"font-size:1.6rem\">${fallbackEmoji}</span>'">`;
+  } else if (avatarUrl && avatarUrl.startsWith('style:')) {
+    // Custom avatar style string
+    try {
+      const style = JSON.parse(avatarUrl.slice(6));
+      el.style.cssText += 'background:' + (style.background || '#c9b8e8') + ';';
+    } catch {}
+    el.innerHTML = `<span style="font-size:1.6rem">${fallbackEmoji}</span>`;
   } else {
-    el.textContent = fallbackEmoji;
+    el.innerHTML = `<span style="font-size:1.6rem">${fallbackEmoji}</span>`;
   }
+}
+
+function getMyAvatar() {
+  // Try profile avatar first
+  try {
+    const p = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
+    if (p?.avatar && (p.avatar.startsWith('data:') || p.avatar.startsWith('http'))) return p.avatar;
+  } catch {}
+  // Try roomPlayerProfile
+  try {
+    const rp = JSON.parse(localStorage.getItem("roomPlayerProfile") || "null");
+    if (rp?.face && (rp.face.startsWith('data:') || rp.face.startsWith('http'))) return rp.face;
+  } catch {}
+  return "";
 }
 
 function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRight) {
