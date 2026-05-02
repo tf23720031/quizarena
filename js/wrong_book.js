@@ -229,17 +229,64 @@ function topBy(items, key) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || ["-", 0];
 }
 
+// Map subject keywords to clean display names for the radar
+const SUBJECT_MAP = [
+  { keys: ["國文","語文","中文","閱讀","文學","故事模式 - 國文","語文力"], label: "國文" },
+  { keys: ["英文","english","英語","閱讀測驗","英文閱讀","故事模式 - 英文"], label: "英文" },
+  { keys: ["數學","math","幾何","代數","計算","數學推理"], label: "數學" },
+  { keys: ["歷史","history","世界史","中國史","台灣史"], label: "歷史" },
+  { keys: ["地理","地球","geography"], label: "地理" },
+  { keys: ["公民","社會","法律","政治","civil"], label: "公民" },
+  { keys: ["自然","理化","物理","化學","生物","science","自然科學"], label: "自然" },
+  { keys: ["程式","coding","python","javascript","演算法","資訊","電腦","code"], label: "程式" },
+  { keys: ["設計","design","ui","ux","視覺","藝術"], label: "設計" },
+  { keys: ["健康","體育","health","衛教","生活"], label: "健康" },
+  { keys: ["邏輯","思考","推理","logic"], label: "邏輯" },
+  { keys: ["音樂","music","藝能"], label: "音樂" },
+];
+
+function resolveSubjectLabel(item) {
+  const raw = String(item.category || item.sourceBankTitle || item.source || "").toLowerCase();
+  for (const { keys, label } of SUBJECT_MAP) {
+    if (keys.some(k => raw.includes(k.toLowerCase()))) return label;
+  }
+  // Fallback: clean up the raw category name
+  const clean = String(item.category || item.sourceBankTitle || "其他")
+    .replace(/^故事模式[\s·-]*/i, "")
+    .replace(/（複製）/, "")
+    .trim();
+  return clean || "其他";
+}
+
 function buildWeaknessMetrics(items) {
-  const groups = [["類別", "category"], ["難度", "difficulty"], ["題型", "type"]];
-  return groups.flatMap(([groupLabel, key]) => {
-    const counts = new Map();
-    items.forEach((item) => {
-      const label = key === "type" ? questionTypeText(item.type) : (item[key] || "未分類");
-      counts.set(label, (counts.get(label) || 0) + Number(item.wrongCount || 1));
-    });
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
-      .map(([label, count]) => ({ label: `${groupLabel}:${label}`, value: count }));
-  }).slice(0, 6);
+  if (!items.length) return [];
+
+  // Count wrong answers per subject
+  const subjectCounts = new Map();
+  items.forEach((item) => {
+    const subject = resolveSubjectLabel(item);
+    subjectCounts.set(subject, (subjectCounts.get(subject) || 0) + Number(item.wrongCount || 1));
+  });
+
+  // Sort by count desc, take top 8 subjects for radar
+  const sorted = [...subjectCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  // Need at least 3 points for a meaningful radar
+  if (sorted.length < 3) {
+    // Pad with zero-value entries so the radar still draws
+    const needed = 3 - sorted.length;
+    const allSubjects = SUBJECT_MAP.map(s => s.label);
+    for (const s of allSubjects) {
+      if (sorted.length >= 3) break;
+      if (!sorted.some(([label]) => label === s)) {
+        sorted.push([s, 0]);
+      }
+    }
+  }
+
+  return sorted.map(([label, value]) => ({ label, value }));
 }
 
 function renderWeaknessRadar(items) {
@@ -270,7 +317,7 @@ function renderWeaknessRadar(items) {
     ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius); ctx.stroke();
     const labelX = cx + Math.cos(angle) * (radius + 38);
     const labelY = cy + Math.sin(angle) * (radius + 38);
-    item.label.split(":").forEach((part, line) => { ctx.fillText(part, labelX, labelY + (line - 0.5) * 16); });
+    ctx.fillText(item.label, labelX, labelY);
   });
   ctx.beginPath();
   metrics.forEach((item, index) => {
@@ -281,22 +328,61 @@ function renderWeaknessRadar(items) {
   });
   ctx.closePath(); ctx.fillStyle = "rgba(255, 107, 166, 0.28)";
   ctx.strokeStyle = "rgba(124, 123, 255, 0.9)"; ctx.lineWidth = 3; ctx.fill(); ctx.stroke();
-  legend.innerHTML = metrics.map((item) => `<span><b>${escapeHtml(item.label)}</b>${Number(item.value)} 次</span>`).join("");
+  // Legend with color gradient based on value
+  const maxVal = Math.max(1, ...metrics.map(m => m.value));
+  legend.innerHTML = metrics.map((item) => {
+    const pct = item.value / maxVal;
+    const color = pct > 0.7 ? "#ef4444" : pct > 0.4 ? "#f59e0b" : "#22c55e";
+    return `<span style="border-left:3px solid ${color}"><b>${escapeHtml(item.label)}</b>${Number(item.value)} 次</span>`;
+  }).join("");
 }
 
 function renderInsight(items) {
   const wrap = $("wrongBookInsight"); if (!wrap) return;
   if (!items.length) {
-    wrap.innerHTML = `<article><strong>狀態很好</strong><span>目前沒有錯題，之後答錯會自動產生複習建議。</span></article>`;
+    wrap.innerHTML = `<article><strong>狀態很好 ✨</strong><span>目前沒有錯題，繼續加油！</span></article>`;
     return;
   }
-  const [category, categoryCount] = topBy(items, "category");
-  const [difficulty, difficultyCount] = topBy(items, "difficulty");
+
+  // Build subject counts
+  const subjectCounts = new Map();
+  items.forEach(item => {
+    const s = resolveSubjectLabel(item);
+    subjectCounts.set(s, (subjectCounts.get(s) || 0) + Number(item.wrongCount || 1));
+  });
+  const topSubjects = [...subjectCounts.entries()].sort((a, b) => b[1] - a[1]);
+  const [weakest, weakestCount] = topSubjects[0] || ["-", 0];
+  const [second, secondCount] = topSubjects[1] || [null, 0];
+
+  // Priority question (most wrong)
   const priority = [...items].sort((a, b) => Number(b.wrongCount || 0) - Number(a.wrongCount || 0))[0];
+
+  // Difficulty breakdown
+  const diffCounts = new Map();
+  items.forEach(item => {
+    const d = item.difficulty || "medium";
+    diffCounts.set(d, (diffCounts.get(d) || 0) + Number(item.wrongCount || 1));
+  });
+  const [hardestDiff, hardestCount] = [...diffCounts.entries()].sort((a,b) => b[1]-a[1])[0] || ["medium", 0];
+  const diffLabel = { easy: "簡單題", medium: "中等題", hard: "困難題" }[hardestDiff] || hardestDiff;
+
   wrap.innerHTML = `
-    <article><strong>${escapeHtml(category)}</strong><span>最需要補強的類別，累積 ${categoryCount} 次錯誤。</span></article>
-    <article><strong>${escapeHtml(difficulty)}</strong><span>最常出錯的難度，累積 ${difficultyCount} 次錯誤。</span></article>
-    <article><strong>${escapeHtml(priority?.title || "-")}</strong><span>優先複習這題，已錯 ${Number(priority?.wrongCount || 0)} 次。</span></article>
+    <article>
+      <strong>📚 ${escapeHtml(weakest)}</strong>
+      <span>最需要補強，累積 ${weakestCount} 次錯誤。</span>
+    </article>
+    ${second ? `<article>
+      <strong>📖 ${escapeHtml(second)}</strong>
+      <span>第二弱項，累積 ${secondCount} 次錯誤。</span>
+    </article>` : ""}
+    <article>
+      <strong>⚠️ ${diffLabel}</strong>
+      <span>最常出錯的難度，共 ${hardestCount} 次。</span>
+    </article>
+    <article>
+      <strong>🔥 ${escapeHtml(priority?.title?.slice(0,20) || "-")}</strong>
+      <span>優先複習這題，已錯 ${Number(priority?.wrongCount || 0)} 次。</span>
+    </article>
   `;
 }
 
