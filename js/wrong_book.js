@@ -1,22 +1,27 @@
 const $ = (id) => document.getElementById(id);
 
 function getCurrentUser() {
-  // Check all possible keys used across the app
+  // 1. Use pre-resolved value from inline script (fastest)
+  if (window.__wbUsername) return window.__wbUsername;
+  // 2. Check all possible simple keys
   const keys = ["currentUser", "qa_current_user", "quizarena_user", "username", "playerName"];
   for (const key of keys) {
     const v = String(localStorage.getItem(key) || sessionStorage.getItem(key) || "").trim();
-    if (v && v !== "undefined" && v !== "null" && v !== "guest") return v;
+    if (v && v !== "undefined" && v !== "null" && v !== "guest") {
+      window.__wbUsername = v;
+      return v;
+    }
   }
-  // Try profile objects
+  // 3. Try profile JSON objects
   const profileKeys = ["currentUserProfile", "qa_profile_cache", "roomPlayerProfile", "currentUserProfileData"];
   for (const key of profileKeys) {
     try {
       const p = JSON.parse(localStorage.getItem(key) || "null");
       if (!p) continue;
       const u = String(p.username || p.account || p.name || p.playerName || "").trim();
-      if (u && u !== "undefined" && u !== "null" && u !== "guest") {
-        // Backfill the primary key so future checks are faster
+      if (u && u !== "undefined" && u !== "null") {
         localStorage.setItem("currentUser", u);
+        window.__wbUsername = u;
         return u;
       }
     } catch {}
@@ -536,59 +541,65 @@ function renderWrongBook(data) {
 }
 
 async function loadWrongBook() {
-  const username = getCurrentUser();
+  // ── Step 1: Resolve username using every possible method ────────────
+  let username = getCurrentUser();
 
-  // Show username immediately (even before API responds)
-  if ($("wrongUserName")) $("wrongUserName").textContent = username || "(未登入)";
-  // Show/hide login warning
+  // Debug: log all localStorage keys to console
+  console.group("[WrongBook] localStorage dump");
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.includes("user") || k.includes("User") || k.includes("profile") || k.includes("Profile") || k.includes("player"))) {
+      console.log(k, "=", localStorage.getItem(k));
+    }
+  }
+  console.log("Resolved username:", username || "(empty)");
+  console.groupEnd();
+
+  // ── Step 2: Show username & warning immediately ──────────────────────
+  if ($("wrongUserName")) $("wrongUserName").textContent = username || "(未登入，請先到首頁登入)";
   const wbWarn = $("wbLoginWarn");
   if (wbWarn) wbWarn.style.display = username ? "none" : "";
 
+  // ── Step 3: If still no username, show local items or prompt ────────
   if (!username) {
-    // Still try to show local story wrong items for guest users
-    const localItems = loadLocalStoryWrongItems("guest");
-    if (localItems.length) {
-      renderWrongBook({ username: "guest", items: localItems, totalWrongCount: localItems.reduce((s, i) => s + (i.wrongCount || 1), 0) });
+    const guestItems = loadLocalStoryWrongItems("guest");
+    if (guestItems.length) {
+      renderWrongBook({ username: "guest", items: guestItems, totalWrongCount: guestItems.reduce((s,i)=>s+(i.wrongCount||1),0) });
     } else {
-      $("wrongBookList").innerHTML = `<article class="question-card"><h3>請先登入</h3><p>登入後就能查看自己的錯題本。在故事模式答錯的題目也會在這裡出現。</p></article>`;
+      $("wrongBookList").innerHTML = `<article class="question-card">
+        <h3>📖 請先登入</h3>
+        <p>請回到<a href="index.html" style="color:#9333ea;font-weight:700"> 首頁 </a>登入帳號後再查看錯題本。</p>
+        <p style="font-size:.85rem;color:#aaa;margin-top:8px">在故事模式答錯的題目也會自動出現在這裡。</p>
+      </article>`;
     }
     return;
   }
 
+  // ── Step 4: Load from server + merge localStorage ───────────────────
+  let data = { username, items: [], totalWrongCount: 0, success: true };
   try {
-    // Load from server
-    let data = { username, items: [], totalWrongCount: 0 };
-    try {
-      data = await api(`/wrong_book_summary?username=${encodeURIComponent(username)}`);
-    } catch (apiErr) {
-      console.warn("[WrongBook] API failed, using localStorage only:", apiErr.message);
-      data = { username, items: [], totalWrongCount: 0, success: true };
-    }
+    data = await api(`/wrong_book_summary?username=${encodeURIComponent(username)}`);
+    console.log("[WrongBook] API returned", (data.items||[]).length, "items");
+  } catch (apiErr) {
+    console.warn("[WrongBook] API failed:", apiErr.message, "— using localStorage only");
+  }
 
-    // Merge localStorage story wrong items (always, as safety net)
-    const localItems = loadLocalStoryWrongItems(username);
-    if (localItems.length) {
-      const seen = new Set((data.items || []).map((item) => String(item.content || item.title || "").trim()));
-      const newLocal = localItems.filter((item) => {
-        const key = String(item.content || item.title || "").trim();
-        return key && !seen.has(key);
-      });
-      if (newLocal.length) {
-        data.items = [...(data.items || []), ...newLocal];
-        data.totalWrongCount = Number(data.totalWrongCount || 0) + newLocal.reduce((s, i) => s + Number(i.wrongCount || 1), 0);
-      }
-    }
-
-    renderWrongBook(data);
-  } catch (error) {
-    console.error("[WrongBook] load failed:", error);
-    showToast("錯題本載入失敗：" + error.message);
-    // Last resort: render whatever is in localStorage
-    const localItems = loadLocalStoryWrongItems(username);
-    if (localItems.length) {
-      renderWrongBook({ username, items: localItems, totalWrongCount: localItems.reduce((s, i) => s + (i.wrongCount || 1), 0) });
+  // Always merge localStorage story wrong items as safety net
+  const localItems = loadLocalStoryWrongItems(username);
+  console.log("[WrongBook] localStorage items:", localItems.length);
+  if (localItems.length) {
+    const seen = new Set((data.items||[]).map(item => String(item.content||item.title||"").trim()));
+    const fresh = localItems.filter(item => {
+      const k = String(item.content||item.title||"").trim();
+      return k && !seen.has(k);
+    });
+    if (fresh.length) {
+      data.items = [...(data.items||[]), ...fresh];
+      data.totalWrongCount = Number(data.totalWrongCount||0) + fresh.reduce((s,i)=>s+Number(i.wrongCount||1),0);
     }
   }
+
+  renderWrongBook(data);
 }
 
 $("refreshWrongBookBtn")?.addEventListener("click", loadWrongBook);

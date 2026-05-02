@@ -13,6 +13,37 @@
 <body>
   <script>
     document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');
+    // ── Immediately resolve username from ALL possible localStorage keys ──
+    (function() {
+      function resolveUser() {
+        var simpleKeys = ["currentUser","qa_current_user","quizarena_user","username","playerName"];
+        for (var i = 0; i < simpleKeys.length; i++) {
+          var v = (localStorage.getItem(simpleKeys[i]) || sessionStorage.getItem(simpleKeys[i]) || "").trim();
+          if (v && v !== "undefined" && v !== "null" && v !== "guest") return v;
+        }
+        var profileKeys = ["currentUserProfile","qa_profile_cache","roomPlayerProfile","currentUserProfileData"];
+        for (var j = 0; j < profileKeys.length; j++) {
+          try {
+            var p = JSON.parse(localStorage.getItem(profileKeys[j]) || "null");
+            if (!p) continue;
+            var u = (p.username || p.account || p.name || p.playerName || "").trim();
+            if (u && u !== "undefined" && u !== "null") {
+              localStorage.setItem("currentUser", u); // backfill
+              return u;
+            }
+          } catch(e) {}
+        }
+        return "";
+      }
+      window.__wbUsername = resolveUser();
+      // Set username display immediately without waiting for JS
+      document.addEventListener("DOMContentLoaded", function() {
+        var el = document.getElementById("wrongUserName");
+        var warn = document.getElementById("wbLoginWarn");
+        if (el) el.textContent = window.__wbUsername || "(未登入)";
+        if (warn) warn.style.display = window.__wbUsername ? "none" : "";
+      });
+    })();
   </script>
   <main class="tool-shell">
     <header class="tool-topbar">
