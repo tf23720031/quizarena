@@ -755,24 +755,27 @@
       });
 
       setCurrentUser(data.username, data.sessionToken, data.deviceId);
-    // Handle post-login redirect (e.g. from challenge invite)
-    const urlParams = new URLSearchParams(location.search);
-    const redirectTo = urlParams.get('redirect');
-    if (redirectTo) {
-      const extraParams = Array.from(urlParams.entries())
-        .filter(([k]) => k !== 'redirect')
-        .map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-      setTimeout(() => {
-        window.location.href = extraParams ? `${redirectTo}?${extraParams}` : redirectTo;
-      }, 500);
-      return;
-    }
       setCachedProfile({
         username: data.username,
         avatar: data.avatar || "",
         displayTitle: data.displayTitle || "新手挑戰者",
         language: data.language || "zh",
       });
+
+      // Handle post-login redirect (e.g. from story challenge invite)
+      const urlParams = new URLSearchParams(location.search);
+      const redirectTo = urlParams.get('redirect');
+      if (redirectTo) {
+        const extraParams = Array.from(urlParams.entries())
+          .filter(([k]) => k !== 'redirect')
+          .map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+        memberModal?.hide();
+        showToast("登入成功，正在進入邀請房間...");
+        setTimeout(() => {
+          window.location.href = extraParams ? `${redirectTo}?${extraParams}` : redirectTo;
+        }, 450);
+        return;
+      }
       memberModal?.hide();
       updateAuthUI();
       await loadUserProfile();
@@ -982,6 +985,17 @@
     loadFriendsOverview();
     loadFriendRequestSummary();
     loadAchievementsSummary();
+
+    // 未登入者點故事模式邀請網址時，先在首頁跳出登入 modal；登入後再回邀請網址。
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get("redirect") && !getCurrentUser()) {
+      switchMemberTab?.("login");
+      setTimeout(() => {
+        openLoginModal();
+        showToast("請先登入，登入後會自動進入邀請房間");
+      }, 250);
+    }
+
     setInterval(loadLobby, 8000);
     setInterval(loadFriendsOverview, 15000);
     setInterval(loadFriendRequestSummary, 15000);

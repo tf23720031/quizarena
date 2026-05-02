@@ -4256,15 +4256,24 @@ def _sm_save(token, match):
         conn.commit()
 
 def _sm_cleanup():
-    # Remove: waiting matches older than 30min, or ready/started matches older than 3h
+    # Story invite rooms: waiting rooms expire after 10 minutes if not started;
+    # started/ready rooms are kept for a while so both clients can poll and sync.
     ts = now_ts()
     with closing(sqlite3.connect(_sm_db_path())) as conn:
         _ensure_story_matches_table(conn)
-        # Delete old waiting matches
-        # Delete old waiting matches (won't have 'ready' in data JSON)
-        conn.execute('DELETE FROM story_matches WHERE created_at < ?', (ts - 1800,))
-        # Delete very old matches regardless of status
-        conn.execute('DELETE FROM story_matches WHERE created_at < ?', (ts - 10800,))
+        rows = conn.execute('SELECT token, data, created_at FROM story_matches').fetchall()
+        for row in rows:
+            try:
+                match = json.loads(row['data'] or '{}')
+            except Exception:
+                conn.execute('DELETE FROM story_matches WHERE token=?', (row['token'],))
+                continue
+            created_at = int(row['created_at'] or match.get('createdAt') or 0)
+            status = str(match.get('status') or 'waiting')
+            if status == 'waiting' and created_at and created_at < ts - 600:
+                conn.execute('DELETE FROM story_matches WHERE token=?', (row['token'],))
+            elif created_at and created_at < ts - 10800:
+                conn.execute('DELETE FROM story_matches WHERE token=?', (row['token'],))
         conn.commit()
 
 
@@ -4613,8 +4622,10 @@ def lobby_rooms():
             stale = conn.execute('''
                 SELECT DISTINCT r.pin FROM rooms r
                 LEFT JOIN room_players hp ON hp.room_pin=r.pin AND hp.is_host=1
-                WHERE hp.id IS NULL OR COALESCE(hp.last_seen,hp.joined_at,0) < ?
-            ''', (host_alive_cutoff(),)).fetchall()
+                WHERE hp.id IS NULL
+                   OR COALESCE(hp.last_seen,hp.joined_at,0) < ?
+                   OR (r.status='waiting' AND COALESCE(r.game_start_ts,0)=0 AND COALESCE(r.created_at,0) < ?)
+            ''', (host_alive_cutoff(), now_ts() - 600)).fetchall()
             for s in stale:
                 delete_room_fully(conn, s['pin'])
             if stale:
@@ -4726,10 +4737,7 @@ def create_room():
         pin = generate_unique_pin()
 
         with closing(get_conn()) as conn:
-            old_rooms = conn.execute('SELECT pin FROM rooms WHERE created_by=?', (created_by,)).fetchall()
-            for old in old_rooms:
-                delete_room_fully(conn, old['pin'])
-
+            # 不在建立新房時刪除舊房。房間只在房主離開，或等待超過 10 分鐘仍未開始時清除。
             conn.execute('''
                 INSERT INTO rooms
                 (pin,room_name,bank_id,bank_title,created_by,is_private,room_key_hash,room_key_plain,

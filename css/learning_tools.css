@@ -4219,3 +4219,120 @@ body.dark-mode .tool-topbar .tool-kicker {
   object-fit: cover !important;
   border-radius: 50% !important;
 }
+
+
+/* === QuizArena final story/teacher hotfix === */
+body:not(.dark-mode) #storyTopKicker,
+body:not(.dark-mode) .tool-topbar .tool-kicker,
+body:not(.dark-mode) .teacher-report-page .tool-kicker {
+  color: #ff66ab !important;
+  -webkit-text-fill-color: #ff66ab !important;
+  text-shadow: 0 6px 18px rgba(255, 102, 171, .22);
+}
+
+/* remove decorative glass layers that could cover text in light mode */
+body:not(.dark-mode) .tool-card::before,
+body:not(.dark-mode) .tool-card::after,
+body:not(.dark-mode) .story-hero-card::before,
+body:not(.dark-mode) .story-hero-card::after,
+body:not(.dark-mode) .summary-grid article::before,
+body:not(.dark-mode) .summary-grid article::after {
+  pointer-events: none !important;
+  z-index: 0 !important;
+  opacity: .35;
+}
+body:not(.dark-mode) .tool-card > *,
+body:not(.dark-mode) .story-hero-card > *,
+body:not(.dark-mode) .summary-grid article > * {
+  position: relative;
+  z-index: 1;
+}
+body:not(.dark-mode) .teacher-report-page .tool-card::before,
+body:not(.dark-mode) .teacher-report-page .tool-card::after {
+  display: none !important;
+  content: none !important;
+}
+
+.story-mode-tab[data-mode="pvp"] strong::before,
+#duelModeLabel::before {
+  content: "\f6de";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  margin-right: 8px;
+  display: inline-block;
+  color: #ff66ab;
+  filter: drop-shadow(0 6px 12px rgba(255,102,171,.28));
+  animation: qaBattleIconFloat 1.8s ease-in-out infinite;
+}
+.story-mode-tab[data-mode="pvp"] i {
+  color: #ff66ab !important;
+  transform-origin: center;
+  animation: qaBattleIconFloat 1.8s ease-in-out infinite;
+}
+@keyframes qaBattleIconFloat {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-5deg); }
+}
+.story-mode-tabs,
+.story-link-row,
+.story-paste-row,
+.duel-score-row,
+.duel-progress-row,
+.duel-options {
+  gap: 16px !important;
+}
+.story-mode-tab,
+.story-tool-panel,
+.story-subject-card,
+.story-branch-card,
+.story-duel-card,
+.duel-question-box,
+.duel-option-btn,
+.duel-player,
+.duel-result-card {
+  padding: clamp(14px, 2.5vw, 22px) !important;
+  box-sizing: border-box;
+}
+.duel-avatar,
+.duel-avatar-real {
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,255,255,.88), rgba(255,230,246,.65));
+  border: 2px solid rgba(255, 102, 171, .38);
+}
+.duel-avatar img,
+.qa-duel-composite-avatar,
+.qa-duel-composite-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.qa-duel-composite-avatar { position: relative; border-radius: 50%; overflow: hidden; }
+.qa-duel-layer { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.qa-duel-face { z-index: 1; }
+.qa-duel-hair { z-index: 2; }
+.qa-duel-eyes { z-index: 3; }
+
+@media (max-width: 768px) {
+  .story-mode-tabs,
+  .story-link-row,
+  .story-paste-row,
+  .duel-score-row,
+  .duel-progress-row {
+    grid-template-columns: 1fr !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .story-link-input,
+  .tool-btn,
+  .story-mode-tab,
+  .duel-option-btn {
+    width: 100% !important;
+  }
+  .duel-score-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+  .duel-vs-badge { margin: 2px auto !important; }
+  .story-shell { padding-inline: 14px !important; }
+}

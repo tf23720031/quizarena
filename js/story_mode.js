@@ -1125,20 +1125,22 @@ function startMatchWhenReady(match, roleName = userKey()) {
 function pollStoryMatch(token, roleName = userKey()) {
   clearStoryMatchPoll();
   let failCount = 0;
-  storyMatchPoll = setInterval(async () => {
+  const check = async () => {
     try {
       const data = await api(`/story_match_state/${encodeURIComponent(token)}`);
       failCount = 0;
-      if (startMatchWhenReady(data.match, roleName)) return; // match started, poll stopped inside
+      if (startMatchWhenReady(data.match, roleName)) return true;
     } catch (error) {
       failCount++;
-      if (failCount >= 5) {
+      if (failCount >= 8) {
         clearStoryMatchPoll();
         showToast(error.message || "邀請狀態讀取失敗，請重新建立連結");
       }
-      // else silently retry
     }
-  }, 800); // 800ms for snappier sync
+    return false;
+  };
+  check(); // 房主建立後立刻檢查一次，避免 B 已加入但 A 還卡在等待畫面
+  storyMatchPoll = setInterval(check, 700);
 }
 
 $("createChallengeBtn")?.addEventListener("click", async () => {
@@ -1289,33 +1291,58 @@ const duelState = {
   timeLeft: DUEL_TIME,
 };
 
+function normalizeAvatarValue(value) {
+  const avatar = String(value || "").trim();
+  if (!avatar || avatar === "null" || avatar === "undefined") return "";
+  if (avatar.startsWith("data:") || avatar.startsWith("http") || avatar.startsWith("images/") || avatar.startsWith("/images/")) return avatar;
+  if (avatar.startsWith("style:")) return avatar;
+  return "";
+}
+
 function renderDuelAvatar(el, avatarUrl, fallbackEmoji) {
   if (!el) return;
-  if (avatarUrl && (avatarUrl.startsWith('data:') || avatarUrl.startsWith('http'))) {
-    el.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML='<span style=\"font-size:1.6rem\">${fallbackEmoji}</span>'">`;
-  } else if (avatarUrl && avatarUrl.startsWith('style:')) {
-    // Custom avatar style string
+  const avatar = normalizeAvatarValue(avatarUrl);
+  el.classList.add("duel-avatar-real");
+  if (avatar.startsWith("style:")) {
     try {
-      const style = JSON.parse(avatarUrl.slice(6));
-      el.style.cssText += 'background:' + (style.background || '#c9b8e8') + ';';
+      const style = JSON.parse(avatar.slice(6));
+      const face = escapeHtml(style.face || "images/face/face.png");
+      const hair = escapeHtml(style.hair || "images/hair/hair01.png");
+      const eyes = escapeHtml(style.eyes || "images/face/eyes01.png");
+      const eyeOffset = Number(style.eyeOffset || style.eyesOffsetY || 0);
+      el.innerHTML = `
+        <div class="qa-duel-composite-avatar">
+          <img class="qa-duel-layer qa-duel-face" src="${face}" alt="">
+          <img class="qa-duel-layer qa-duel-hair" src="${hair}" alt="">
+          <img class="qa-duel-layer qa-duel-eyes" src="${eyes}" style="transform:translate(-50%, calc(-50% + ${eyeOffset}px));" alt="">
+        </div>`;
+      return;
     } catch {}
-    el.innerHTML = `<span style="font-size:1.6rem">${fallbackEmoji}</span>`;
-  } else {
-    el.innerHTML = `<span style="font-size:1.6rem">${fallbackEmoji}</span>`;
   }
+  if (avatar) {
+    el.innerHTML = `<img src="${escapeHtml(avatar)}" alt="玩家頭像" onerror="this.parentElement.innerHTML='<span style=\"font-size:1.6rem\">${fallbackEmoji}</span>'">`;
+    return;
+  }
+  el.innerHTML = `<span style="font-size:1.6rem">${fallbackEmoji}</span>`;
 }
 
 function getMyAvatar() {
-  // Try profile avatar first
-  try {
-    const p = JSON.parse(localStorage.getItem("currentUserProfile") || "null");
-    if (p?.avatar && (p.avatar.startsWith('data:') || p.avatar.startsWith('http'))) return p.avatar;
-  } catch {}
-  // Try roomPlayerProfile
-  try {
-    const rp = JSON.parse(localStorage.getItem("roomPlayerProfile") || "null");
-    if (rp?.face && (rp.face.startsWith('data:') || rp.face.startsWith('http'))) return rp.face;
-  } catch {}
+  const keys = ["currentUserProfile", "roomPlayerProfile", "qa_profile_cache", "quizarena_user_profile"];
+  for (const key of keys) {
+    try {
+      const p = JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || "null");
+      const avatar = normalizeAvatarValue(p?.avatar || p?.avatarUrl || p?.photo || p?.face || p?.image);
+      if (avatar) return avatar;
+      if (p?.face || p?.hair || p?.eyes) {
+        return "style:" + JSON.stringify({
+          face: p.face || "images/face/face.png",
+          hair: p.hair || "images/hair/hair01.png",
+          eyes: p.eyes || "images/face/eyes01.png",
+          eyeOffset: Number(p.eyeOffset || p.eyesOffsetY || p.eyes_offset_y || 0),
+        });
+      }
+    } catch {}
+  }
   return "";
 }
 
@@ -1343,8 +1370,8 @@ function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRigh
   if ($("duelModeLabel")) $("duelModeLabel").textContent = mode === "pvp" ? "挑戰模式" : "合作模式";
 
   // Render avatars with real images or emoji fallback
-  renderDuelAvatar($("duelAvatarLeft"),  avatarLeft || "", "🧑");
-  renderDuelAvatar($("duelAvatarRight"), avatarRight || "", "🤖");
+  renderDuelAvatar($("duelAvatarLeft"), avatarLeft || getMyAvatar(), "🧑");
+  renderDuelAvatar($("duelAvatarRight"), avatarRight || "", "🧑");
 
   renderDuelQuestion();
 }
@@ -1504,7 +1531,7 @@ function endDuelGame() {
 
 $("duelPlayAgainBtn")?.addEventListener("click", () => {
   $("duelResultOverlay").style.display = "none";
-  startDuelGame(duelState.names[0], duelState.names[1], duelState.mode, activeBranch().stages);
+  startDuelGame(duelState.names[0], duelState.names[1], duelState.mode, activeBranch().stages, duelState.avatarLeft, duelState.avatarRight);
 });
 
 $("duelBackBtn")?.addEventListener("click", () => {
