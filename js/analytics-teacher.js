@@ -1,0 +1,347 @@
+// js/analytics-teacher.js
+
+let currentRoomId = '';
+let overviewData = null;
+let classDistChart = null;
+let weakBarChart = null;
+
+async function initRoomSelector() {
+  try {
+    const res = await fetch('/api/recent-rooms');
+    const data = await res.json();
+    const sel = document.getElementById('analytics-room-select');
+    if (!sel) return;
+    (data.rooms || []).forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.room_id;
+      opt.textContent = `${r.room_name || r.room_id} (${(r.played_at || '').slice(0, 10)})`;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    console.warn('[teacher] initRoomSelector error:', e);
+  }
+
+  const params = new URLSearchParams(location.search);
+  const rid = params.get('room_id') || '';
+  if (rid) {
+    const sel = document.getElementById('analytics-room-select');
+    if (sel) sel.value = rid;
+    analyticsLoadRoom(rid);
+  }
+}
+
+async function analyticsLoadRoom(roomId) {
+  if (!roomId) return;
+  currentRoomId = roomId;
+  await loadOverview();
+}
+
+async function loadOverview() {
+  if (!currentRoomId) return;
+  try {
+    const res = await fetch(`/api/teacher/overview/${currentRoomId}`);
+    overviewData = await res.json();
+    renderClassStats(overviewData);
+    renderStudentGrid(overviewData);
+    populateStudentLists(overviewData);
+  } catch (e) {
+    console.error('[teacher] loadOverview error:', e);
+  }
+}
+
+function renderClassStats(data) {
+  const el = document.getElementById('class-stats-grid');
+  if (!el) return;
+  el.innerHTML = [
+    { label: '學生人數',   value: data.total_students || 0,       color: '#f0abfc' },
+    { label: '平均正確率', value: `${data.avg_accuracy || 0}%`,   color: '#34d399' },
+    { label: '平均速度',   value: `${data.avg_speed || 0}s`,      color: '#60a5fa' },
+    { label: '需輔導人數', value: (data.needs_help || []).length,  color: '#f87171' },
+  ].map(s => `
+    <div class="stat-card">
+      <div class="stat-value" style="color:${s.color};">${s.value}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>
+  `).join('');
+
+  const students = data.students || [];
+  const buckets = { '0-49': 0, '50-69': 0, '70-89': 0, '90-100': 0 };
+  students.forEach(s => {
+    const a = s.accuracy;
+    if (a < 50) buckets['0-49']++;
+    else if (a < 70) buckets['50-69']++;
+    else if (a < 90) buckets['70-89']++;
+    else buckets['90-100']++;
+  });
+
+  const canvas = document.getElementById('class-dist-chart');
+  if (!canvas) return;
+  if (classDistChart) classDistChart.destroy();
+  classDistChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(buckets),
+      datasets: [{
+        label: '人數',
+        data: Object.values(buckets),
+        backgroundColor: ['rgba(248,113,113,0.7)','rgba(251,191,36,0.7)','rgba(96,165,250,0.7)','rgba(52,211,153,0.7)'],
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      animation: { duration: 600 },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#a78bfa' }, grid: { color: 'rgba(139,92,246,0.1)' } },
+        y: { ticks: { color: '#a78bfa', stepSize: 1 }, grid: { color: 'rgba(139,92,246,0.1)' } },
+      },
+    },
+  });
+}
+
+function renderStudentGrid(data) {
+  const el = document.getElementById('student-grid');
+  if (!el) return;
+  const students = data.students || [];
+  el.innerHTML = students.map(s => {
+    const color = s.status === 'good' ? '#34d399' : s.status === 'warning' ? '#fbbf24' : '#f87171';
+    return `<div onclick="showStudentDetail('${s.player_name}')" style="
+      background:rgba(139,92,246,0.08);border:1px solid ${color}40;border-radius:10px;
+      padding:12px;text-align:center;cursor:pointer;transition:all 0.2s;
+    " onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='${color}40'">
+      <div style="font-size:24px;margin-bottom:4px;">🧝</div>
+      <div style="font-size:12px;font-weight:600;color:#e9d5ff;margin-bottom:4px;">${s.player_name}</div>
+      <div style="font-size:11px;color:${color};">${s.accuracy}%</div>
+    </div>`;
+  }).join('');
+}
+
+function populateStudentLists(data) {
+  const students = data.students || [];
+
+  const listEl = document.getElementById('student-list');
+  if (listEl) {
+    listEl.innerHTML = students.map(s => {
+      const color = s.status === 'good' ? '#34d399' : s.status === 'warning' ? '#fbbf24' : '#f87171';
+      return `<div onclick="showStudentDetail('${s.player_name}')"
+        style="padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:4px;border-left:3px solid ${color};background:rgba(139,92,246,0.05);">
+        <div style="font-size:13px;">${s.player_name}</div>
+        <div style="font-size:11px;color:${color};">${s.accuracy}%</div>
+      </div>`;
+    }).join('');
+  }
+
+  const sel = document.getElementById('parent-student-select');
+  if (sel) {
+    // clear old dynamic options
+    while (sel.options.length > 1) sel.remove(1);
+    students.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.player_name;
+      opt.textContent = s.player_name;
+      sel.appendChild(opt);
+    });
+  }
+
+  const aiEl = document.getElementById('ai-cards-container');
+  if (aiEl) {
+    aiEl.innerHTML = students.map(s => `
+      <div class="glass-card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span style="font-size:20px;">🧝</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;">${s.player_name}</div>
+            <div style="font-size:12px;color:#a78bfa;">正確率 ${s.accuracy}%</div>
+          </div>
+          <button onclick="fetchAiSuggestion('${s.player_name}', this)"
+            style="margin-left:auto;background:rgba(124,58,237,0.3);border:1px solid #7c3aed;color:#e9d5ff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;">
+            生成建議
+          </button>
+        </div>
+        <div id="ai-result-${s.player_name}" style="font-size:13px;color:#a78bfa;white-space:pre-line;"></div>
+      </div>
+    `).join('');
+  }
+}
+
+async function showStudentDetail(playerName) {
+  switchTeacherTab('student', document.querySelectorAll('.tab-btn')[1]);
+
+  const panel = document.getElementById('student-detail-panel');
+  if (!panel) return;
+  panel.innerHTML = '<p style="color:#6d28d9;text-align:center;padding:20px;">載入中...</p>';
+
+  try {
+    const res = await fetch(`/api/teacher/student/${currentRoomId}/${encodeURIComponent(playerName)}`);
+    const s = await res.json();
+
+    const weakHTML = s.weak_subjects?.length
+      ? s.weak_subjects.map(w => `<span class="badge badge-red">${w}</span>`).join(' ')
+      : '<span style="color:#34d399;font-size:13px;">無明顯弱科 ✓</span>';
+
+    const subjHTML = Object.entries(s.subject_scores || {}).map(([subj, score]) => `
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:13px;">${subj}</span>
+          <span style="color:#f0abfc;font-size:13px;">${score}%</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width:${score}%;background:linear-gradient(90deg,#7c3aed,#f0abfc);"></div>
+        </div>
+      </div>
+    `).join('');
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span style="font-size:32px;">🧝</span>
+        <div>
+          <div style="font-size:18px;font-weight:700;">${s.student_name}</div>
+          <div style="font-size:13px;color:#a78bfa;">第 ${s.rank} 名 / 共 ${s.total_players} 人</div>
+        </div>
+      </div>
+      <div class="stat-grid" style="margin-bottom:16px;">
+        <div class="stat-card"><div class="stat-value" style="color:#34d399;">${s.accuracy}%</div><div class="stat-label">正確率</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:#60a5fa;">${s.avg_speed_sec?.toFixed(1) || '-'}s</div><div class="stat-label">平均速度</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:#f0abfc;">${s.score}</div><div class="stat-label">本場分數</div></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:#a78bfa;font-size:12px;margin-bottom:6px;">弱點科目</div>
+        ${weakHTML}
+      </div>
+      ${subjHTML ? `<div style="margin-top:12px;"><div style="color:#a78bfa;font-size:12px;margin-bottom:8px;">各科分數</div>${subjHTML}</div>` : ''}
+    `;
+  } catch (e) {
+    panel.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px;">載入失敗：${e.message}</p>`;
+  }
+}
+
+async function loadWeakQuestions() {
+  if (!currentRoomId) return;
+  try {
+    const res = await fetch(`/api/teacher/weak-questions/${currentRoomId}`);
+    const data = await res.json();
+    const questions = data.questions || [];
+    const total = data.total_players || 1;
+
+    const canvas = document.getElementById('weak-bar-chart');
+    if (canvas && questions.length > 0) {
+      if (weakBarChart) weakBarChart.destroy();
+      weakBarChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: questions.slice(0, 10).map(q => `題目 ${q.q_id}`),
+          datasets: [{
+            label: '錯誤率 %',
+            data: questions.slice(0, 10).map(q => q.error_rate),
+            backgroundColor: 'rgba(248,113,113,0.7)',
+            borderColor: '#f87171',
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          indexAxis: 'y',
+          animation: { duration: 600 },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { min: 0, max: 100, ticks: { color: '#a78bfa' }, grid: { color: 'rgba(139,92,246,0.1)' } },
+            y: { ticks: { color: '#e9d5ff' }, grid: { display: false } },
+          },
+        },
+      });
+    }
+
+    const listEl = document.getElementById('weak-detail-list');
+    if (listEl) {
+      listEl.innerHTML = questions.map(q => `
+        <div class="glass-card" style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:600;">題目 ${q.q_id}</span>
+            <span class="badge badge-red">${q.error_rate}% 錯誤</span>
+          </div>
+          <div style="color:#a78bfa;font-size:12px;">答錯的學生：${(q.wrong_players || []).join('、') || '無'}</div>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    console.error('[teacher] loadWeakQuestions error:', e);
+  }
+}
+
+async function fetchAiSuggestion(playerName, btn) {
+  btn.disabled = true;
+  btn.textContent = '生成中...';
+  const resultEl = document.getElementById(`ai-result-${playerName}`);
+  if (resultEl) resultEl.textContent = '🤖 AI 分析中...';
+
+  try {
+    const res = await fetch('/api/teacher/ai-suggestion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_name: playerName, room_id: currentRoomId }),
+    });
+    const data = await res.json();
+    if (resultEl) resultEl.textContent = data.suggestion || '無法生成建議';
+    btn.textContent = '已生成';
+  } catch (e) {
+    if (resultEl) resultEl.textContent = `錯誤：${e.message}`;
+    btn.disabled = false;
+    btn.textContent = '重試';
+  }
+}
+
+async function generateParentReport() {
+  const studentName = document.getElementById('parent-student-select')?.value;
+  if (!studentName || !currentRoomId) {
+    alert('請選擇學生及房間');
+    return;
+  }
+
+  const resultEl = document.getElementById('parent-report-result');
+  if (resultEl) resultEl.innerHTML = '<p style="color:#a78bfa;">產生中...</p>';
+
+  try {
+    const res = await fetch('/api/teacher/parent-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_name: studentName,
+        room_id: currentRoomId,
+        teacher_name: localStorage.getItem('playerName') || '',
+      }),
+    });
+    const data = await res.json();
+    if (resultEl) {
+      resultEl.innerHTML = `
+        <div style="background:rgba(52,211,153,0.1);border:1px solid #34d399;border-radius:10px;padding:16px;">
+          <div style="color:#34d399;font-weight:600;margin-bottom:8px;">✅ 報告已生成</div>
+          <div style="font-size:13px;color:#a78bfa;margin-bottom:8px;">分享連結：</div>
+          <div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;font-size:12px;color:#e9d5ff;word-break:break-all;margin-bottom:12px;">${data.url}</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="navigator.clipboard.writeText('${data.url}').then(()=>this.textContent='已複製！')"
+              style="background:rgba(139,92,246,0.3);border:1px solid #7c3aed;color:#e9d5ff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">
+              複製連結
+            </button>
+            <a href="${data.url}" target="_blank"
+              style="background:var(--purple-primary);color:#fff;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:12px;">
+              預覽報告
+            </a>
+          </div>
+        </div>
+      `;
+    }
+  } catch (e) {
+    if (resultEl) resultEl.innerHTML = `<p style="color:#f87171;">錯誤：${e.message}</p>`;
+  }
+}
+
+function switchTeacherTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById(`tab-${name}`);
+  if (panel) panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  if (name === 'weak') loadWeakQuestions();
+}
+
+initRoomSelector();

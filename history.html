@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>歷屆戰績 — QuizArena</title>
+<link rel="stylesheet" href="css/analytics.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="analytics-page" style="padding:20px;max-width:900px;margin:0 auto;">
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+  <a href="/" style="color:#a78bfa;text-decoration:none;font-size:20px;">←</a>
+  <h1 class="gradient-title" style="font-size:26px;">📜 歷屆戰績</h1>
+  <span id="player-name-label" style="color:#6d28d9;font-size:14px;margin-left:auto;"></span>
+</div>
+
+<!-- 統計卡片 -->
+<div class="stat-grid" id="stats-grid" style="margin-bottom:24px;"></div>
+
+<!-- 折線圖 -->
+<div class="glass-card" style="margin-bottom:24px;">
+  <h3 style="color:#c4b5fd;margin-bottom:12px;">近期成績趨勢</h3>
+  <canvas id="trend-chart" height="80"></canvas>
+</div>
+
+<!-- 戰績列表 -->
+<div id="history-list"></div>
+
+<!-- 分頁 -->
+<div id="pagination" style="display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap;"></div>
+
+<!-- 雷達圖 -->
+<div class="glass-card" style="margin-top:24px;">
+  <h3 style="color:#c4b5fd;margin-bottom:16px;text-align:center;">🎯 能力雷達圖</h3>
+  <canvas id="radar-canvas" height="300"></canvas>
+  <p style="text-align:center;color:#6d28d9;font-size:12px;margin-top:10px;">
+    紫色=你　灰色=全體平均　金色=第一名
+  </p>
+</div>
+
+<script src="js/analytics-radar.js"></script>
+<script src="js/analytics-history.js"></script>
+</body>
+</html>

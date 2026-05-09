@@ -1,0 +1,236 @@
+{
+  "users": {
+    "mingjia": [
+      {
+        "id": "bank_1776913119024_in06n",
+        "questions": [],
+        "title": "211211",
+        "updatedAt": 1776913122
+      },
+      {
+        "id": "bank_1776913091_3298",
+        "questions": [
+          {
+            "content": "fdhdghg",
+            "fakeAnswer": false,
+            "id": "1776664142863_u4ho53",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "gfhdghfg"
+              },
+              {
+                "correct": true,
+                "text": "hfghfghf"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 1",
+            "type": "single"
+          },
+          {
+            "content": "nvbnvbnvbn",
+            "fakeAnswer": false,
+            "id": "1776664152810_czp7qd",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnbvnbvn"
+              },
+              {
+                "correct": true,
+                "text": "vcbcvbcv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "bvnvbnvb",
+            "type": "single"
+          },
+          {
+            "content": "fdbc",
+            "fakeAnswer": false,
+            "id": "1776664177336_zfstrx",
+            "image": "",
+            "mode": "團體賽",
+            "options": [
+              {
+                "correct": true,
+                "text": "是"
+              },
+              {
+                "correct": false,
+                "text": "否"
+              }
+            ],
+            "score": "1000",
+            "time": "30 秒",
+            "title": "cvbvcbcvb",
+            "type": "tf"
+          },
+          {
+            "content": "bnvbn",
+            "fakeAnswer": false,
+            "id": "1776664186114_sjma24",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnvbnvbn"
+              },
+              {
+                "correct": true,
+                "text": "vbnvbnvb"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 2",
+            "type": "single"
+          },
+          {
+            "content": "cxvcxv",
+            "fakeAnswer": false,
+            "id": "1776664192719_3cp9vm",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "cxv"
+              },
+              {
+                "correct": true,
+                "text": "cxvvv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 3",
+            "type": "single"
+          }
+        ],
+        "title": "其中",
+        "updatedAt": 1776917440
+      },
+      {
+        "id": "1776664282932_5eb6g3",
+        "questions": [
+          {
+            "content": "fdhdghg",
+            "fakeAnswer": false,
+            "id": "1776664142863_u4ho53",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "gfhdghfg"
+              },
+              {
+                "correct": true,
+                "text": "hfghfghf"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 1",
+            "type": "single"
+          },
+          {
+            "content": "nvbnvbnvbn",
+            "fakeAnswer": false,
+            "id": "1776664152810_czp7qd",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnbvnbvn"
+              },
+              {
+                "correct": true,
+                "text": "vcbcvbcv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "bvnvbnvb",
+            "type": "single"
+          },
+          {
+            "content": "fdbc",
+            "fakeAnswer": false,
+            "id": "1776664177336_zfstrx",
+            "image": "",
+            "mode": "團體賽",
+            "options": [
+              {
+                "correct": true,
+                "text": "是"
+              },
+              {
+                "correct": false,
+                "text": "否"
+              }
+            ],
+            "score": "1000",
+            "time": "30 秒",
+            "title": "cvbvcbcvb",
+            "type": "tf"
+          },
+          {
+            "content": "bnvbn",
+            "fakeAnswer": false,
+            "id": "1776664186114_sjma24",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "vbnvbnvbn"
+              },
+              {
+                "correct": true,
+                "text": "vbnvbnvb"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 2",
+            "type": "single"
+          },
+          {
+            "content": "cxvcxv",
+            "fakeAnswer": false,
+            "id": "1776664192719_3cp9vm",
+            "image": "",
+            "mode": "個人賽",
+            "options": [
+              {
+                "correct": false,
+                "text": "cxv"
+              },
+              {
+                "correct": true,
+                "text": "cxvvv"
+              }
+            ],
+            "score": "1000",
+            "time": "20 秒",
+            "title": "未命名題目 3",
+            "type": "single"
+          }
+        ],
+        "title": "期末",
+        "updatedAt": 1776917501
+      }
+    ]
+  }
+}

@@ -1914,6 +1914,49 @@ def record_room_winner(conn, pin):
     record_user_win(room, winner_name, int(winner.get('total_score') or 0))
     save_teacher_report_snapshot_for_pin(conn, pin)
 
+    # === Analytics hook: save match results ===
+    try:
+        _teacher = str(room.get('created_by') or '').strip()
+        _room_name = str(room.get('room_name') or pin)
+        _bank_name = str(room.get('bank_title') or room.get('bank_id') or '')
+        _total_players = len(rankings)
+        _hook_results = []
+        for _rank_idx, _r in enumerate(rankings, 1):
+            _pname = str(_r.get('player_name') or '')
+            _score = int(_r.get('total_score') or 0)
+            _qrows = conn.execute(
+                'SELECT question_id, is_correct FROM room_results'
+                ' WHERE room_pin=? AND player_name=?',
+                (pin, _pname)
+            ).fetchall()
+            _correct = sum(1 for q in _qrows if q['is_correct'])
+            _wrong = len(_qrows) - _correct
+            _raw_answers = [
+                {'q_id': q['question_id'], 'correct': bool(q['is_correct']), 'speed_sec': None}
+                for q in _qrows
+            ]
+            _hook_results.append({
+                'player_name': _pname,
+                'score': _score,
+                'rank': _rank_idx,
+                'total_players': _total_players,
+                'correct_count': _correct,
+                'wrong_count': _wrong,
+                'avg_speed_sec': None,
+                'subject_scores': {},
+                'raw_answers': _raw_answers,
+            })
+        if _hook_results:
+            save_match_results(
+                room_id=pin,
+                room_name=_room_name,
+                quiz_bank_name=_bank_name,
+                results=_hook_results,
+            )
+    except Exception as _ae:
+        print(f'[Analytics] game-end hook error: {_ae}')
+    # === end analytics hook ===
+
 
 def load_quiz_store():
     ensure_file(QUIZ_BANKS_PATH, {'users': {}})
@@ -5730,6 +5773,925 @@ def business_dashboard_summary_api():
 @app.route('/<path:filename>')
 def static_files(filename):
     return send_from_directory(PROJECT_DIR, filename)
+
+
+# ================================================================
+# === ANALYTICS MODULE ===
+# 所有學習分析功能的資料存取與 API routes 集中於此區塊
+# ================================================================
+
+import os as _os
+import secrets as _secrets
+
+
+def _get_analytics_conn():
+    """回傳 (connection, is_postgres) 元組。"""
+    db_url = _os.environ.get('DATABASE_URL', '')
+    if db_url and psycopg2:
+        try:
+            conn = psycopg2.connect(db_url)
+            return conn, True
+        except Exception:
+            pass
+    analytics_path = _os.path.join(resolve_data_dir(), 'analytics.db')
+    conn = sqlite3.connect(analytics_path)
+    conn.row_factory = sqlite3.Row
+    return conn, False
+
+
+def _json_col(val, is_pg):
+    """序列化 JSON 欄位：PG 傳 dict，SQLite 傳 JSON 字串。"""
+    if val is None:
+        return None
+    if is_pg:
+        return val if isinstance(val, (dict, list)) else json.loads(val)
+    return json.dumps(val, ensure_ascii=False)
+
+
+def _parse_json(val):
+    """從資料庫取出後反序列化。"""
+    if val is None:
+        return {}
+    if isinstance(val, (dict, list)):
+        return val
+    try:
+        return json.loads(val)
+    except Exception:
+        return {}
+
+
+def save_match_results(room_id, room_name, quiz_bank_name, results):
+    """
+    在遊戲結束時呼叫，將每位玩家本場資料寫入 match_history。
+    results: list of dict，每筆需含：
+        player_name, score, rank, total_players,
+        correct_count, wrong_count, avg_speed_sec,
+        subject_scores (dict), raw_answers (list)
+    回傳 True 成功，False 失敗。
+    """
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        for r in results:
+            cur.execute(
+                f"INSERT INTO match_history"
+                f" (player_name, room_id, room_name, quiz_bank_name,"
+                f"  total_score, rank, total_players, correct_count,"
+                f"  wrong_count, avg_speed_sec, subject_scores, raw_answers)"
+                f" VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})",
+                (
+                    r['player_name'], room_id, room_name, quiz_bank_name,
+                    r.get('score', 0), r.get('rank'), r.get('total_players'),
+                    r.get('correct_count', 0), r.get('wrong_count', 0),
+                    r.get('avg_speed_sec'),
+                    _json_col(r.get('subject_scores', {}), is_pg),
+                    _json_col(r.get('raw_answers', []), is_pg),
+                )
+            )
+        conn.commit()
+        conn.close()
+        t = threading.Thread(
+            target=_update_player_statistics_batch,
+            args=([r['player_name'] for r in results],),
+            daemon=True,
+        )
+        t.start()
+        return True
+    except Exception as e:
+        print(f'[Analytics] save_match_results error: {e}')
+        return False
+
+
+_stats_update_lock = threading.Lock()
+
+
+def _update_player_statistics_batch(player_names):
+    # Brief delay ensures all concurrent inserts (from the same game round) are
+    # committed before we aggregate, preventing thread_1 from seeing a stale count.
+    import time as _time
+    _time.sleep(0.15)
+    for name in player_names:
+        with _stats_update_lock:
+            _update_single_player_statistics(name)
+
+
+def _update_single_player_statistics(player_name):
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+
+        cur.execute(
+            f"SELECT COUNT(*) AS total_games,"
+            f" SUM(CASE WHEN rank=1 THEN 1 ELSE 0 END) AS total_wins,"
+            f" SUM(correct_count) AS total_correct,"
+            f" SUM(correct_count + wrong_count) AS total_questions,"
+            f" AVG(CAST(total_score AS FLOAT)) AS avg_score,"
+            f" AVG(avg_speed_sec) AS avg_speed"
+            f" FROM match_history WHERE player_name={ph}",
+            (player_name,)
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return
+
+        if is_pg:
+            total_games, total_wins, total_correct, total_questions, avg_score, avg_speed = row
+        else:
+            total_games = row['total_games']
+            total_wins = row['total_wins'] or 0
+            total_correct = row['total_correct'] or 0
+            total_questions = row['total_questions'] or 0
+            avg_score = row['avg_score'] or 0
+            avg_speed = row['avg_speed'] or 0
+
+        if not total_games:
+            conn.close()
+            return
+
+        cur.execute(
+            f"SELECT rank FROM match_history WHERE player_name={ph}"
+            f" ORDER BY played_at DESC LIMIT 20",
+            (player_name,)
+        )
+        recent = cur.fetchall()
+        current_streak = 0
+        for r in recent:
+            rank_val = r[0] if is_pg else r['rank']
+            if rank_val == 1:
+                current_streak += 1
+            else:
+                break
+
+        cur.execute(
+            f"SELECT best_streak FROM player_statistics WHERE player_name={ph}",
+            (player_name,)
+        )
+        old = cur.fetchone()
+        old_best = 0
+        if old:
+            old_best = old[0] if is_pg else old['best_streak']
+        best_streak = max(current_streak, old_best)
+
+        if is_pg:
+            cur.execute("""
+                INSERT INTO player_statistics
+                    (player_name, total_games, total_wins, current_streak, best_streak,
+                     total_correct, total_questions, avg_score, avg_speed_sec, last_updated)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
+                ON CONFLICT (player_name) DO UPDATE SET
+                    total_games=EXCLUDED.total_games,
+                    total_wins=EXCLUDED.total_wins,
+                    current_streak=EXCLUDED.current_streak,
+                    best_streak=EXCLUDED.best_streak,
+                    total_correct=EXCLUDED.total_correct,
+                    total_questions=EXCLUDED.total_questions,
+                    avg_score=EXCLUDED.avg_score,
+                    avg_speed_sec=EXCLUDED.avg_speed_sec,
+                    last_updated=NOW()
+            """, (player_name, total_games, total_wins, current_streak, best_streak,
+                  total_correct, total_questions, avg_score, avg_speed))
+        else:
+            cur.execute("""
+                INSERT OR REPLACE INTO player_statistics
+                    (player_name, total_games, total_wins, current_streak, best_streak,
+                     total_correct, total_questions, avg_score, avg_speed_sec)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            """, (player_name, total_games, total_wins, current_streak, best_streak,
+                  total_correct, total_questions, avg_score, avg_speed))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f'[Analytics] _update_single_player_statistics error: {e}')
+
+
+# --- API: 戰績 & 統計 ---
+
+@app.route('/api/history/<player_name>')
+def api_history(player_name):
+    limit = min(int(request.args.get('limit', 20)), 100)
+    offset = int(request.args.get('offset', 0))
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"SELECT id, room_id, room_name, quiz_bank_name, played_at,"
+            f" total_score, rank, total_players, correct_count,"
+            f" wrong_count, avg_speed_sec, subject_scores"
+            f" FROM match_history WHERE player_name={ph}"
+            f" ORDER BY played_at DESC LIMIT {limit} OFFSET {offset}",
+            (player_name,)
+        )
+        rows = cur.fetchall()
+        conn.close()
+        history = []
+        for r in rows:
+            if is_pg:
+                history.append({
+                    'id': r[0], 'room_id': r[1], 'room_name': r[2],
+                    'quiz_bank_name': r[3], 'played_at': str(r[4]),
+                    'total_score': r[5], 'rank': r[6], 'total_players': r[7],
+                    'correct_count': r[8], 'wrong_count': r[9],
+                    'avg_speed_sec': r[10], 'subject_scores': r[11] or {},
+                })
+            else:
+                history.append({
+                    'id': r['id'], 'room_id': r['room_id'],
+                    'room_name': r['room_name'],
+                    'quiz_bank_name': r['quiz_bank_name'],
+                    'played_at': r['played_at'],
+                    'total_score': r['total_score'], 'rank': r['rank'],
+                    'total_players': r['total_players'],
+                    'correct_count': r['correct_count'],
+                    'wrong_count': r['wrong_count'],
+                    'avg_speed_sec': r['avg_speed_sec'],
+                    'subject_scores': _parse_json(r['subject_scores']),
+                })
+        return jsonify({'history': history, 'offset': offset, 'limit': limit})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/stats/<player_name>')
+def api_stats(player_name):
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(f"SELECT * FROM player_statistics WHERE player_name={ph}", (player_name,))
+        row = cur.fetchone()
+        conn.close()
+        if not row:
+            return jsonify({
+                'player_name': player_name, 'total_games': 0,
+                'total_wins': 0, 'current_streak': 0, 'best_streak': 0,
+                'total_correct': 0, 'total_questions': 0,
+                'avg_score': 0, 'avg_speed_sec': 0,
+                'win_rate': 0, 'accuracy': 0,
+            })
+        if is_pg:
+            keys = ['player_name', 'total_games', 'total_wins', 'current_streak',
+                    'best_streak', 'total_correct', 'total_questions',
+                    'avg_score', 'avg_speed_sec', 'subject_avg', 'radar_scores', 'last_updated']
+            d = dict(zip(keys, row))
+        else:
+            d = dict(row)
+            d['subject_avg'] = _parse_json(d.get('subject_avg'))
+            d['radar_scores'] = _parse_json(d.get('radar_scores'))
+
+        total_games = d.get('total_games', 0) or 1
+        d['win_rate'] = round((d.get('total_wins', 0) / total_games) * 100, 1)
+        total_q = d.get('total_questions', 0) or 1
+        d['accuracy'] = round((d.get('total_correct', 0) / total_q) * 100, 1)
+        return jsonify(d)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# --- Radar ---
+
+def _compute_radar(player_name, conn, is_pg):
+    """計算玩家六維能力值（0-100）。"""
+    ph = '%s' if is_pg else '?'
+    cur = conn.cursor()
+
+    cur.execute(f"SELECT AVG(avg_speed_sec) FROM match_history WHERE player_name={ph}", (player_name,))
+    speed_raw = (cur.fetchone() or [None])[0]
+    speed_score = max(0, min(100, int(100 - ((speed_raw or 5) - 1) * 12))) if speed_raw else 50
+
+    cur.execute(
+        f"SELECT SUM(correct_count)*100.0 / NULLIF(SUM(correct_count+wrong_count),0)"
+        f" FROM match_history WHERE player_name={ph}",
+        (player_name,)
+    )
+    accuracy_row = cur.fetchone()
+    accuracy = int(accuracy_row[0] or 50) if accuracy_row else 50
+
+    cur.execute(
+        f"SELECT total_score FROM match_history WHERE player_name={ph}"
+        f" ORDER BY played_at DESC LIMIT 10",
+        (player_name,)
+    )
+    scores = [r[0] for r in cur.fetchall()]
+    if len(scores) > 1:
+        mean = sum(scores) / len(scores)
+        std = (sum((s - mean) ** 2 for s in scores) / len(scores)) ** 0.5
+        stability = max(0, min(100, int(100 - std / 10)))
+    else:
+        stability = 70
+
+    cur.execute(
+        f"SELECT AVG(CAST(correct_count AS FLOAT) / NULLIF(correct_count+wrong_count, 0))"
+        f" FROM (SELECT correct_count, wrong_count FROM match_history"
+        f" WHERE player_name={ph} ORDER BY played_at DESC LIMIT 5) recent",
+        (player_name,)
+    )
+    memory_raw = (cur.fetchone() or [None])[0] or 0.5
+    memory = int(memory_raw * 100)
+
+    cur.execute(f"SELECT subject_avg FROM player_statistics WHERE player_name={ph}", (player_name,))
+    subj_row = cur.fetchone()
+    subj = {}
+    if subj_row:
+        raw = subj_row[0] if is_pg else subj_row['subject_avg']
+        subj = _parse_json(raw)
+    reasoning = int(max(subj.values(), default=70)) if subj else 70
+    overall_subject = int(sum(subj.values()) / len(subj)) if subj else 70
+
+    return [speed_score, accuracy, stability, memory, reasoning, overall_subject]
+
+
+@app.route('/api/radar/<player_name>')
+def api_radar(player_name):
+    labels = ['速度', '正確率', '穩定度', '記憶力', '推理能力', '各科綜合']
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+
+        self_scores = _compute_radar(player_name, conn, is_pg)
+
+        cur.execute("SELECT DISTINCT player_name FROM match_history LIMIT 200")
+        all_players = [r[0] for r in cur.fetchall()]
+        if all_players:
+            all_scores = [_compute_radar(p, conn, is_pg) for p in all_players]
+            avg_scores = [
+                int(sum(s[i] for s in all_scores) / len(all_scores))
+                for i in range(6)
+            ]
+        else:
+            avg_scores = [60] * 6
+
+        cur.execute(
+            "SELECT player_name FROM player_statistics ORDER BY avg_score DESC LIMIT 1"
+        )
+        top_row = cur.fetchone()
+        top_name = (top_row[0] if is_pg else top_row['player_name']) if top_row else player_name
+        top_scores = _compute_radar(top_name, conn, is_pg)
+
+        conn.close()
+        return jsonify({
+            'labels': labels,
+            'self': self_scores,
+            'average': avg_scores,
+            'top': top_scores,
+            'top_player': top_name,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/game-results/<room_id>')
+def api_game_results(room_id):
+    """回傳某場比賽的排名與個人分析。"""
+    try:
+        caller = request.args.get('player', '')
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+
+        cur.execute(
+            f"SELECT player_name, total_score, rank, total_players,"
+            f" correct_count, wrong_count, avg_speed_sec, subject_scores, raw_answers"
+            f" FROM match_history WHERE room_id={ph} ORDER BY rank ASC",
+            (room_id,)
+        )
+        rows = cur.fetchall()
+
+        rankings = []
+        my_stats = None
+        all_scores = []
+
+        for r in rows:
+            if is_pg:
+                pname, score, rank, total, correct, wrong, speed, subj, ans = r
+            else:
+                pname = r['player_name']; score = r['total_score']
+                rank = r['rank']; total = r['total_players']
+                correct = r['correct_count']; wrong = r['wrong_count']
+                speed = r['avg_speed_sec']
+                subj = _parse_json(r['subject_scores'])
+                ans = _parse_json(r['raw_answers'])
+
+            all_scores.append(score)
+            rankings.append({
+                'player_name': pname, 'score': score, 'rank': rank,
+                'total_players': total, 'correct_count': correct,
+                'wrong_count': wrong, 'avg_speed_sec': speed,
+                'accuracy': round(correct * 100 / max(correct + wrong, 1), 1),
+            })
+            if pname == caller:
+                my_stats = {
+                    'score': score, 'rank': rank, 'total_players': total,
+                    'correct_count': correct, 'wrong_count': wrong,
+                    'avg_speed_sec': speed,
+                    'subject_scores': subj if isinstance(subj, dict) else _parse_json(subj),
+                    'accuracy': round(correct * 100 / max(correct + wrong, 1), 1),
+                }
+
+        if my_stats and all_scores:
+            below = sum(1 for s in all_scores if s < (my_stats.get('score') or 0))
+            my_stats['percentile'] = round(below * 100 / len(all_scores), 1)
+
+        wrong_questions = {}
+        for r in rows:
+            ans_raw = r[8] if is_pg else r['raw_answers']
+            answers = ans_raw if isinstance(ans_raw, list) else _parse_json(ans_raw)
+            for a in (answers or []):
+                qid = a.get('q_id', '')
+                if not a.get('correct', True):
+                    wrong_questions[qid] = wrong_questions.get(qid, 0) + 1
+
+        top5_wrong = sorted(wrong_questions.items(), key=lambda x: -x[1])[:5]
+
+        conn.close()
+        return jsonify({
+            'room_id': room_id,
+            'rankings': rankings,
+            'my_stats': my_stats or {},
+            'avg_score': round(sum(all_scores) / max(len(all_scores), 1), 1),
+            'top5_wrong_questions': [{'q_id': q, 'wrong_count': c} for q, c in top5_wrong],
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/leaderboard')
+def api_leaderboard():
+    board_type = request.args.get('type', 'total')
+    subject = request.args.get('subject', '')
+    limit = min(int(request.args.get('limit', 50)), 100)
+
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+
+        if board_type == 'total':
+            cur.execute(
+                f"SELECT player_name, avg_score AS score, total_games, total_wins, current_streak"
+                f" FROM player_statistics ORDER BY avg_score DESC LIMIT {limit}"
+            )
+        elif board_type == 'winrate':
+            cur.execute(
+                f"SELECT player_name,"
+                f" CAST(total_wins AS FLOAT)/MAX(total_games,1)*100 AS score,"
+                f" total_games, total_wins, current_streak"
+                f" FROM player_statistics WHERE total_games >= 3"
+                f" ORDER BY score DESC LIMIT {limit}"
+            )
+        elif board_type == 'streak':
+            cur.execute(
+                f"SELECT player_name, best_streak AS score, total_games, total_wins, current_streak"
+                f" FROM player_statistics ORDER BY best_streak DESC LIMIT {limit}"
+            )
+        elif board_type == 'daily':
+            today_cond = ("played_at::date=CURRENT_DATE" if is_pg
+                          else "date(played_at)=date('now')")
+            cur.execute(
+                f"SELECT player_name, SUM(total_score) AS score, COUNT(*) AS games"
+                f" FROM match_history WHERE {today_cond}"
+                f" GROUP BY player_name ORDER BY score DESC LIMIT {limit}"
+            )
+        elif board_type == 'weekly':
+            week_cond = ("played_at >= NOW() - INTERVAL '7 days'" if is_pg
+                         else "played_at >= datetime('now','-7 days')")
+            cur.execute(
+                f"SELECT player_name, SUM(total_score) AS score, COUNT(*) AS games"
+                f" FROM match_history WHERE {week_cond}"
+                f" GROUP BY player_name ORDER BY score DESC LIMIT {limit}"
+            )
+        elif board_type == 'subject' and subject:
+            cur.execute(
+                f"SELECT player_name, avg_score AS score, game_count"
+                f" FROM subject_ranking WHERE subject={ph}"
+                f" ORDER BY avg_score DESC LIMIT {limit}",
+                (subject,)
+            )
+        else:
+            conn.close()
+            return jsonify({'rankings': []})
+
+        rows = cur.fetchall()
+        desc = cur.description or []
+        col_names = [d[0] for d in desc]
+        conn.close()
+
+        rankings = []
+        for i, r in enumerate(rows, 1):
+            row_dict = dict(zip(col_names, r)) if is_pg else dict(r)
+            row_dict['rank'] = i
+            # convert Decimal/float
+            row_dict['score'] = float(row_dict.get('score', 0) or 0)
+            rankings.append(row_dict)
+
+        return jsonify({'rankings': rankings, 'type': board_type})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# --- 頁面路由 ---
+
+@app.route('/leaderboard')
+def page_leaderboard():
+    return send_from_directory(PROJECT_DIR, 'leaderboard.html')
+
+
+@app.route('/history')
+def page_history():
+    return send_from_directory(PROJECT_DIR, 'history.html')
+
+
+@app.route('/game-results/<room_id>')
+def page_game_results(room_id):
+    return send_from_directory(PROJECT_DIR, 'game_results.html')
+
+
+@app.route('/parent-report/<token>')
+def page_parent_report(token):
+    return send_from_directory(PROJECT_DIR, 'parent_report.html')
+
+
+# --- 教師 API ---
+
+@app.route('/api/teacher/overview/<room_id>')
+def api_teacher_overview(room_id):
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"SELECT player_name, correct_count, wrong_count, avg_speed_sec, rank"
+            f" FROM match_history WHERE room_id={ph} ORDER BY rank ASC",
+            (room_id,)
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        if not rows:
+            return jsonify({'total_students': 0, 'avg_accuracy': 0, 'needs_help': [], 'students': []})
+
+        students = []
+        for r in rows:
+            if is_pg:
+                name, correct, wrong, speed, rank = r
+            else:
+                name = r['player_name']; correct = r['correct_count']
+                wrong = r['wrong_count']; speed = r['avg_speed_sec']
+                rank = r['rank']
+            accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+            students.append({
+                'player_name': name, 'correct': correct, 'wrong': wrong,
+                'accuracy': accuracy, 'avg_speed_sec': speed, 'rank': rank,
+                'status': ('good' if accuracy >= 70 else 'warning' if accuracy >= 50 else 'needs_help'),
+            })
+
+        avg_accuracy = round(sum(s['accuracy'] for s in students) / len(students), 1)
+        needs_help = [s['player_name'] for s in students if s['status'] == 'needs_help']
+        avg_speed = round(sum(s['avg_speed_sec'] or 0 for s in students) / max(len(students), 1), 1)
+
+        return jsonify({
+            'room_id': room_id,
+            'total_students': len(students),
+            'avg_accuracy': avg_accuracy,
+            'avg_speed': avg_speed,
+            'needs_help': needs_help,
+            'students': students,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/teacher/student/<room_id>/<student_name>')
+def api_teacher_student(room_id, student_name):
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"SELECT correct_count, wrong_count, avg_speed_sec,"
+            f" total_score, rank, total_players, subject_scores, raw_answers"
+            f" FROM match_history WHERE room_id={ph} AND player_name={ph}",
+            (room_id, student_name)
+        )
+        row = cur.fetchone()
+        conn.close()
+
+        if not row:
+            return jsonify({'error': 'Student not found'}), 404
+
+        if is_pg:
+            correct, wrong, speed, score, rank, total, subj, answers = row
+        else:
+            correct = row['correct_count']; wrong = row['wrong_count']
+            speed = row['avg_speed_sec']; score = row['total_score']
+            rank = row['rank']; total = row['total_players']
+            subj = _parse_json(row['subject_scores'])
+            answers = _parse_json(row['raw_answers'])
+
+        accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+        subj_dict = subj if isinstance(subj, dict) else _parse_json(subj)
+        weak_subjects = [s for s, v in subj_dict.items() if v < 60]
+
+        return jsonify({
+            'student_name': student_name, 'room_id': room_id,
+            'score': score, 'rank': rank, 'total_players': total,
+            'correct_count': correct, 'wrong_count': wrong,
+            'accuracy': accuracy, 'avg_speed_sec': speed,
+            'subject_scores': subj_dict, 'weak_subjects': weak_subjects,
+            'raw_answers': answers if isinstance(answers, list) else _parse_json(answers),
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/teacher/weak-questions/<room_id>')
+def api_teacher_weak_questions(room_id):
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"SELECT player_name, raw_answers FROM match_history WHERE room_id={ph}",
+            (room_id,)
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        total_players = len(rows)
+        if not total_players:
+            return jsonify({'questions': []})
+
+        wrong_counts = {}
+        wrong_players = {}
+        for r in rows:
+            pname = r[0] if is_pg else r['player_name']
+            ans_raw = r[1] if is_pg else r['raw_answers']
+            answers = ans_raw if isinstance(ans_raw, list) else _parse_json(ans_raw)
+            for a in (answers or []):
+                qid = a.get('q_id', '')
+                if not a.get('correct', True):
+                    wrong_counts[qid] = wrong_counts.get(qid, 0) + 1
+                    wrong_players.setdefault(qid, []).append(pname)
+
+        questions = sorted([
+            {
+                'q_id': qid, 'wrong_count': cnt,
+                'error_rate': round(cnt * 100 / total_players, 1),
+                'wrong_players': wrong_players.get(qid, []),
+            }
+            for qid, cnt in wrong_counts.items()
+        ], key=lambda x: -x['error_rate'])
+
+        return jsonify({'room_id': room_id, 'total_players': total_players, 'questions': questions})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/teacher/ai-suggestion', methods=['POST'])
+def api_teacher_ai_suggestion():
+    body = request.get_json() or {}
+    student_name = body.get('student_name', '')
+    room_id = body.get('room_id', '')
+
+    if not student_name or not room_id:
+        return jsonify({'error': 'student_name and room_id required'}), 400
+
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"SELECT correct_count, wrong_count, avg_speed_sec, subject_scores"
+            f" FROM match_history WHERE room_id={ph} AND player_name={ph}",
+            (room_id, student_name)
+        )
+        row = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    if not row:
+        return jsonify({'error': 'Student data not found'}), 404
+
+    if is_pg:
+        correct, wrong, speed, subj_raw = row
+    else:
+        correct = row['correct_count']; wrong = row['wrong_count']
+        speed = row['avg_speed_sec']; subj_raw = row['subject_scores']
+
+    subj = subj_raw if isinstance(subj_raw, dict) else _parse_json(subj_raw)
+    accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+    weak_subjects = [s for s, v in subj.items() if v < 60]
+
+    hf_key = _os.environ.get('HF_API_KEY', '')
+    hf_url = _os.environ.get('HF_API_URL', '')
+    suggestion = None
+
+    if hf_key and hf_url and requests:
+        prompt = (
+            f"學生 {student_name} 的答題狀況：正確率 {accuracy}%，"
+            f"弱科：{', '.join(weak_subjects) if weak_subjects else '無明顯弱科'}。"
+            f"請用繁體中文給出 3 條具體的學習建議，每條一行。"
+        )
+        try:
+            resp = requests.post(
+                hf_url,
+                headers={'Authorization': f'Bearer {hf_key}'},
+                json={'inputs': prompt, 'parameters': {'max_new_tokens': 200}},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                result = resp.json()
+                if isinstance(result, list) and result:
+                    suggestion = result[0].get('generated_text', '').replace(prompt, '').strip()
+        except Exception:
+            pass
+
+    if not suggestion:
+        parts = []
+        if accuracy < 50:
+            parts.append(f'建議 {student_name} 先複習基礎概念，正確率偏低（{accuracy}%）。')
+        elif accuracy < 70:
+            parts.append(f'{student_name} 的正確率有進步空間（{accuracy}%），建議多做練習題。')
+        else:
+            parts.append(f'{student_name} 表現良好（{accuracy}%），可嘗試進階題庫。')
+        if weak_subjects:
+            parts.append(f'重點加強科目：{", ".join(weak_subjects)}。')
+        if speed and speed > 6:
+            parts.append('答題速度偏慢，建議計時練習以提升反應速度。')
+        elif speed and speed < 2:
+            parts.append('答題速度很快，但請注意準確度比速度更重要。')
+        suggestion = '\n'.join(parts)
+
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"INSERT INTO student_analysis (room_id, student_name, weak_subjects, ai_suggestion)"
+            f" VALUES ({ph},{ph},{ph},{ph})",
+            (room_id, student_name, _json_col(weak_subjects, is_pg), suggestion)
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+    return jsonify({'student_name': student_name, 'suggestion': suggestion, 'weak_subjects': weak_subjects})
+
+
+@app.route('/api/teacher/parent-report', methods=['POST'])
+def api_create_parent_report():
+    body = request.get_json() or {}
+    student_name = body.get('student_name', '')
+    room_id = body.get('room_id', '')
+    teacher_name = body.get('teacher_name', '')
+
+    if not student_name or not room_id:
+        return jsonify({'error': 'student_name and room_id required'}), 400
+
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+
+        cur.execute(
+            f"SELECT total_score, rank, total_players, correct_count,"
+            f" wrong_count, avg_speed_sec, subject_scores, played_at"
+            f" FROM match_history WHERE room_id={ph} AND player_name={ph}"
+            f" ORDER BY played_at DESC LIMIT 1",
+            (room_id, student_name)
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Student not found'}), 404
+
+        if is_pg:
+            score, rank, total, correct, wrong, speed, subj, played_at = row
+        else:
+            score = row['total_score']; rank = row['rank']; total = row['total_players']
+            correct = row['correct_count']; wrong = row['wrong_count']
+            speed = row['avg_speed_sec']; subj = _parse_json(row['subject_scores'])
+            played_at = row['played_at']
+
+        cur.execute(
+            f"SELECT ai_suggestion, weak_subjects FROM student_analysis"
+            f" WHERE room_id={ph} AND student_name={ph}"
+            f" ORDER BY created_at DESC LIMIT 1",
+            (room_id, student_name)
+        )
+        ai_row = cur.fetchone()
+
+        cur.execute(
+            f"SELECT total_score, played_at, rank FROM match_history"
+            f" WHERE player_name={ph} ORDER BY played_at DESC LIMIT 5",
+            (student_name,)
+        )
+        trend_rows = cur.fetchall()
+        conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    subj_dict = subj if isinstance(subj, dict) else _parse_json(subj)
+    accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+    ai_suggestion = ''
+    weak_subjects = []
+    if ai_row:
+        ai_suggestion = (ai_row[0] if is_pg else ai_row['ai_suggestion']) or ''
+        ws_raw = ai_row[1] if is_pg else ai_row['weak_subjects']
+        weak_subjects = ws_raw if isinstance(ws_raw, list) else _parse_json(ws_raw)
+
+    trend = []
+    for t in trend_rows:
+        if is_pg:
+            trend.append({'score': t[0], 'date': str(t[1])[:10], 'rank': t[2]})
+        else:
+            trend.append({'score': t['total_score'], 'date': str(t['played_at'])[:10], 'rank': t['rank']})
+
+    report_data = {
+        'student_name': student_name, 'room_id': room_id,
+        'teacher_name': teacher_name,
+        'generated_at': str(played_at)[:10],
+        'score': score, 'rank': rank, 'total_players': total,
+        'correct_count': correct, 'wrong_count': wrong,
+        'accuracy': accuracy, 'avg_speed_sec': speed,
+        'subject_scores': subj_dict,
+        'weak_subjects': weak_subjects,
+        'ai_suggestion': ai_suggestion,
+        'recent_trend': trend,
+    }
+
+    token = _secrets.token_hex(16)
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"INSERT INTO parent_reports"
+            f" (report_token, student_name, room_id, generated_by, report_data)"
+            f" VALUES ({ph},{ph},{ph},{ph},{ph})",
+            (token, student_name, room_id, teacher_name, _json_col(report_data, is_pg))
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    report_url = f'{request.host_url}parent-report/{token}'
+    return jsonify({'token': token, 'url': report_url})
+
+
+@app.route('/api/parent-report/<token>')
+def api_get_parent_report(token):
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(f"SELECT report_data FROM parent_reports WHERE report_token={ph}", (token,))
+        row = cur.fetchone()
+        conn.close()
+
+        if not row:
+            return jsonify({'error': 'Report not found'}), 404
+
+        data_raw = row[0] if is_pg else row['report_data']
+        data = data_raw if isinstance(data_raw, dict) else _parse_json(data_raw)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/recent-rooms')
+def api_recent_rooms():
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT room_id, room_name, MAX(played_at) AS played_at
+            FROM match_history
+            GROUP BY room_id, room_name
+            ORDER BY played_at DESC
+            LIMIT 30
+        """)
+        rows = cur.fetchall()
+        conn.close()
+        rooms = []
+        for r in rows:
+            if is_pg:
+                rooms.append({'room_id': r[0], 'room_name': r[1], 'played_at': str(r[2])})
+            else:
+                rooms.append({'room_id': r['room_id'], 'room_name': r['room_name'], 'played_at': r['played_at']})
+        return jsonify({'rooms': rooms})
+    except Exception as e:
+        return jsonify({'rooms': [], 'error': str(e)})
+
+
+# === end ANALYTICS MODULE ===
 
 
 if __name__ == '__main__':

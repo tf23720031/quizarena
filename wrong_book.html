@@ -134,6 +134,15 @@
     </section>
   </main>
 
+  <!-- Analytics: 能力雷達圖（對比全體與第一名） -->
+  <section class="tool-card" style="margin-top:16px;">
+    <div class="tool-card-head">
+      <h2><i class="fa-solid fa-chart-area"></i> 能力雷達圖</h2>
+      <span class="tool-note">紫色=你　灰=全體平均　金=第一名</span>
+    </div>
+    <canvas id="analytics-radar-canvas" height="300" aria-label="能力雷達圖（對比分析）"></canvas>
+  </section>
+
   <div class="toast-qa" id="toast"></div>
   <script src="js/api_client.js"></script>
   <script src="js/session_guard.js"></script>
@@ -142,6 +151,14 @@
   <script src="js/Audio_manager.js"></script>
   <script src="js/nav_drawer.js"></script>
   <script src="js/music_drawer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/analytics-radar.js"></script>
+  <script>
+    (function() {
+      var player = window.__wbUsername || localStorage.getItem('playerName') || '';
+      if (player) RadarChart.loadAndRender('analytics-radar-canvas', player);
+    })();
+  </script>
 
   <script>
   // ── Smart Review Tabs ──────────────────────────────

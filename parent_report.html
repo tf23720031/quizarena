@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>學習報告 — QuizArena</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* 家長報告：白底、專業、可列印 */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f8f9fa;
+    color: #1e293b;
+    font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
+    padding: 40px 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #7c3aed;
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+  .report-brand { color: #7c3aed; font-size: 22px; font-weight: 700; }
+  .report-title { font-size: 14px; color: #64748b; margin-top: 4px; }
+  .report-meta { text-align: right; font-size: 13px; color: #64748b; }
+
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-size: 16px; font-weight: 700; color: #7c3aed;
+    border-left: 4px solid #7c3aed;
+    padding-left: 10px;
+    margin-bottom: 14px;
+  }
+
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .stat-box {
+    background: #f1f5f9; border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 14px 20px;
+    text-align: center; flex: 1; min-width: 100px;
+  }
+  .stat-box .sv { font-size: 24px; font-weight: 700; color: #7c3aed; }
+  .stat-box .sl { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+  .badge-weak { display:inline-block; background:#fee2e2; color:#dc2626; border-radius:6px; padding:3px 10px; font-size:12px; margin:2px; }
+  .suggestion-box { background:#f0fdf4; border-left:4px solid #22c55e; border-radius:0 8px 8px 0; padding:14px; font-size:13px; line-height:1.7; color:#166534; white-space:pre-line; }
+
+  .signature-area { margin-top:40px; display:flex; justify-content:flex-end; }
+  .signature-box { border-top:1px solid #94a3b8; width:160px; text-align:center; padding-top:6px; font-size:12px; color:#64748b; }
+
+  @media print {
+    body { background: white; padding: 20px; }
+    .no-print { display: none !important; }
+    canvas { max-height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 列印/返回按鈕 -->
+<div class="no-print" style="display:flex;gap:8px;margin-bottom:20px;">
+  <button onclick="window.print()"
+    style="background:#7c3aed;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px;">
+    🖨️ 列印 / 儲存 PDF
+  </button>
+  <button onclick="history.back()"
+    style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;">
+    ← 返回
+  </button>
+</div>
+
+<!-- 報告標題 -->
+<div class="report-header">
+  <div>
+    <div class="report-brand">🎮 QuizArena</div>
+    <div class="report-title">學生學習報告</div>
+  </div>
+  <div class="report-meta" id="report-meta">載入中...</div>
+</div>
+
+<!-- 1. 成績摘要 -->
+<div class="section">
+  <div class="section-title">成績摘要</div>
+  <div class="stat-row" id="summary-stats"></div>
+</div>
+
+<!-- 2. 雷達圖 -->
+<div class="section">
+  <div class="section-title">能力分析雷達圖</div>
+  <div style="max-width:360px;margin:0 auto;">
+    <canvas id="parent-radar" height="280"></canvas>
+  </div>
+</div>
+
+<!-- 3. 各科分析 -->
+<div class="section" id="subject-section" style="display:none;">
+  <div class="section-title">各科得分</div>
+  <canvas id="parent-subject-bar" height="80"></canvas>
+</div>
+
+<!-- 4. 學習弱點 -->
+<div class="section">
+  <div class="section-title">建議加強項目</div>
+  <div id="weak-section"></div>
+</div>
+
+<!-- 5. 近期趨勢 -->
+<div class="section" id="trend-section" style="display:none;">
+  <div class="section-title">近期學習趨勢</div>
+  <canvas id="parent-trend" height="80"></canvas>
+</div>
+
+<!-- 6. AI 建議 -->
+<div class="section" id="ai-section" style="display:none;">
+  <div class="section-title">🤖 個人化學習建議</div>
+  <div class="suggestion-box" id="ai-suggestion-box"></div>
+</div>
+
+<!-- 7. 簽名 -->
+<div class="signature-area">
+  <div class="signature-box">
+    教師簽名<br><br><br>
+    <span id="teacher-name-label"></span>
+  </div>
+</div>
+
+<script>
+const TOKEN = location.pathname.split('/').pop();
+
+async function loadReport() {
+  try {
+    const res = await fetch(`/api/parent-report/${TOKEN}`);
+    if (!res.ok) {
+      document.body.innerHTML += '<p style="color:red;text-align:center;margin-top:40px;">報告不存在或已過期。</p>';
+      return;
+    }
+    const d = await res.json();
+
+    document.getElementById('report-meta').innerHTML =
+      `學生：<strong>${d.student_name}</strong><br>日期：${d.generated_at || '—'}<br>班級：${d.room_id || '—'}`;
+    document.getElementById('teacher-name-label').textContent = d.teacher_name || '教師';
+
+    const accuracy = Math.round(d.correct_count * 100 / Math.max(d.correct_count + d.wrong_count, 1));
+    document.getElementById('summary-stats').innerHTML = [
+      { label: '本場分數',    value: d.score },
+      { label: '班級排名',    value: `第 ${d.rank}/${d.total_players} 名` },
+      { label: '答題正確率',  value: `${accuracy}%` },
+      { label: '平均答題速度', value: d.avg_speed_sec ? `${Number(d.avg_speed_sec).toFixed(1)}s` : '—' },
+    ].map(s => `<div class="stat-box"><div class="sv">${s.value}</div><div class="sl">${s.label}</div></div>`).join('');
+
+    // 雷達圖
+    try {
+      const radarRes = await fetch(`/api/radar/${encodeURIComponent(d.student_name)}`);
+      const radarData = await radarRes.json();
+      new Chart(document.getElementById('parent-radar'), {
+        type: 'radar',
+        data: {
+          labels: radarData.labels,
+          datasets: [
+            { label: d.student_name, data: radarData.self, backgroundColor: 'rgba(124,58,237,0.2)', borderColor: '#7c3aed', borderWidth: 2, pointRadius: 3 },
+            { label: '全體平均', data: radarData.average, backgroundColor: 'rgba(148,163,184,0.1)', borderColor: '#94a3b8', borderWidth: 1, borderDash: [4,4], pointRadius: 2 },
+          ],
+        },
+        options: {
+          animation: { duration: 0 },
+          plugins: { legend: { labels: { color: '#475569', font: { size: 11 } } } },
+          scales: {
+            r: {
+              min: 0, max: 100,
+              ticks: { color: '#94a3b8', backdropColor: 'transparent', stepSize: 25 },
+              grid: { color: '#e2e8f0' },
+              angleLines: { color: '#e2e8f0' },
+              pointLabels: { color: '#475569', font: { size: 11 } },
+            },
+          },
+        },
+      });
+    } catch (e) {
+      console.warn('[parent-report] radar error:', e);
+    }
+
+    // 各科
+    const subj = d.subject_scores || {};
+    const subjKeys = Object.keys(subj);
+    if (subjKeys.length > 0) {
+      document.getElementById('subject-section').style.display = '';
+      new Chart(document.getElementById('parent-subject-bar'), {
+        type: 'bar',
+        data: {
+          labels: subjKeys,
+          datasets: [{ label: '得分', data: subjKeys.map(k => subj[k]), backgroundColor: 'rgba(124,58,237,0.6)', borderColor: '#7c3aed', borderWidth: 1 }],
+        },
+        options: {
+          animation: { duration: 0 },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#475569' }, grid: { display: false } },
+            y: { min: 0, max: 100, ticks: { color: '#475569' }, grid: { color: '#f1f5f9' } },
+          },
+        },
+      });
+    }
+
+    // 弱點
+    const weak = d.weak_subjects || [];
+    document.getElementById('weak-section').innerHTML = weak.length > 0
+      ? weak.map(w => `<span class="badge-weak">${w}</span>`).join('')
+      : '<span style="color:#22c55e;font-size:13px;">✓ 無明顯弱科，表現均衡</span>';
+
+    // 趨勢
+    const trend = d.recent_trend || [];
+    if (trend.length > 1) {
+      document.getElementById('trend-section').style.display = '';
+      const tReversed = [...trend].reverse();
+      new Chart(document.getElementById('parent-trend'), {
+        type: 'line',
+        data: {
+          labels: tReversed.map(t => t.date),
+          datasets: [{ label: '分數', data: tReversed.map(t => t.score), borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.1)', fill: true, tension: 0.4, pointRadius: 4 }],
+        },
+        options: {
+          animation: { duration: 0 },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#475569' }, grid: { display: false } },
+            y: { ticks: { color: '#475569' }, grid: { color: '#f1f5f9' } },
+          },
+        },
+      });
+    }
+
+    // AI 建議
+    if (d.ai_suggestion) {
+      document.getElementById('ai-section').style.display = '';
+      document.getElementById('ai-suggestion-box').textContent = d.ai_suggestion;
+    }
+  } catch (e) {
+    console.error('[parent-report] error:', e);
+  }
+}
+
+loadReport();
+</script>
+</body>
+</html>

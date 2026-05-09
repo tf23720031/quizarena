@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本場結算 — QuizArena</title>
+<link rel="stylesheet" href="css/analytics.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="analytics-page" style="padding:20px;max-width:900px;margin:0 auto;">
+
+<h1 class="gradient-title" style="font-size:28px;margin-bottom:6px;text-align:center;">🏆 本場結算</h1>
+<p id="room-subtitle" style="text-align:center;color:#a78bfa;margin-bottom:20px;font-size:14px;"></p>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('rankings',event)">🏆 排名總覽</button>
+  <button class="tab-btn" onclick="switchTab('analysis',event)">📊 個人分析</button>
+  <button class="tab-btn" onclick="switchTab('radar',event)">🎯 雷達圖</button>
+  <button class="tab-btn" id="teacher-tab-btn" onclick="switchTab('teacher',event)" style="display:none;">👨‍🏫 教師查看</button>
+</div>
+
+<!-- Tab 1: 排名總覽 -->
+<div id="tab-rankings" class="tab-panel active">
+  <div id="top3-container" class="top3-container"></div>
+  <div id="rankings-list"></div>
+</div>
+
+<!-- Tab 2: 個人分析 -->
+<div id="tab-analysis" class="tab-panel">
+  <div class="stat-grid" id="my-stats-grid"></div>
+  <div class="glass-card" style="margin-bottom:16px;">
+    <h3 style="color:#c4b5fd;margin-bottom:12px;">各科分數比較</h3>
+    <canvas id="subject-bar-chart" height="100"></canvas>
+  </div>
+  <div class="glass-card">
+    <h3 style="color:#c4b5fd;margin-bottom:12px;">答題正確率</h3>
+    <div style="max-width:200px;margin:0 auto;">
+      <canvas id="accuracy-donut-chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: 雷達圖 -->
+<div id="tab-radar" class="tab-panel">
+  <div class="glass-card">
+    <h3 style="color:#c4b5fd;margin-bottom:16px;text-align:center;">能力雷達圖</h3>
+    <canvas id="radar-canvas" height="320"></canvas>
+    <p style="text-align:center;color:#6d28d9;font-size:12px;margin-top:12px;">
+      紫色=你　灰色=全體平均　金色=第一名
+    </p>
+  </div>
+</div>
+
+<!-- Tab 4: 教師查看（僅房主） -->
+<div id="tab-teacher" class="tab-panel">
+  <div class="glass-card" style="margin-bottom:16px;">
+    <h3 style="color:#c4b5fd;margin-bottom:12px;">⚠️ 最多人答錯的題目 Top 5</h3>
+    <div id="wrong-questions-list"></div>
+  </div>
+  <div class="glass-card">
+    <h3 style="color:#c4b5fd;margin-bottom:12px;">📋 學生答題一覽</h3>
+    <div id="student-table-container" style="overflow-x:auto;"></div>
+  </div>
+  <div style="text-align:center;margin-top:16px;">
+    <a href="/teacher" style="background:var(--purple-primary);color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">
+      進入完整教師儀表板 →
+    </a>
+  </div>
+</div>
+
+<script src="js/analytics-radar.js"></script>
+<script src="js/analytics-game-results.js"></script>
+</body>
+</html>
