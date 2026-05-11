@@ -130,6 +130,8 @@ function saveLocalDraft() {
     savedAt: Math.floor(Date.now() / 1000),
     quizBanks: mutable
   }));
+  // Keep qa_banks_cache in sync so challenge/marketplace pages can find these banks
+  localStorage.setItem('qa_banks_cache', JSON.stringify(mutable));
 }
 
 function loadLocalDraft() {

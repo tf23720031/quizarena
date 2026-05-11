@@ -29,8 +29,32 @@ const gameState = {
 
 // ── 讀取題庫 ──
 function loadBanks() {
-  const raw = localStorage.getItem("quizBanks") || "[]";
-  try { return JSON.parse(raw); } catch { return []; }
+  // 1. API client cache (api_client.js / server sync)
+  try {
+    const b = JSON.parse(localStorage.getItem("qa_banks_cache") || "null");
+    if (Array.isArray(b) && b.length) return b;
+  } catch {}
+  // 2. create_htme.js draft keys (quizarena_draft_<user>)
+  let bestDraft = null;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i) || '';
+    if (!key.startsWith('quizarena_draft_')) continue;
+    try {
+      const draft = JSON.parse(localStorage.getItem(key) || 'null');
+      const banks = Array.isArray(draft?.quizBanks) ? draft.quizBanks : [];
+      if (!banks.length) continue;
+      if (!bestDraft || Number(draft.savedAt || 0) > Number(bestDraft.savedAt || 0)) {
+        bestDraft = { savedAt: Number(draft.savedAt || 0), quizBanks: banks };
+      }
+    } catch {}
+  }
+  if (bestDraft?.quizBanks?.length) return bestDraft.quizBanks;
+  // 3. Marketplace legacy key
+  try {
+    const b = JSON.parse(localStorage.getItem("quizBanks") || "null");
+    if (Array.isArray(b) && b.length) return b;
+  } catch {}
+  return [];
 }
 
 function populateBankSelect() {

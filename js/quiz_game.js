@@ -757,8 +757,9 @@ async function submitAnswer(isTimeout = false) {
   if (currentQuestion.type === 'fill') {
     if (!textAnswer && !isTimeout) { showToast('請先輸入答案'); return; }
   } else if (currentQuestion.type === 'matching') {
-    selected = [...document.querySelectorAll('.matching-select')].map((item) => Number(item.value));
-    if ((!selected.length || selected.some((value) => Number.isNaN(value))) && !isTimeout) {
+    const rawMatchVals = [...document.querySelectorAll('.matching-select')].map((item) => item.value);
+    selected = rawMatchVals.map(Number);
+    if ((!rawMatchVals.length || rawMatchVals.some((v) => v === '')) && !isTimeout) {
       showToast('請完成所有左右配對');
       return;
     }
