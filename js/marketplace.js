@@ -93,7 +93,7 @@ function loadMyBanks() {
     const b = JSON.parse(localStorage.getItem("qa_banks_cache") || "null");
     if (Array.isArray(b) && b.length) return b;
   } catch {}
-  // Try create_htme.js draft keys
+  // Try create_home.js draft keys (quizarena_draft_<user>)
   let bestDraft = null;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i) || '';

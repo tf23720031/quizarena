@@ -1,143 +1,185 @@
-// ── Taiwan Taipei Time Display ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+//  wrong_book.js — 我的錯題本
+//
+//  本檔負責：
+//   1. 統一登入帳號判定（一律使用 currentUser，不再用 playerName）
+//   2. 從 /wrong_book_summary 載入錯題
+//   3. 渲染統計卡、複習建議、雷達圖、知識地圖
+//   4. 完整複習清單支援「科目篩選 + 排序方式 + 可滾動」
+//   5. 錯題練習、筆記、分享、AI 解題
+//   6. 修正：lastWrongAt 為「秒級 timestamp」，需 *1000 才能轉成毫秒
+//   7. 統一以 Asia/Taipei 顯示時間
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Taipei Time Display ──────────────────────────────────────────────
 function toTaipeiTimeStr(ts) {
   if (!ts) return '';
-  return new Date(Number(ts) * 1000).toLocaleString('zh-TW', {
-    timeZone: 'Asia/Taipei', year:'numeric', month:'2-digit', day:'2-digit',
-    hour:'2-digit', minute:'2-digit', hour12: false,
+  const num = Number(ts);
+  if (!num || isNaN(num)) return '';
+  const ms = num > 1e12 ? num : num * 1000;
+  return new Date(ms).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
   });
 }
 function toTaipeiDateStr(ts) {
   if (!ts) return '';
-  return new Date(Number(ts) * 1000).toLocaleDateString('zh-TW', {timeZone:'Asia/Taipei'});
+  const num = Number(ts);
+  if (!num || isNaN(num)) return '';
+  const ms = num > 1e12 ? num : num * 1000;
+  return new Date(ms).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
 }
 
 const $ = (id) => document.getElementById(id);
 
+// ── 統一登入帳號判定 ──────────────────────────────────────────────────
+// 規則：
+//   1. 錯題本 API 一律使用「登入帳號」username（即 currentUser）
+//   2. 暱稱 playerName 只用於房間遊戲顯示，不可拿來查錯題本
+//   3. 若 currentUser 取不到，才退而求其次讀 currentUserProfile / qa_profile_cache
+//   4. 未登入時不要誤抓 guest，回傳空字串並顯示登入提醒
 function getCurrentUser() {
-  // 1. Use pre-resolved value from inline script (fastest)
   if (window.__wbUsername) return window.__wbUsername;
-  // 2. Check all possible simple keys
-  const keys = ["currentUser", "qa_current_user", "quizarena_user", "username", "playerName"];
-  for (const key of keys) {
-    const v = String(localStorage.getItem(key) || sessionStorage.getItem(key) || "").trim();
-    if (v && v !== "undefined" && v !== "null" && v !== "guest") {
-      window.__wbUsername = v;
-      return v;
-    }
+  // 1. 主要：登入帳號
+  const direct = String(localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || '').trim();
+  if (direct && direct !== 'undefined' && direct !== 'null' && direct !== 'guest') {
+    window.__wbUsername = direct;
+    return direct;
   }
-  // 3. Try profile JSON objects
-  const profileKeys = ["currentUserProfile", "qa_profile_cache", "roomPlayerProfile", "currentUserProfileData"];
-  for (const key of profileKeys) {
+  // 2. profile cache 內的 username（api_client.js 寫入）
+  for (const key of ['currentUserProfile', 'qa_profile_cache']) {
     try {
-      const p = JSON.parse(localStorage.getItem(key) || "null");
+      const p = JSON.parse(localStorage.getItem(key) || 'null');
       if (!p) continue;
-      const u = String(p.username || p.account || p.name || p.playerName || "").trim();
-      if (u && u !== "undefined" && u !== "null") {
-        localStorage.setItem("currentUser", u);
+      const u = String(p.username || '').trim();
+      if (u && u !== 'undefined' && u !== 'null' && u !== 'guest') {
+        localStorage.setItem('currentUser', u);
         window.__wbUsername = u;
         return u;
       }
     } catch {}
   }
-  return "";
+  return '';
 }
 
+// ── localStorage 故事模式錯題（離線備援） ────────────────────────────
 function loadLocalStoryWrongItems(username) {
   if (!username) return [];
   try {
-    const book = JSON.parse(localStorage.getItem(`quizarena_wrong_book_${username}`) || "[]");
+    const book = JSON.parse(localStorage.getItem(`quizarena_wrong_book_${username}`) || '[]');
     if (!Array.isArray(book)) return [];
     return book.map((item, index) => {
       const answer = Number(item.answer || 0);
       const options = Array.isArray(item.options) ? item.options.map((option, optIndex) => ({
-        text: typeof option === "object" ? String(option.text || "") : String(option || ""),
+        text: typeof option === 'object' ? String(option.text || '') : String(option || ''),
         correct: optIndex === answer,
       })) : [];
       return {
         questionId: `story_local_${index}`,
-        title: item.title || item.q || "故事模式錯題",
-        content: item.q || item.content || "",
-        type: "single",
+        title: item.title || item.q || '故事模式錯題',
+        content: item.q || item.content || '',
+        type: 'single',
         options,
-        explanation: item.explanation || item.scene || "",
-        sourceBankTitle: item.source || "故事模式",
-        category: item.category || "故事模式",
-        difficulty: item.difficulty || "medium",
+        explanation: item.explanation || item.scene || '',
+        sourceBankTitle: item.source || '故事模式',
+        category: item.category || '故事模式',
+        difficulty: item.difficulty || 'medium',
         wrongCount: Number(item.wrongCount || 1),
-        lastWrongAtText: item.lastWrongAt ? new Date(item.lastWrongAt).toLocaleString("zh-TW") : "",
+        lastWrongAt: item.lastWrongAt ? Math.floor(Number(item.lastWrongAt) / 1000) : 0,
+        lastWrongAtText: item.lastWrongAt ? toTaipeiTimeStr(Math.floor(Number(item.lastWrongAt) / 1000)) : '',
       };
     }).filter((item) => item.content);
   } catch {
     return [];
   }
 }
+
 const practiceState = { items: [], order: [], index: 0, selected: [], checked: false };
+// 完整複習清單顯示狀態
+const listState = { subject: 'all', sort: 'recent' };
 
 function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 function showToast(message, delay = 2200) {
-  const toast = $("toast");
+  const toast = $('toast');
   if (!toast) return;
   toast.textContent = message;
-  toast.classList.add("show");
+  toast.classList.add('show');
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => toast.classList.remove("show"), delay);
+  showToast.timer = setTimeout(() => toast.classList.remove('show'), delay);
 }
 
 async function api(url, options = {}) {
-  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
+  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
   const data = await res.json();
-  if (!res.ok || data.success === false) throw new Error(data.message || "讀取失敗");
+  if (!res.ok || data.success === false) throw new Error(data.message || '讀取失敗');
   return data;
 }
 
 function optionText(option, index) {
-  if (typeof option === "string") return option;
+  if (typeof option === 'string') return option;
   return option?.text || `選項 ${index + 1}`;
-}
-
-function questionTypeText(type) {
-  return { single: "單選題", multiple: "多選題", tf: "是非題", fill: "填充題", matching: "配對題" }[type] || "單選題";
 }
 
 function correctIndexes(item) {
   const options = Array.isArray(item.options) ? item.options : [];
   return options
-    .map((option, index) => (option && typeof option === "object" && option.correct ? index : -1))
+    .map((option, index) => (option && typeof option === 'object' && option.correct ? index : -1))
     .filter((index) => index >= 0);
 }
 
 function correctAnswerText(item) {
   const options = Array.isArray(item.options) ? item.options : [];
-  if (item.type === "fill") return optionText(options[0], 0) || "未提供正解";
-  if (item.type === "matching") {
-    return options.map(o => `${o.left || ''} ↔ ${o.right || ''}`).join("、");
+  if (item.type === 'fill') return optionText(options[0], 0) || '未提供正解';
+  if (item.type === 'matching') {
+    return options.map(o => `${o.left || ''} ↔ ${o.right || ''}`).join('、');
   }
   const indexes = correctIndexes(item);
-  if (!indexes.length) return "未提供正解";
-  return indexes.map((index) => `${String.fromCharCode(65 + index)}. ${optionText(options[index], index)}`).join("、");
+  if (!indexes.length) return '未提供正解';
+  return indexes.map((index) => `${String.fromCharCode(65 + index)}. ${optionText(options[index], index)}`).join('、');
 }
 
-// ── 筆記持久化 ──
+// ── 筆記持久化 ──────────────────────────────────────────────────────
 function notesKey(item) {
-  const username = localStorage.getItem("currentUser") || "guest";
+  const username = getCurrentUser() || 'guest';
   return `quizarena_note_${username}_${item.questionId || item.title}`;
 }
-function getNote(item) { return localStorage.getItem(notesKey(item)) || ""; }
+function getNote(item) { return localStorage.getItem(notesKey(item)) || ''; }
 function saveNote(item, text) { localStorage.setItem(notesKey(item), text); }
 
-// ── 知識地圖 ──
+// ── 科目分類對照 ──────────────────────────────────────────────────────
+// 將原始類別 / 題庫名稱對應到主要科目標籤
+const SUBJECT_MAP = [
+  { keys: ['國文', '語文', '中文', '閱讀', '文學', '故事模式 - 國文', '語文力'], label: '國文' },
+  { keys: ['英文', 'english', '英語', '英文閱讀', '故事模式 - 英文'], label: '英文' },
+  { keys: ['數學', 'math', '幾何', '代數', '計算', '數學推理'], label: '數學' },
+  { keys: ['自然', '理化', '物理', '化學', '生物', 'science', '自然科學'], label: '自然' },
+  { keys: ['社會', '歷史', 'history', '地理', '公民', '法律', '政治', 'civil', '世界史', '中國史', '台灣史'], label: '社會' },
+  { keys: ['程式', 'coding', 'python', 'javascript', '演算法', '資訊', '電腦', 'code'], label: '程式' },
+];
+
+function resolveSubjectLabel(item) {
+  const raw = String(item.category || item.sourceBankTitle || item.source || '').toLowerCase();
+  if (!raw) return '其他';
+  for (const { keys, label } of SUBJECT_MAP) {
+    if (keys.some(k => raw.includes(String(k).toLowerCase()))) return label;
+  }
+  return '其他';
+}
+
+// ── 知識地圖 ──────────────────────────────────────────────────────────
 function buildCategoryMastery(items) {
   const map = new Map();
   items.forEach(item => {
-    const cat = item.category || "未分類";
+    const cat = item.category || '未分類';
     if (!map.has(cat)) map.set(cat, { wrong: 0, total: 0 });
     const entry = map.get(cat);
     entry.wrong += Number(item.wrongCount || 1);
@@ -148,13 +190,13 @@ function buildCategoryMastery(items) {
 
 function masteryLevel(wrongCount, total) {
   const ratio = wrongCount / Math.max(1, total);
-  if (ratio >= 0.7) return { label: "需加強", color: "#ff6b6b", icon: "fa-circle-xmark", cls: "mastery-low" };
-  if (ratio >= 0.3) return { label: "練習中", color: "#ffb347", icon: "fa-circle-half-stroke", cls: "mastery-mid" };
-  return { label: "已掌握", color: "#51cf66", icon: "fa-circle-check", cls: "mastery-high" };
+  if (ratio >= 0.7) return { label: '需加強', color: '#ff6b6b', icon: 'fa-circle-xmark', cls: 'mastery-low' };
+  if (ratio >= 0.3) return { label: '練習中', color: '#ffb347', icon: 'fa-circle-half-stroke', cls: 'mastery-mid' };
+  return { label: '已掌握', color: '#51cf66', icon: 'fa-circle-check', cls: 'mastery-high' };
 }
 
 function renderKnowledgeMap(items) {
-  const area = $("knowledgeMapArea");
+  const area = $('knowledgeMapArea');
   if (!area) return;
   const catMap = buildCategoryMastery(items);
   if (!catMap.size) {
@@ -175,7 +217,7 @@ function renderKnowledgeMap(items) {
         <div class="km-bar-track"><div class="km-bar-fill" style="width:${pct}%;background:${m.color}"></div></div>
         <div class="km-meta">${data.total} 題 ・ 累積錯 ${data.wrong} 次</div>
       </div>`;
-  }).join("");
+  }).join('');
 }
 
 function sharePayload(item) {
@@ -233,69 +275,25 @@ function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
   if (line) ctx.fillText(line, x, currentY);
 }
 
-function topBy(items, key) {
-  const counts = new Map();
-  items.forEach((item) => {
-    const name = item[key] || "未分類";
-    counts.set(name, (counts.get(name) || 0) + Number(item.wrongCount || 1));
-  });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || ["-", 0];
-}
-
-// Map subject keywords to clean display names for the radar
-const SUBJECT_MAP = [
-  { keys: ["國文","語文","中文","閱讀","文學","故事模式 - 國文","語文力"], label: "國文" },
-  { keys: ["英文","english","英語","閱讀測驗","英文閱讀","故事模式 - 英文"], label: "英文" },
-  { keys: ["數學","math","幾何","代數","計算","數學推理"], label: "數學" },
-  { keys: ["歷史","history","世界史","中國史","台灣史"], label: "歷史" },
-  { keys: ["地理","地球","geography"], label: "地理" },
-  { keys: ["公民","社會","法律","政治","civil"], label: "公民" },
-  { keys: ["自然","理化","物理","化學","生物","science","自然科學"], label: "自然" },
-  { keys: ["程式","coding","python","javascript","演算法","資訊","電腦","code"], label: "程式" },
-  { keys: ["設計","design","ui","ux","視覺","藝術"], label: "設計" },
-  { keys: ["健康","體育","health","衛教","生活"], label: "健康" },
-  { keys: ["邏輯","思考","推理","logic"], label: "邏輯" },
-  { keys: ["音樂","music","藝能"], label: "音樂" },
-];
-
-function resolveSubjectLabel(item) {
-  const raw = String(item.category || item.sourceBankTitle || item.source || "").toLowerCase();
-  for (const { keys, label } of SUBJECT_MAP) {
-    if (keys.some(k => raw.includes(k.toLowerCase()))) return label;
-  }
-  // Fallback: clean up the raw category name
-  const clean = String(item.category || item.sourceBankTitle || "其他")
-    .replace(/^故事模式[\s·-]*/i, "")
-    .replace(/（複製）/, "")
-    .trim();
-  return clean || "其他";
-}
-
+// ── 雷達圖（學習弱點，依科目） ────────────────────────────────────────
 function buildWeaknessMetrics(items) {
   if (!items.length) return [];
 
-  // Count wrong answers per subject
   const subjectCounts = new Map();
   items.forEach((item) => {
     const subject = resolveSubjectLabel(item);
     subjectCounts.set(subject, (subjectCounts.get(subject) || 0) + Number(item.wrongCount || 1));
   });
 
-  // Sort by count desc, take top 8 subjects for radar
   const sorted = [...subjectCounts.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
-  // Need at least 3 points for a meaningful radar
   if (sorted.length < 3) {
-    // Pad with zero-value entries so the radar still draws
-    const needed = 3 - sorted.length;
-    const allSubjects = SUBJECT_MAP.map(s => s.label);
+    const allSubjects = SUBJECT_MAP.map(s => s.label).concat(['其他']);
     for (const s of allSubjects) {
       if (sorted.length >= 3) break;
-      if (!sorted.some(([label]) => label === s)) {
-        sorted.push([s, 0]);
-      }
+      if (!sorted.some(([label]) => label === s)) sorted.push([s, 0]);
     }
   }
 
@@ -303,17 +301,17 @@ function buildWeaknessMetrics(items) {
 }
 
 function renderWeaknessRadar(items) {
-  const canvas = $("weaknessRadar"); const legend = $("weaknessRadarLegend");
+  const canvas = $('weaknessRadar'); const legend = $('weaknessRadarLegend');
   if (!canvas || !legend) return;
-  const ctx = canvas.getContext("2d"); const metrics = buildWeaknessMetrics(items);
+  const ctx = canvas.getContext('2d'); const metrics = buildWeaknessMetrics(items);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!metrics.length) { legend.innerHTML = `<span>目前沒有足夠錯題資料</span>`; return; }
   const cx = canvas.width / 2; const cy = canvas.height / 2;
   const radius = Math.min(cx, cy) - 62;
   const max = Math.max(1, ...metrics.map((item) => item.value));
-  ctx.lineWidth = 1; ctx.strokeStyle = "rgba(113, 121, 175, 0.22)";
-  ctx.fillStyle = "rgba(102, 112, 155, 0.9)"; ctx.font = "700 13px sans-serif";
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(113, 121, 175, 0.22)';
+  ctx.fillStyle = 'rgba(102, 112, 155, 0.9)'; ctx.font = '700 13px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let ring = 1; ring <= 4; ring += 1) {
     ctx.beginPath();
     metrics.forEach((_, index) => {
@@ -339,45 +337,40 @@ function renderWeaknessRadar(items) {
     const x = cx + Math.cos(angle) * r; const y = cy + Math.sin(angle) * r;
     if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
-  ctx.closePath(); ctx.fillStyle = "rgba(255, 107, 166, 0.28)";
-  ctx.strokeStyle = "rgba(124, 123, 255, 0.9)"; ctx.lineWidth = 3; ctx.fill(); ctx.stroke();
-  // Legend with color gradient based on value
+  ctx.closePath(); ctx.fillStyle = 'rgba(255, 107, 166, 0.28)';
+  ctx.strokeStyle = 'rgba(124, 123, 255, 0.9)'; ctx.lineWidth = 3; ctx.fill(); ctx.stroke();
   const maxVal = Math.max(1, ...metrics.map(m => m.value));
   legend.innerHTML = metrics.map((item) => {
     const pct = item.value / maxVal;
-    const color = pct > 0.7 ? "#ef4444" : pct > 0.4 ? "#f59e0b" : "#22c55e";
+    const color = pct > 0.7 ? '#ef4444' : pct > 0.4 ? '#f59e0b' : '#22c55e';
     return `<span style="border-left:3px solid ${color}"><b>${escapeHtml(item.label)}</b>${Number(item.value)} 次</span>`;
-  }).join("");
+  }).join('');
 }
 
+// ── 複習建議卡 ────────────────────────────────────────────────────────
 function renderInsight(items) {
-  const wrap = $("wrongBookInsight"); if (!wrap) return;
+  const wrap = $('wrongBookInsight'); if (!wrap) return;
   if (!items.length) {
     wrap.innerHTML = `<article><strong>狀態很好 ✨</strong><span>目前沒有錯題，繼續加油！</span></article>`;
     return;
   }
-
-  // Build subject counts
   const subjectCounts = new Map();
   items.forEach(item => {
     const s = resolveSubjectLabel(item);
     subjectCounts.set(s, (subjectCounts.get(s) || 0) + Number(item.wrongCount || 1));
   });
   const topSubjects = [...subjectCounts.entries()].sort((a, b) => b[1] - a[1]);
-  const [weakest, weakestCount] = topSubjects[0] || ["-", 0];
+  const [weakest, weakestCount] = topSubjects[0] || ['-', 0];
   const [second, secondCount] = topSubjects[1] || [null, 0];
-
-  // Priority question (most wrong)
   const priority = [...items].sort((a, b) => Number(b.wrongCount || 0) - Number(a.wrongCount || 0))[0];
 
-  // Difficulty breakdown
   const diffCounts = new Map();
   items.forEach(item => {
-    const d = item.difficulty || "medium";
+    const d = item.difficulty || 'medium';
     diffCounts.set(d, (diffCounts.get(d) || 0) + Number(item.wrongCount || 1));
   });
-  const [hardestDiff, hardestCount] = [...diffCounts.entries()].sort((a,b) => b[1]-a[1])[0] || ["medium", 0];
-  const diffLabel = { easy: "簡單題", medium: "中等題", hard: "困難題" }[hardestDiff] || hardestDiff;
+  const [hardestDiff, hardestCount] = [...diffCounts.entries()].sort((a, b) => b[1] - a[1])[0] || ['medium', 0];
+  const diffLabel = { easy: '簡單題', medium: '中等題', hard: '困難題' }[hardestDiff] || hardestDiff;
 
   wrap.innerHTML = `
     <article>
@@ -387,32 +380,35 @@ function renderInsight(items) {
     ${second ? `<article>
       <strong>📖 ${escapeHtml(second)}</strong>
       <span>第二弱項，累積 ${secondCount} 次錯誤。</span>
-    </article>` : ""}
+    </article>` : ''}
     <article>
       <strong>⚠️ ${diffLabel}</strong>
       <span>最常出錯的難度，共 ${hardestCount} 次。</span>
     </article>
     <article>
-      <strong>🔥 ${escapeHtml(priority?.title?.slice(0,20) || "-")}</strong>
+      <strong>🔥 ${escapeHtml(priority?.title?.slice(0, 20) || '-')}</strong>
       <span>優先複習這題，已錯 ${Number(priority?.wrongCount || 0)} 次。</span>
     </article>
   `;
 }
 
+// ── 錯題練習 ────────────────────────────────────────────────────────
 function shuffleItems(items) { return [...items].sort(() => Math.random() - 0.5); }
 function currentPracticeItem() { return practiceState.order[practiceState.index] || null; }
 
 function renderPractice() {
-  const box = $("wrongPracticeBox"); const item = currentPracticeItem();
+  const box = $('wrongPracticeBox'); const item = currentPracticeItem();
   if (!box) return;
   if (!item) {
     if (practiceState.items.length) {
-      box.innerHTML = `<p>按下開始練習後，系統會從 ${practiceState.items.length} 題錯題中抽題讓你反覆測試。</p>`; return;
+      box.innerHTML = `<p>按下開始練習後，系統會從 ${practiceState.items.length} 題錯題中抽題讓你反覆測試。</p>`;
+      return;
     }
-    box.innerHTML = `<p>目前沒有可以練習的錯題。</p>`; return;
+    box.innerHTML = `<p>目前沒有可以練習的錯題。</p>`;
+    return;
   }
-  const isFill = item.type === "fill";
-  const isMatching = item.type === "matching";
+  const isFill = item.type === 'fill';
+  const isMatching = item.type === 'matching';
   const selectedSet = new Set(practiceState.selected);
   const correctSet = new Set(correctIndexes(item));
 
@@ -426,11 +422,11 @@ function renderPractice() {
     optionsHtml = `
       <div class="matching-practice-wrap">
         <div class="matching-col">
-          ${opts.map((o, i) => `<div class="match-left-item">${escapeHtml(o.left)}</div>`).join('')}
+          ${opts.map((o) => `<div class="match-left-item">${escapeHtml(o.left)}</div>`).join('')}
         </div>
         <div class="matching-col">
           ${(practiceState.matchingRight || shuffledRight).map((r, i) => `
-            <div class="match-right-item ${practiceState.checked ? (opts.find(o=>o.right===r && opts[i]?.right===r) ? 'correct' : 'wrong') : ''}" data-right="${escapeHtml(r)}">${escapeHtml(r)}</div>
+            <div class="match-right-item ${practiceState.checked ? (opts.find(o => o.right === r && opts[i]?.right === r) ? 'correct' : 'wrong') : ''}" data-right="${escapeHtml(r)}">${escapeHtml(r)}</div>
           `).join('')}
         </div>
       </div>`;
@@ -441,11 +437,11 @@ function renderPractice() {
       ${(item.options || []).map((option, index) => {
         const selected = selectedSet.has(index);
         const correct = correctSet.has(index);
-        const revealClass = practiceState.checked ? (correct ? "correct" : selected ? "wrong" : "") : "";
-        return `<button type="button" class="practice-option ${selected ? "selected" : ""} ${revealClass}" data-index="${index}">
+        const revealClass = practiceState.checked ? (correct ? 'correct' : selected ? 'wrong' : '') : '';
+        return `<button type="button" class="practice-option ${selected ? 'selected' : ''} ${revealClass}" data-index="${index}">
           <b>${String.fromCharCode(65 + index)}</b><span>${escapeHtml(optionText(option, index))}</span>
         </button>`;
-      }).join("")}
+      }).join('')}
     </div>`;
   }
 
@@ -456,24 +452,24 @@ function renderPractice() {
         <span class="answer-pill">${practiceState.index + 1} / ${practiceState.order.length}</span>
       </div>
       <p>${escapeHtml(item.content)}</p>
-      ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" class="practice-image">` : ""}
+      ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" class="practice-image">` : ''}
       ${optionsHtml}
       <div class="practice-actions">
         <button id="checkPracticeBtn" class="tool-btn"><i class="fa-solid fa-check"></i> 檢查答案</button>
         <button id="nextPracticeBtn" class="tool-btn secondary"><i class="fa-solid fa-forward"></i> 下一題</button>
-        <button id="aiTutorBtn" class="tool-btn tutor" style="${practiceState.checked ? "" : "display:none;"}"><i class="fa-solid fa-chalkboard-user"></i> AI 家教講解</button>
+        <button id="aiTutorBtn" class="tool-btn tutor" style="${practiceState.checked ? '' : 'display:none;'}"><i class="fa-solid fa-chalkboard-user"></i> AI 家教講解</button>
       </div>
       <div id="aiTutorBox" class="ai-tutor-box"></div>
       ${practiceState.checked ? `<div class="explanation-box">
-        ${item.explanation ? `<strong>解析</strong><br>${escapeHtml(item.explanation)}` : "綠色選項就是正確答案。"}
-      </div>` : ""}
+        ${item.explanation ? `<strong>解析</strong><br>${escapeHtml(item.explanation)}` : '綠色選項就是正確答案。'}
+      </div>` : ''}
     </article>`;
 
-  box.querySelectorAll(".practice-option").forEach((button) => {
-    button.addEventListener("click", () => {
+  box.querySelectorAll('.practice-option').forEach((button) => {
+    button.addEventListener('click', () => {
       if (practiceState.checked) return;
       const index = Number(button.dataset.index);
-      if (item.type === "multiple") {
+      if (item.type === 'multiple') {
         practiceState.selected = selectedSet.has(index)
           ? practiceState.selected.filter((v) => v !== index)
           : [...practiceState.selected, index].sort((a, b) => a - b);
@@ -481,13 +477,13 @@ function renderPractice() {
       renderPractice();
     });
   });
-  $("checkPracticeBtn")?.addEventListener("click", checkPracticeAnswer);
-  $("nextPracticeBtn")?.addEventListener("click", nextPracticeQuestion);
-  $("aiTutorBtn")?.addEventListener("click", loadAiTutor);
+  $('checkPracticeBtn')?.addEventListener('click', checkPracticeAnswer);
+  $('nextPracticeBtn')?.addEventListener('click', nextPracticeQuestion);
+  $('aiTutorBtn')?.addEventListener('click', loadAiTutor);
 }
 
 function startPractice() {
-  if (!practiceState.items.length) { showToast("目前沒有錯題可以練習"); return; }
+  if (!practiceState.items.length) { showToast('目前沒有錯題可以練習'); return; }
   practiceState.order = shuffleItems(practiceState.items);
   practiceState.index = 0; practiceState.selected = []; practiceState.checked = false; practiceState.matchingRight = null;
   renderPractice();
@@ -495,32 +491,35 @@ function startPractice() {
 
 function checkPracticeAnswer() {
   const item = currentPracticeItem(); if (!item) return;
-  if (item.type === "fill") {
-    const input = String($("practiceFillInput")?.value || "").trim().toLowerCase();
+  if (item.type === 'fill') {
+    const input = String($('practiceFillInput')?.value || '').trim().toLowerCase();
     const correct = correctAnswerText(item).trim().toLowerCase();
     practiceState.selected = input ? [0] : []; practiceState.checked = true;
-    showToast(input && input === correct ? "答對了" : "再複習一次"); renderPractice(); return;
+    showToast(input && input === correct ? '答對了' : '再複習一次'); renderPractice(); return;
   }
-  if (!practiceState.selected.length) { showToast("請先選擇答案"); return; }
-  const picked = practiceState.selected.join(","); const answer = correctIndexes(item).join(",");
+  if (!practiceState.selected.length) { showToast('請先選擇答案'); return; }
+  const picked = practiceState.selected.join(','); const answer = correctIndexes(item).join(',');
   practiceState.checked = true;
-  showToast(picked === answer ? "答對了" : "答錯了，下面有正解"); renderPractice();
+  showToast(picked === answer ? '答對了' : '答錯了，下面有正解'); renderPractice();
 }
 
 async function loadAiTutor() {
-  const item = currentPracticeItem(); const box = $("aiTutorBox");
+  const item = currentPracticeItem(); const box = $('aiTutorBox');
   if (!item || !box) return;
-  const pickedText = practiceState.selected.map((idx) => `${String.fromCharCode(65 + idx)}. ${optionText(item.options?.[idx], idx)}`).join("、");
+  const pickedText = practiceState.selected.map((idx) => `${String.fromCharCode(65 + idx)}. ${optionText(item.options?.[idx], idx)}`).join('、');
   box.innerHTML = `<div class="explanation-box"><i class="fa-solid fa-spinner fa-spin"></i> AI 家教正在整理講解...</div>`;
   try {
-    const data = await api("/ai_tutor", {
-      method: "POST",
+    const data = await api('/ai_tutor', {
+      method: 'POST',
       body: JSON.stringify({
-        question: item.content, selected: pickedText, correct: correctAnswerText(item),
-        explanation: item.explanation || "", language: localStorage.getItem("quizLang") || "zh",
+        question: item.content,
+        selected: pickedText,
+        correct: correctAnswerText(item),
+        explanation: item.explanation || '',
+        language: localStorage.getItem('quizLang') || 'zh',
       }),
     });
-    box.innerHTML = `<div class="explanation-box"><strong>AI 家教</strong><br>${escapeHtml(data.tutor || "").replaceAll("\n", "<br>")}</div>`;
+    box.innerHTML = `<div class="explanation-box"><strong>AI 家教</strong><br>${escapeHtml(data.tutor || '').replaceAll('\n', '<br>')}</div>`;
   } catch (error) {
     box.innerHTML = `<div class="explanation-box">AI 家教暫時無法回應，請先看綠色正解與解析。</div>`;
   }
@@ -541,18 +540,20 @@ async function loadInlineAiExplanation(itemIndex, btn) {
   btn.disabled = true;
   box.innerHTML = `<div class="explanation-box ai-personal-explanation"><i class="fa-solid fa-spinner fa-spin"></i> AI 正在針對你的弱點分析中...</div>`;
   try {
-    const data = await api("/ai_tutor", {
-      method: "POST",
+    const data = await api('/ai_tutor', {
+      method: 'POST',
       body: JSON.stringify({
-        question: item.content, selected: "（答錯）", correct: correctAnswerText(item),
-        explanation: item.explanation || "", language: localStorage.getItem("quizLang") || "zh",
+        question: item.content,
+        selected: '（答錯）',
+        correct: correctAnswerText(item),
+        explanation: item.explanation || '',
+        language: localStorage.getItem('quizLang') || 'zh',
         wrongCount: item.wrongCount || 1,
       }),
     });
-    const text = data.tutor || "";
-    // Save to item
+    const text = data.tutor || '';
     item.aiExplanation = text;
-    box.innerHTML = `<div class="explanation-box ai-personal-explanation"><strong><i class="fa-solid fa-robot"></i> AI 個人化解析</strong><br>${escapeHtml(text).replaceAll("\n", "<br>")}</div>`;
+    box.innerHTML = `<div class="explanation-box ai-personal-explanation"><strong><i class="fa-solid fa-robot"></i> AI 個人化解析</strong><br>${escapeHtml(text).replaceAll('\n', '<br>')}</div>`;
     btn.innerHTML = `<i class="fa-solid fa-rotate"></i> 重新解析`;
     btn.disabled = false;
   } catch {
@@ -561,21 +562,60 @@ async function loadInlineAiExplanation(itemIndex, btn) {
   }
 }
 
-function renderWrongBook(data) {
-  const items = Array.isArray(data.items) ? data.items : [];
-  practiceState.items = items;
-  window._wrongBookItems = items; // expose for AI advice
-  practiceState.order = []; practiceState.index = 0; practiceState.selected = []; practiceState.checked = false;
-  $("wrongItemCount").textContent = String(items.length);
-  $("wrongTotalCount").textContent = String(Number(data.totalWrongCount || 0));
-  $("wrongUserName").textContent = data.username || "-";
-  renderInsight(items); renderWeaknessRadar(items); renderKnowledgeMap(items); renderPractice();
+// ── 科目篩選 + 排序 + 渲染清單 ────────────────────────────────────────
+const DIFF_RANK = { hard: 0, medium: 1, easy: 2 };
 
-  const list = $("wrongBookList");
+function filterAndSortItems(items) {
+  let arr = items.slice();
+  // 科目篩選
+  if (listState.subject && listState.subject !== 'all') {
+    arr = arr.filter((it) => resolveSubjectLabel(it) === listState.subject);
+  }
+  // 排序
+  switch (listState.sort) {
+    case 'most-wrong':
+      arr.sort((a, b) => Number(b.wrongCount || 0) - Number(a.wrongCount || 0));
+      break;
+    case 'hardest':
+      arr.sort((a, b) => (DIFF_RANK[a.difficulty || 'medium'] ?? 1) - (DIFF_RANK[b.difficulty || 'medium'] ?? 1));
+      break;
+    case 'alpha':
+      arr.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hant'));
+      break;
+    case 'recent':
+    default:
+      arr.sort((a, b) => Number(b.lastWrongAt || 0) - Number(a.lastWrongAt || 0));
+      break;
+  }
+  return arr;
+}
+
+function renderWrongListCards(items) {
+  const list = $('wrongBookList');
+  if (!list) return;
+
+  // 更新「錯題數」統計：依篩選後顯示
+  const countEl = $('wrongItemCount');
+  const totalEl = $('wrongTotalCount');
+  if (countEl) countEl.textContent = String(items.length);
+  if (totalEl) totalEl.textContent = String(items.reduce((s, i) => s + Number(i.wrongCount || 0), 0));
+  const filterCount = $('wbFilterCount');
+  if (filterCount) {
+    const all = (window._wrongBookItemsAll || []).length;
+    filterCount.textContent = (listState.subject === 'all' && listState.sort === 'recent')
+      ? ''
+      : `（顯示 ${items.length} / ${all} 題）`;
+  }
+
   if (!items.length) {
-    list.innerHTML = `<article class="question-card"><h3>目前沒有錯題</h3><p>答錯的題目會自動收藏到這裡，之後可以回來複習。</p></article>`;
+    list.innerHTML = `<article class="question-card"><h3>此科目目前沒有錯題</h3><p>切換其他科目，或答錯後會自動加入這裡。</p></article>`;
+    // 同步 practiceState.items 為篩選後
+    practiceState.items = items;
     return;
   }
+
+  // 將 practiceState 同步成「篩選後」的 items，這樣 AI 解析 / 練習也能順著篩選走
+  practiceState.items = items;
 
   list.innerHTML = items.map((item, itemIndex) => {
     const note = getNote(item);
@@ -586,17 +626,16 @@ function renderWrongBook(data) {
         <span class="answer-pill">答錯 ${Number(item.wrongCount || 0)} 次</span>
       </div>
       <p>${escapeHtml(item.content)}</p>
-      ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" style="max-width:100%;border-radius:14px;margin-top:12px;">` : ""}
+      ${item.image ? `<img src="${escapeHtml(item.image)}" alt="" style="max-width:100%;border-radius:14px;margin-top:12px;">` : ''}
       <ul class="option-list">
         ${(item.options || []).map((option, index) => {
           const isCorrect = correctIndexes(item).includes(index);
-          return `<li class="${isCorrect ? "is-correct" : ""}">${escapeHtml(optionText(option, index))}${isCorrect ? " ✓" : ""}</li>`;
-        }).join("")}
+          return `<li class="${isCorrect ? 'is-correct' : ''}">${escapeHtml(optionText(option, index))}${isCorrect ? ' ✓' : ''}</li>`;
+        }).join('')}
       </ul>
-      ${item.explanation ? `<div class="explanation-box"><strong>解析</strong><br>${escapeHtml(item.explanation)}</div>` : ""}
-      ${item.aiExplanation ? `<div class="explanation-box ai-personal-explanation"><strong><i class="fa-solid fa-robot"></i> AI 個人化解析</strong><br>${escapeHtml(item.aiExplanation).replaceAll("\n", "<br>")}</div>` : ""}
+      ${item.explanation ? `<div class="explanation-box"><strong>解析</strong><br>${escapeHtml(item.explanation)}</div>` : ''}
+      ${item.aiExplanation ? `<div class="explanation-box ai-personal-explanation"><strong><i class="fa-solid fa-robot"></i> AI 個人化解析</strong><br>${escapeHtml(item.aiExplanation).replaceAll('\n', '<br>')}</div>` : ''}
       <div id="ai-inline-box-${itemIndex}"></div>
-      <!-- 筆記欄 -->
       <div class="wrong-note-wrap">
         <label class="wrong-note-label"><i class="fa-solid fa-pencil"></i> 我的筆記・記憶法</label>
         <textarea class="wrong-note-input" data-note-index="${itemIndex}" placeholder="寫下自己的記憶法或補充說明...">${escapeHtml(note)}</textarea>
@@ -611,97 +650,130 @@ function renderWrongBook(data) {
         <span>${escapeHtml(item.sourceBankTitle)}</span>
         <span>${escapeHtml(item.category)}</span>
         <span>${escapeHtml(item.difficulty)}</span>
-        <span>最後錯誤：${escapeHtml(item.lastWrongAtText)}</span>
+        <span>最後錯誤：${escapeHtml(item.lastWrongAtText || toTaipeiTimeStr(item.lastWrongAt))}</span>
       </div>
     </article>`;
-  }).join("");
+  }).join('');
 
-  document.querySelectorAll(".wrong-share-link").forEach((btn) =>
-    btn.addEventListener("click", () => copyWrongShareLink(Number(btn.dataset.shareIndex))));
-  document.querySelectorAll(".wrong-export-image").forEach((btn) =>
-    btn.addEventListener("click", () => exportWrongImage(Number(btn.dataset.imageIndex))));
-
-  // AI inline btn
-  document.querySelectorAll(".ai-inline-btn").forEach((btn) => {
-    btn.addEventListener("click", () => loadInlineAiExplanation(Number(btn.dataset.aiIndex), btn));
+  document.querySelectorAll('.wrong-share-link').forEach((btn) =>
+    btn.addEventListener('click', () => copyWrongShareLink(Number(btn.dataset.shareIndex))));
+  document.querySelectorAll('.wrong-export-image').forEach((btn) =>
+    btn.addEventListener('click', () => exportWrongImage(Number(btn.dataset.imageIndex))));
+  document.querySelectorAll('.ai-inline-btn').forEach((btn) => {
+    btn.addEventListener('click', () => loadInlineAiExplanation(Number(btn.dataset.aiIndex), btn));
   });
-
-  // Save note btn
-  document.querySelectorAll(".save-note-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+  document.querySelectorAll('.save-note-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
       const idx = Number(btn.dataset.noteIndex);
       const item = practiceState.items[idx];
       const textarea = document.querySelector(`.wrong-note-input[data-note-index="${idx}"]`);
       if (!item || !textarea) return;
       saveNote(item, textarea.value);
-      showToast("筆記已儲存 ✓");
+      showToast('筆記已儲存 ✓');
     });
   });
 }
 
+function applyListFilters() {
+  const all = window._wrongBookItemsAll || [];
+  const filtered = filterAndSortItems(all);
+  // 「智慧複習」分頁也跟著篩選後的清單走
+  window._wrongBookItems = filtered;
+  renderWrongListCards(filtered);
+  renderInsight(filtered);
+  renderWeaknessRadar(filtered);
+  renderKnowledgeMap(filtered);
+  if (typeof window.__wbRefreshSmartTabs === 'function') window.__wbRefreshSmartTabs();
+}
+
+// ── 主渲染入口 ────────────────────────────────────────────────────────
+function renderWrongBook(data) {
+  const items = Array.isArray(data.items) ? data.items : [];
+  window._wrongBookItemsAll = items;
+  practiceState.order = []; practiceState.index = 0; practiceState.selected = []; practiceState.checked = false;
+
+  const nameEl = $('wrongUserName');
+  if (nameEl) nameEl.textContent = data.username || '-';
+  // 累積答錯：未篩選的原始總數
+  const totalEl = $('wrongTotalCount');
+  if (totalEl) totalEl.textContent = String(Number(data.totalWrongCount || 0));
+
+  applyListFilters();
+  renderPractice();
+}
+
 async function loadWrongBook() {
-  // ── Step 1: Resolve username using every possible method ────────────
-  let username = getCurrentUser();
+  // Step 1: 取得登入帳號
+  const username = getCurrentUser();
+  if ($('wrongUserName')) $('wrongUserName').textContent = username || '(未登入)';
+  const wbWarn = $('wbLoginWarn');
+  if (wbWarn) wbWarn.style.display = username ? 'none' : '';
 
-  // Debug: log all relevant localStorage keys
-  console.group("[WrongBook] localStorage dump");
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && (k.includes("user") || k.includes("User") || k.includes("profile") || k.includes("Profile") || k.includes("player") || k.includes("wrong_book"))) {
-      const v = localStorage.getItem(k);
-      console.log(k, "=", k.includes("wrong_book") ? `[${JSON.parse(v||"[]").length} items]` : v);
-    }
-  }
-  console.log("Resolved username:", username || "(empty)");
-  console.groupEnd();
-
-  // ── Step 2: Show username & warning immediately ──────────────────────
-  if ($("wrongUserName")) $("wrongUserName").textContent = username || "(未登入，請先到首頁登入)";
-  const wbWarn = $("wbLoginWarn");
-  if (wbWarn) wbWarn.style.display = username ? "none" : "";
-
-  // ── Step 3: If still no username, show local items or prompt ────────
+  // Step 2: 未登入 → 顯示提醒，不誤抓 guest 或 playerName
   if (!username) {
-    const guestItems = loadLocalStoryWrongItems("guest");
-    if (guestItems.length) {
-      renderWrongBook({ username: "guest", items: guestItems, totalWrongCount: guestItems.reduce((s,i)=>s+(i.wrongCount||1),0) });
-    } else {
-      $("wrongBookList").innerHTML = `<article class="question-card">
+    if ($('wrongBookList')) {
+      $('wrongBookList').innerHTML = `<article class="question-card">
         <h3>📖 請先登入</h3>
         <p>請回到<a href="index.html" style="color:#9333ea;font-weight:700"> 首頁 </a>登入帳號後再查看錯題本。</p>
         <p style="font-size:.85rem;color:#aaa;margin-top:8px">在故事模式答錯的題目也會自動出現在這裡。</p>
       </article>`;
     }
+    window._wrongBookItemsAll = [];
+    window._wrongBookItems = [];
+    renderInsight([]); renderWeaknessRadar([]); renderKnowledgeMap([]);
+    if (typeof window.__wbRefreshSmartTabs === 'function') window.__wbRefreshSmartTabs();
     return;
   }
 
-  // ── Step 4: Load from server + merge localStorage ───────────────────
+  // Step 3: 已登入 → 從 API 載入 + 合併 localStorage 故事錯題
   let data = { username, items: [], totalWrongCount: 0, success: true };
   try {
     data = await api(`/wrong_book_summary?username=${encodeURIComponent(username)}`);
-    console.log("[WrongBook] API returned", (data.items||[]).length, "items");
   } catch (apiErr) {
-    console.warn("[WrongBook] API failed:", apiErr.message, "— using localStorage only");
+    console.warn('[WrongBook] API failed:', apiErr.message, '— 改用 localStorage');
   }
 
-  // Always merge localStorage story wrong items as safety net
+  // 合併 localStorage 故事錯題（離線安全網）
   const localItems = loadLocalStoryWrongItems(username);
-  console.log("[WrongBook] localStorage items:", localItems.length);
   if (localItems.length) {
-    const seen = new Set((data.items||[]).map(item => String(item.content||item.title||"").trim()));
+    const seen = new Set((data.items || []).map(item => String(item.content || item.title || '').trim()));
     const fresh = localItems.filter(item => {
-      const k = String(item.content||item.title||"").trim();
+      const k = String(item.content || item.title || '').trim();
       return k && !seen.has(k);
     });
     if (fresh.length) {
-      data.items = [...(data.items||[]), ...fresh];
-      data.totalWrongCount = Number(data.totalWrongCount||0) + fresh.reduce((s,i)=>s+Number(i.wrongCount||1),0);
+      data.items = [...(data.items || []), ...fresh];
+      data.totalWrongCount = Number(data.totalWrongCount || 0) + fresh.reduce((s, i) => s + Number(i.wrongCount || 1), 0);
     }
   }
+
+  // 補上 lastWrongAtText（Taipei 顯示）
+  (data.items || []).forEach((it) => {
+    if (!it.lastWrongAtText && it.lastWrongAt) it.lastWrongAtText = toTaipeiTimeStr(it.lastWrongAt);
+  });
 
   renderWrongBook(data);
 }
 
-$("refreshWrongBookBtn")?.addEventListener("click", loadWrongBook);
-$("startPracticeBtn")?.addEventListener("click", startPractice);
+// ── 事件綁定 ────────────────────────────────────────────────────────
+$('refreshWrongBookBtn')?.addEventListener('click', loadWrongBook);
+$('startPracticeBtn')?.addEventListener('click', startPractice);
+
+// 科目篩選 chip 按鈕
+document.querySelectorAll('#wbSubjectFilterRow .wb-chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#wbSubjectFilterRow .wb-chip').forEach((c) => c.classList.remove('active'));
+    chip.classList.add('active');
+    listState.subject = chip.dataset.subject || 'all';
+    applyListFilters();
+  });
+});
+
+// 排序下拉
+$('wbSortSelect')?.addEventListener('change', (e) => {
+  listState.sort = e.target.value || 'recent';
+  applyListFilters();
+});
+
+// 初始載入
 loadWrongBook();

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/learning_tools.css">
   <link rel="stylesheet" href="css/dark_mode.css">
   <link rel="stylesheet" href="css/teacher_mode.css">
+  <link rel="stylesheet" href="css/analytics.css">
 </head>
 <body>
   <script>
@@ -65,86 +66,101 @@
       <div class="tool-card-head"><h2>題目答對率</h2></div>
       <div id="questionReportList" class="question-list compact"></div>
     </section>
-  </main>
 
-  <!-- ===== Analytics 5-Tab 儀表板 ===== -->
-  <link rel="stylesheet" href="css/analytics.css">
-  <div style="margin-top:28px;border-top:2px solid rgba(139,92,246,0.3);padding-top:24px;">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
-      <h2 class="gradient-title" style="font-size:22px;">📊 進階分析儀表板</h2>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-        <label for="analytics-room-select" style="color:#a78bfa;font-size:13px;">房間：</label>
-        <select id="analytics-room-select" onchange="analyticsLoadRoom(this.value)"
-          style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.4);color:#e9d5ff;padding:6px 12px;border-radius:8px;font-size:13px;">
-          <option value="">請選擇...</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTeacherTab('overview',this)">📊 班級總覽</button>
-      <button class="tab-btn" onclick="switchTeacherTab('student',this)">👤 個別學生</button>
-      <button class="tab-btn" onclick="switchTeacherTab('weak',this)">⚠️ 弱題分析</button>
-      <button class="tab-btn" onclick="switchTeacherTab('ai',this)">🤖 AI 建議</button>
-      <button class="tab-btn" onclick="switchTeacherTab('parent',this)">📄 家長報告</button>
-    </div>
-
-    <div id="tab-overview" class="tab-panel active">
-      <div class="stat-grid" id="class-stats-grid" style="margin-bottom:20px;"></div>
-      <div class="glass-card" style="margin-bottom:16px;">
-        <h3 style="color:#c4b5fd;margin-bottom:12px;">班級正確率分布</h3>
-        <canvas id="class-dist-chart" height="80"></canvas>
-      </div>
-      <h3 style="color:#c4b5fd;margin-bottom:12px;">學生狀態一覽</h3>
-      <div id="student-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
-    </div>
-
-    <div id="tab-student" class="tab-panel">
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <div id="student-list-panel" style="width:180px;flex-shrink:0;">
-          <h3 style="color:#c4b5fd;font-size:14px;margin-bottom:8px;">學生列表</h3>
-          <div id="student-list"></div>
-        </div>
-        <div id="student-detail-panel" class="glass-card" style="flex:1;min-width:200px;">
-          <p style="color:#6d28d9;text-align:center;padding:20px;">點選左側學生查看詳情</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="tab-weak" class="tab-panel">
-      <div class="glass-card" style="margin-bottom:16px;">
-        <h3 style="color:#c4b5fd;margin-bottom:12px;">各題錯誤率</h3>
-        <canvas id="weak-bar-chart" height="120"></canvas>
-      </div>
-      <div id="weak-detail-list"></div>
-    </div>
-
-    <div id="tab-ai" class="tab-panel">
-      <p style="color:#a78bfa;margin-bottom:16px;font-size:13px;">
-        點擊「生成建議」為各學生產生 AI 個人化學習建議。
-      </p>
-      <div id="ai-cards-container"></div>
-    </div>
-
-    <div id="tab-parent" class="tab-panel">
-      <div class="glass-card">
-        <h3 style="color:#c4b5fd;margin-bottom:16px;">📄 生成家長報告</h3>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-          <label style="color:#a78bfa;font-size:13px;">選擇學生：</label>
-          <select id="parent-student-select"
-            style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.4);color:#e9d5ff;padding:6px 12px;border-radius:8px;font-size:13px;">
-            <option value="">請選擇學生...</option>
+    <!-- ═══════ 進階分析儀表板（包進 tool-shell，與上方版面一致） ═══════ -->
+    <section class="tool-card analytics-dashboard">
+      <div class="tool-card-head">
+        <h2><i class="fa-solid fa-chart-pie"></i> 進階分析儀表板</h2>
+        <div class="analytics-room-picker">
+          <label for="analytics-room-select">房間：</label>
+          <select id="analytics-room-select">
+            <option value="">請選擇…</option>
           </select>
-          <button onclick="generateParentReport()"
-            style="background:var(--purple-primary);color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px;">
-            生成報告
-          </button>
         </div>
-        <div id="parent-report-result"></div>
       </div>
-    </div>
-  </div>
-  <!-- ===== end Analytics 儀表板 ===== -->
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="overview" type="button">📊 班級總覽</button>
+        <button class="tab-btn" data-tab="student" type="button">👤 個別學生</button>
+        <button class="tab-btn" data-tab="weak" type="button">⚠️ 弱題分析</button>
+        <button class="tab-btn" data-tab="ai" type="button">🤖 AI 建議</button>
+        <button class="tab-btn" data-tab="parent" type="button">📄 家長報告</button>
+      </div>
+
+      <div id="tab-overview" class="tab-panel active">
+        <div class="analytics-empty" data-empty-for="overview" style="display:none;">
+          <i class="fa-solid fa-circle-info"></i>
+          <p>請先從上方選擇一間有比賽紀錄的房間。</p>
+        </div>
+        <div class="stat-grid" id="class-stats-grid" style="margin-bottom:20px;"></div>
+        <div class="glass-card" style="margin-bottom:16px;">
+          <h3 style="color:#c4b5fd;margin-bottom:12px;">班級正確率分布</h3>
+          <canvas id="class-dist-chart" height="80"></canvas>
+        </div>
+        <h3 style="color:#c4b5fd;margin-bottom:12px;">學生狀態一覽</h3>
+        <div id="student-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
+      </div>
+
+      <div id="tab-student" class="tab-panel">
+        <div class="analytics-empty" data-empty-for="student" style="display:none;">
+          <i class="fa-solid fa-circle-info"></i>
+          <p>選好房間後，這裡會列出每位學生個別表現。</p>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div id="student-list-panel" style="width:180px;flex-shrink:0;">
+            <h3 style="color:#c4b5fd;font-size:14px;margin-bottom:8px;">學生列表</h3>
+            <div id="student-list"></div>
+          </div>
+          <div id="student-detail-panel" class="glass-card" style="flex:1;min-width:200px;">
+            <p style="color:#6d28d9;text-align:center;padding:20px;">點選左側學生查看詳情</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-weak" class="tab-panel">
+        <div class="analytics-empty" data-empty-for="weak" style="display:none;">
+          <i class="fa-solid fa-circle-info"></i>
+          <p>選好房間後，這裡會列出全班答錯最多的題目。</p>
+        </div>
+        <div class="glass-card" style="margin-bottom:16px;">
+          <h3 style="color:#c4b5fd;margin-bottom:12px;">各題錯誤率</h3>
+          <canvas id="weak-bar-chart" height="120"></canvas>
+        </div>
+        <div id="weak-detail-list"></div>
+      </div>
+
+      <div id="tab-ai" class="tab-panel">
+        <div class="analytics-empty" data-empty-for="ai" style="display:none;">
+          <i class="fa-solid fa-circle-info"></i>
+          <p>選好房間後，這裡會出現各學生的 AI 個人化建議。</p>
+        </div>
+        <p style="color:#a78bfa;margin-bottom:16px;font-size:13px;">
+          點擊「生成建議」為各學生產生 AI 個人化學習建議。
+        </p>
+        <div id="ai-cards-container"></div>
+      </div>
+
+      <div id="tab-parent" class="tab-panel">
+        <div class="analytics-empty" data-empty-for="parent" style="display:none;">
+          <i class="fa-solid fa-circle-info"></i>
+          <p>選好房間後，可以為個別學生產生家長報告。</p>
+        </div>
+        <div class="glass-card">
+          <h3 style="color:#c4b5fd;margin-bottom:16px;">📄 生成家長報告</h3>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+            <label style="color:#a78bfa;font-size:13px;">選擇學生：</label>
+            <select id="parent-student-select">
+              <option value="">請選擇學生...</option>
+            </select>
+            <button id="parent-report-generate-btn" type="button" class="tool-btn primary">
+              生成報告
+            </button>
+          </div>
+          <div id="parent-report-result"></div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <div class="toast-qa" id="toast"></div>
   <script src="js/i18n.js"></script>
@@ -155,12 +171,66 @@
   <script src="js/nav_drawer.js"></script>
   <script src="js/music_drawer.js"></script>
   <script>
-    (function(){
+    // 房間切換 → 同步更新班級總覽、個別學生、弱題分析、AI 建議、家長報告
+    (function () {
+      const select = document.getElementById('analytics-room-select');
+      if (select && typeof window.analyticsLoadRoom === 'function') {
+        select.addEventListener('change', () => {
+          const rid = select.value || '';
+          // 切換時隱藏所有空狀態（資料載入完才會正確顯示）
+          document.querySelectorAll('.analytics-empty').forEach(e => e.style.display = rid ? 'none' : '');
+          if (!rid) return;
+          try { window.analyticsLoadRoom(rid); } catch (e) { console.warn('analyticsLoadRoom err', e); }
+          // 同步主報表（如果報表頁也支援切換）
+          const pinInput = document.getElementById('reportPinInput');
+          if (pinInput && /^\d{6}$/.test(rid)) {
+            pinInput.value = rid;
+            const loadBtn = document.getElementById('loadReportBtn');
+            if (loadBtn) loadBtn.click();
+          }
+        });
+      }
+
+      // Tab 切換邏輯（取代原本 inline onclick）
+      document.querySelectorAll('.analytics-dashboard .tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          if (typeof window.switchTeacherTab === 'function') {
+            window.switchTeacherTab(tab, btn);
+          } else {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const panel = document.getElementById('tab-' + tab);
+            if (panel) panel.classList.add('active');
+            btn.classList.add('active');
+          }
+        });
+      });
+
+      // 家長報告按鈕（取代原本 inline onclick）
+      const parentBtn = document.getElementById('parent-report-generate-btn');
+      if (parentBtn) {
+        parentBtn.addEventListener('click', () => {
+          if (typeof window.generateParentReport === 'function') {
+            window.generateParentReport();
+          }
+        });
+      }
+
+      // 初始無房間時，所有 panel 顯示空狀態
+      if (select && !select.value) {
+        document.querySelectorAll('.analytics-empty').forEach(e => e.style.display = '');
+      }
+    })();
+  </script>
+  <script>
+    (function () {
       if (document.querySelector('.teacher-bg-bubble')) return;
       const bubbles = [
-        ['8%','28%','84px','11s'], ['78%','18%','118px','15s'], ['88%','70%','72px','13s'], ['18%','78%','96px','17s']
+        ['8%', '28%', '84px', '11s'], ['78%', '18%', '118px', '15s'],
+        ['88%', '70%', '72px', '13s'], ['18%', '78%', '96px', '17s']
       ];
-      bubbles.forEach(([x,y,s,d]) => {
+      bubbles.forEach(([x, y, s, d]) => {
         const el = document.createElement('span');
         el.className = 'teacher-bg-bubble';
         el.style.setProperty('--x', x); el.style.setProperty('--y', y);

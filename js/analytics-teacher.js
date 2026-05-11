@@ -5,6 +5,30 @@ let overviewData = null;
 let classDistChart = null;
 let weakBarChart = null;
 
+// ── 空狀態 / 錯誤狀態小工具 ──────────────────────────────────────────
+function _setAnalyticsEmpty(tab, show, msg) {
+  const el = document.querySelector(`.analytics-empty[data-empty-for="${tab}"]`);
+  if (!el) return;
+  el.style.display = show ? '' : 'none';
+  if (msg) {
+    const p = el.querySelector('p');
+    if (p) p.textContent = msg;
+  }
+}
+function _hideAllAnalyticsEmpty() {
+  document.querySelectorAll('.analytics-empty').forEach(e => e.style.display = 'none');
+}
+
+// 等 Chart.js 載入完成才繼續（避免 new Chart 時還沒定義）
+function _waitForChart(cb, maxTries) {
+  let tries = 0;
+  (function tick() {
+    if (typeof window.Chart !== 'undefined') { cb(); return; }
+    if (++tries > (maxTries || 60)) return; // ~6s
+    setTimeout(tick, 100);
+  })();
+}
+
 async function initRoomSelector() {
   try {
     const res = await fetch('/api/recent-rooms');
@@ -33,19 +57,31 @@ async function initRoomSelector() {
 async function analyticsLoadRoom(roomId) {
   if (!roomId) return;
   currentRoomId = roomId;
+  _hideAllAnalyticsEmpty();
+  // 選了房間之後：班級總覽 + 預先載入弱題（一進去就要看得到圖）
   await loadOverview();
+  loadWeakQuestions();
 }
 
 async function loadOverview() {
   if (!currentRoomId) return;
   try {
     const res = await fetch(`/api/teacher/overview/${currentRoomId}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     overviewData = await res.json();
+    if (!overviewData || !(overviewData.students || []).length) {
+      _setAnalyticsEmpty('overview', true, '這個房間目前沒有學生資料。');
+      _setAnalyticsEmpty('student', true, '這個房間目前沒有學生資料。');
+      _setAnalyticsEmpty('ai', true, '這個房間目前沒有學生資料。');
+      _setAnalyticsEmpty('parent', true, '這個房間目前沒有學生資料。');
+      return;
+    }
     renderClassStats(overviewData);
     renderStudentGrid(overviewData);
     populateStudentLists(overviewData);
   } catch (e) {
     console.error('[teacher] loadOverview error:', e);
+    _setAnalyticsEmpty('overview', true, '載入失敗：' + e.message);
   }
 }
 
@@ -76,26 +112,28 @@ function renderClassStats(data) {
 
   const canvas = document.getElementById('class-dist-chart');
   if (!canvas) return;
-  if (classDistChart) classDistChart.destroy();
-  classDistChart = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels: Object.keys(buckets),
-      datasets: [{
-        label: '人數',
-        data: Object.values(buckets),
-        backgroundColor: ['rgba(248,113,113,0.7)','rgba(251,191,36,0.7)','rgba(96,165,250,0.7)','rgba(52,211,153,0.7)'],
-        borderWidth: 0,
-      }],
-    },
-    options: {
-      animation: { duration: 600 },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#a78bfa' }, grid: { color: 'rgba(139,92,246,0.1)' } },
-        y: { ticks: { color: '#a78bfa', stepSize: 1 }, grid: { color: 'rgba(139,92,246,0.1)' } },
+  _waitForChart(() => {
+    if (classDistChart) classDistChart.destroy();
+    classDistChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(buckets),
+        datasets: [{
+          label: '人數',
+          data: Object.values(buckets),
+          backgroundColor: ['rgba(248,113,113,0.7)','rgba(251,191,36,0.7)','rgba(96,165,250,0.7)','rgba(52,211,153,0.7)'],
+          borderWidth: 0,
+        }],
       },
-    },
+      options: {
+        animation: { duration: 600 },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#a78bfa' }, grid: { color: 'rgba(139,92,246,0.1)' } },
+          y: { ticks: { color: '#a78bfa', stepSize: 1 }, grid: { color: 'rgba(139,92,246,0.1)' } },
+        },
+      },
+    });
   });
 }
 
@@ -133,7 +171,6 @@ function populateStudentLists(data) {
 
   const sel = document.getElementById('parent-student-select');
   if (sel) {
-    // clear old dynamic options
     while (sel.options.length > 1) sel.remove(1);
     students.forEach(s => {
       const opt = document.createElement('option');
@@ -219,34 +256,45 @@ async function loadWeakQuestions() {
   if (!currentRoomId) return;
   try {
     const res = await fetch(`/api/teacher/weak-questions/${currentRoomId}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const questions = data.questions || [];
-    const total = data.total_players || 1;
+
+    if (!questions.length) {
+      _setAnalyticsEmpty('weak', true, '這個房間目前沒有弱題資料。');
+      const listEl = document.getElementById('weak-detail-list');
+      if (listEl) listEl.innerHTML = '';
+      if (weakBarChart) { weakBarChart.destroy(); weakBarChart = null; }
+      return;
+    }
+    _setAnalyticsEmpty('weak', false);
 
     const canvas = document.getElementById('weak-bar-chart');
-    if (canvas && questions.length > 0) {
-      if (weakBarChart) weakBarChart.destroy();
-      weakBarChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-          labels: questions.slice(0, 10).map(q => `題目 ${q.q_id}`),
-          datasets: [{
-            label: '錯誤率 %',
-            data: questions.slice(0, 10).map(q => q.error_rate),
-            backgroundColor: 'rgba(248,113,113,0.7)',
-            borderColor: '#f87171',
-            borderWidth: 1,
-          }],
-        },
-        options: {
-          indexAxis: 'y',
-          animation: { duration: 600 },
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { min: 0, max: 100, ticks: { color: '#a78bfa' }, grid: { color: 'rgba(139,92,246,0.1)' } },
-            y: { ticks: { color: '#e9d5ff' }, grid: { display: false } },
+    if (canvas) {
+      _waitForChart(() => {
+        if (weakBarChart) weakBarChart.destroy();
+        weakBarChart = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: questions.slice(0, 10).map(q => `題目 ${q.q_id}`),
+            datasets: [{
+              label: '錯誤率 %',
+              data: questions.slice(0, 10).map(q => q.error_rate),
+              backgroundColor: 'rgba(248,113,113,0.7)',
+              borderColor: '#f87171',
+              borderWidth: 1,
+            }],
           },
-        },
+          options: {
+            indexAxis: 'y',
+            animation: { duration: 600 },
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { min: 0, max: 100, ticks: { color: '#a78bfa' }, grid: { color: 'rgba(139,92,246,0.1)' } },
+              y: { ticks: { color: '#e9d5ff' }, grid: { display: false } },
+            },
+          },
+        });
       });
     }
 
@@ -264,6 +312,7 @@ async function loadWeakQuestions() {
     }
   } catch (e) {
     console.error('[teacher] loadWeakQuestions error:', e);
+    _setAnalyticsEmpty('weak', true, '弱題分析載入失敗：' + e.message);
   }
 }
 
@@ -306,7 +355,7 @@ async function generateParentReport() {
       body: JSON.stringify({
         student_name: studentName,
         room_id: currentRoomId,
-        teacher_name: localStorage.getItem('playerName') || '',
+        teacher_name: localStorage.getItem('currentUser') || localStorage.getItem('playerName') || '',
       }),
     });
     const data = await res.json();
@@ -343,5 +392,12 @@ function switchTeacherTab(name, btn) {
 
   if (name === 'weak') loadWeakQuestions();
 }
+
+// 暴露 globals 供 teacher_report.html 內的事件綁定使用
+window.analyticsLoadRoom = analyticsLoadRoom;
+window.switchTeacherTab = switchTeacherTab;
+window.generateParentReport = generateParentReport;
+window.fetchAiSuggestion = fetchAiSuggestion;
+window.showStudentDetail = showStudentDetail;
 
 initRoomSelector();

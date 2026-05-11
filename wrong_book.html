@@ -13,35 +13,31 @@
 <body>
   <script>
     document.body.classList.toggle('dark-mode', localStorage.getItem('quizDarkMode') === '1');
-    // ── Immediately resolve username from ALL possible localStorage keys ──
+    // ── 統一帳號判定：錯題本一律使用登入帳號 currentUser ──
+    // 順序：currentUser → currentUserProfile.username → qa_profile_cache.username
+    // 玩家暱稱（playerName）不再用於查錯題本，避免抓錯人
     (function() {
-      function resolveUser() {
-        var simpleKeys = ["currentUser","qa_current_user","quizarena_user","username","playerName"];
-        for (var i = 0; i < simpleKeys.length; i++) {
-          var v = (localStorage.getItem(simpleKeys[i]) || sessionStorage.getItem(simpleKeys[i]) || "").trim();
-          if (v && v !== "undefined" && v !== "null" && v !== "guest") return v;
-        }
-        var profileKeys = ["currentUserProfile","qa_profile_cache","roomPlayerProfile","currentUserProfileData"];
-        for (var j = 0; j < profileKeys.length; j++) {
-          try {
-            var p = JSON.parse(localStorage.getItem(profileKeys[j]) || "null");
-            if (!p) continue;
-            var u = (p.username || p.account || p.name || p.playerName || "").trim();
-            if (u && u !== "undefined" && u !== "null") {
-              localStorage.setItem("currentUser", u); // backfill
+      function resolveLoginUser() {
+        var v = (localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser') || '').trim();
+        if (v && v !== 'undefined' && v !== 'null' && v !== 'guest') return v;
+        try {
+          var p = JSON.parse(localStorage.getItem('currentUserProfile') || localStorage.getItem('qa_profile_cache') || 'null');
+          if (p && p.username) {
+            var u = String(p.username).trim();
+            if (u && u !== 'undefined' && u !== 'null') {
+              localStorage.setItem('currentUser', u);
               return u;
             }
-          } catch(e) {}
-        }
-        return "";
+          }
+        } catch(e) {}
+        return '';
       }
-      window.__wbUsername = resolveUser();
-      // Set username display immediately without waiting for JS
-      document.addEventListener("DOMContentLoaded", function() {
-        var el = document.getElementById("wrongUserName");
-        var warn = document.getElementById("wbLoginWarn");
-        if (el) el.textContent = window.__wbUsername || "(未登入)";
-        if (warn) warn.style.display = window.__wbUsername ? "none" : "";
+      window.__wbUsername = resolveLoginUser();
+      document.addEventListener('DOMContentLoaded', function() {
+        var el = document.getElementById('wrongUserName');
+        var warn = document.getElementById('wbLoginWarn');
+        if (el) el.textContent = window.__wbUsername || '(未登入)';
+        if (warn) warn.style.display = window.__wbUsername ? 'none' : '';
       });
     })();
   </script>
@@ -54,19 +50,16 @@
       </div>
     </header>
 
-    <!-- Login warning (shown only if not logged in) -->
     <div id="wbLoginWarn" style="display:none;margin:12px 0;padding:14px 18px;border-radius:16px;background:rgba(255,100,100,.08);border:1.5px solid rgba(255,100,100,.2);color:#be123c;font-size:.9rem;font-weight:700">
       <i class="fa-solid fa-triangle-exclamation"></i> 尚未登入，請先回首頁登入帳號，才能查看錯題本。
     </div>
 
-    <!-- Stats -->
     <section class="summary-grid">
       <article><span><i class="fa-solid fa-circle-xmark"></i> 錯題數</span><strong id="wrongItemCount">0</strong></article>
       <article><span><i class="fa-solid fa-chart-line"></i> 累積答錯</span><strong id="wrongTotalCount">0</strong></article>
       <article><span><i class="fa-solid fa-user"></i> 目前帳號</span><strong id="wrongUserName">-</strong></article>
     </section>
 
-    <!-- AI Advice + Insight -->
     <section class="tool-card">
       <div class="tool-card-head">
         <h2><i class="fa-solid fa-lightbulb"></i> 複習建議</h2>
@@ -78,7 +71,6 @@
       <div id="aiAdviceBox" class="wb-ai-box" style="display:none"></div>
     </section>
 
-    <!-- Radar -->
     <section class="tool-card">
       <div class="tool-card-head">
         <h2><i class="fa-solid fa-radar"></i> 學習弱點雷達圖</h2>
@@ -90,7 +82,6 @@
       </div>
     </section>
 
-    <!-- Knowledge Map -->
     <section class="tool-card">
       <div class="tool-card-head">
         <h2><i class="fa-solid fa-map"></i> 知識地圖</h2>
@@ -99,7 +90,6 @@
       <div id="knowledgeMapArea" class="knowledge-map-area"></div>
     </section>
 
-    <!-- Smart Review tabs -->
     <section class="tool-card">
       <div class="tool-card-head">
         <h2><i class="fa-solid fa-brain"></i> 智慧複習</h2>
@@ -113,7 +103,6 @@
       <div id="wb-review-panel" class="wb-review-panel"></div>
     </section>
 
-    <!-- Practice -->
     <section class="tool-card">
       <div class="tool-card-head">
         <h2><i class="fa-solid fa-dumbbell"></i> 錯題練習</h2>
@@ -124,24 +113,64 @@
       </div>
     </section>
 
-    <!-- Review list -->
+    <!-- Review list (with subject filter + scrollable area) -->
     <section class="tool-card">
       <div class="tool-card-head">
         <h2><i class="fa-solid fa-list-check"></i> 完整複習清單</h2>
         <button id="refreshWrongBookBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> 重新整理</button>
       </div>
-      <div id="wrongBookList" class="question-list"></div>
+
+      <div class="wb-filter-row" id="wbSubjectFilterRow" role="tablist" aria-label="科目篩選">
+        <button class="wb-chip active" data-subject="all" type="button">全部</button>
+        <button class="wb-chip" data-subject="國文" type="button">國文</button>
+        <button class="wb-chip" data-subject="英文" type="button">英文</button>
+        <button class="wb-chip" data-subject="數學" type="button">數學</button>
+        <button class="wb-chip" data-subject="自然" type="button">自然</button>
+        <button class="wb-chip" data-subject="社會" type="button">社會</button>
+        <button class="wb-chip" data-subject="程式" type="button">程式</button>
+        <button class="wb-chip" data-subject="其他" type="button">其他</button>
+      </div>
+      <div class="wb-filter-row" style="margin-top:6px;">
+        <label class="wb-sort-label" for="wbSortSelect">排序方式：</label>
+        <select id="wbSortSelect" class="wb-sort-select">
+          <option value="recent">最近錯誤</option>
+          <option value="most-wrong">答錯最多次</option>
+          <option value="hardest">難度高 → 低</option>
+          <option value="alpha">標題排序</option>
+        </select>
+        <span class="wb-filter-count" id="wbFilterCount"></span>
+      </div>
+
+      <div id="wrongBookListScroll" class="wb-scroll">
+        <div id="wrongBookList" class="question-list"></div>
+      </div>
+    </section>
+
+    <!-- 能力雷達圖（對比全體與第一名） — 移回 tool-shell -->
+    <section class="tool-card">
+      <div class="tool-card-head">
+        <h2><i class="fa-solid fa-chart-area"></i> 能力雷達圖</h2>
+        <span class="tool-note">比較自己、全體平均、第一名</span>
+      </div>
+      <div class="wb-radar-controls">
+        <label class="wb-radar-label" for="abilityRadarPlayerInput">查詢帳號：</label>
+        <input id="abilityRadarPlayerInput" class="wb-radar-input" type="text" placeholder="輸入帳號或暱稱…">
+        <button id="abilityRadarReloadBtn" class="tool-btn" type="button"><i class="fa-solid fa-rotate"></i> 重新查詢</button>
+      </div>
+      <p class="wb-radar-legend-note">
+        <span class="wb-dot self"></span> 你
+        <span class="wb-dot avg"></span> 全體平均
+        <span class="wb-dot top"></span> 第一名
+      </p>
+      <div class="wb-radar-wrap">
+        <canvas id="analytics-radar-canvas" height="300" aria-label="能力雷達圖（對比分析）"></canvas>
+        <div id="abilityRadarEmpty" class="wb-radar-empty" style="display:none;">
+          <i class="fa-solid fa-chart-line"></i>
+          <p>目前沒有比賽紀錄，完成遊戲後會產生能力分析。</p>
+        </div>
+      </div>
     </section>
   </main>
-
-  <!-- Analytics: 能力雷達圖（對比全體與第一名） -->
-  <section class="tool-card" style="margin-top:16px;">
-    <div class="tool-card-head">
-      <h2><i class="fa-solid fa-chart-area"></i> 能力雷達圖</h2>
-      <span class="tool-note">紫色=你　灰=全體平均　金=第一名</span>
-    </div>
-    <canvas id="analytics-radar-canvas" height="300" aria-label="能力雷達圖（對比分析）"></canvas>
-  </section>
 
   <div class="toast-qa" id="toast"></div>
   <script src="js/api_client.js"></script>
@@ -153,15 +182,96 @@
   <script src="js/music_drawer.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="js/analytics-radar.js"></script>
+
+  <!-- ── 能力雷達圖：等 Chart.js 載入完成後再初始化；無資料 / API 錯誤時顯示提示 ── -->
   <script>
     (function() {
-      var player = window.__wbUsername || localStorage.getItem('playerName') || '';
-      if (player) RadarChart.loadAndRender('analytics-radar-canvas', player);
+      function waitForChart(cb, maxTries) {
+        var tries = 0;
+        function tick() {
+          if (typeof window.Chart !== 'undefined' && window.RadarChart) { cb(); return; }
+          if (++tries > (maxTries || 60)) return;
+          setTimeout(tick, 100);
+        }
+        tick();
+      }
+
+      function showRadarEmpty(msg) {
+        var canvas = document.getElementById('analytics-radar-canvas');
+        var box = document.getElementById('abilityRadarEmpty');
+        if (canvas) canvas.style.display = 'none';
+        if (box) {
+          box.style.display = '';
+          var p = box.querySelector('p');
+          if (p && msg) p.textContent = msg;
+        }
+      }
+      function showRadarCanvas() {
+        var canvas = document.getElementById('analytics-radar-canvas');
+        var box = document.getElementById('abilityRadarEmpty');
+        if (canvas) canvas.style.display = '';
+        if (box) box.style.display = 'none';
+      }
+
+      async function loadAbilityRadar(playerName) {
+        if (!playerName) { showRadarEmpty('請先輸入帳號或登入後再查詢能力雷達圖。'); return; }
+        showRadarCanvas();
+        try {
+          const res = await fetch('/api/radar/' + encodeURIComponent(playerName));
+          if (!res.ok) {
+            showRadarEmpty('能力雷達 API 回傳錯誤（HTTP ' + res.status + '），請稍後再試。');
+            return;
+          }
+          const data = await res.json();
+          if (data && data.error) {
+            showRadarEmpty('能力雷達載入失敗：' + data.error);
+            return;
+          }
+          var selfArr = Array.isArray(data.self) ? data.self : [];
+          var hasData = selfArr.length > 0 && selfArr.some(function(v) { return Number(v) > 0; });
+          if (!hasData) {
+            showRadarEmpty('目前沒有比賽紀錄，完成遊戲後會產生能力分析。');
+            return;
+          }
+          window.RadarChart.render('analytics-radar-canvas', data);
+        } catch (err) {
+          console.warn('[abilityRadar] load error', err);
+          showRadarEmpty('能力雷達載入失敗，請稍後再試。');
+        }
+      }
+
+      waitForChart(function() {
+        var input = document.getElementById('abilityRadarPlayerInput');
+        var btn = document.getElementById('abilityRadarReloadBtn');
+        // 使用登入帳號 currentUser，不再用 playerName 抓錯人
+        var defaultUser = window.__wbUsername || '';
+        if (input) input.value = defaultUser;
+        loadAbilityRadar(defaultUser);
+        if (btn && input) {
+          btn.addEventListener('click', function() {
+            loadAbilityRadar((input.value || '').trim());
+          });
+          input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') loadAbilityRadar((input.value || '').trim());
+          });
+        }
+      });
     })();
   </script>
 
+  <!-- ── Smart Review Tabs + AI Advice ── -->
   <script>
-  // ── Smart Review Tabs ──────────────────────────────
+  // ── 今日複習：以 Asia/Taipei 取得「今天 00:00」毫秒，後端 lastWrongAt 是秒級需 *1000 ──
+  function _wbTaipeiDayStartMs() {
+    const now = new Date();
+    // 算現在 Taipei 偏移
+    const taipeiNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+    const offsetMs = now.getTime() - taipeiNow.getTime();
+    const taipeiMidnight = new Date(taipeiNow);
+    taipeiMidnight.setHours(0, 0, 0, 0);
+    return taipeiMidnight.getTime() + offsetMs;
+  }
+
   const wbTabBtns = document.querySelectorAll('.wb-tab');
   const wbPanel = document.getElementById('wb-review-panel');
   let _wbActiveTab = 'today';
@@ -176,16 +286,24 @@
     const escH = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
     if (tab === 'today') {
-      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-      filtered = items.filter(i => i.lastWrongAt && new Date(i.lastWrongAt) >= todayStart);
-      if (!filtered.length) filtered = items.slice(0, 5); // fallback: 5 oldest
+      const todayStartMs = _wbTaipeiDayStartMs();
+      // lastWrongAt 後端是「秒級」timestamp → 要 *1000 才是毫秒
+      filtered = items.filter(i => {
+        if (!i.lastWrongAt) return false;
+        const ts = Number(i.lastWrongAt);
+        if (!ts || isNaN(ts)) return false;
+        const ms = ts > 1e12 ? ts : ts * 1000; // 自動偵測秒/毫秒
+        return ms >= todayStartMs;
+      });
+      if (!filtered.length) {
+        wbPanel.innerHTML = `<p style="color:#aaa;text-align:center;padding:20px;font-size:.88rem">今天還沒有新的錯題，要不要先複習舊題？</p>`;
+        return;
+      }
     } else if (tab === 'ai-rec') {
-      // Sort by wrong count desc, take top 6
       filtered = [...items].sort((a,b) => (b.wrongCount||0)-(a.wrongCount||0)).slice(0,6);
     } else if (tab === 'most-wrong') {
       filtered = [...items].sort((a,b) => (b.wrongCount||0)-(a.wrongCount||0)).slice(0,10);
     } else if (tab === 'high-err') {
-      // High error rate = wrongCount / total attempts (estimate as wrongCount)
       filtered = [...items].filter(i => (i.wrongCount||0) >= 2).sort((a,b)=>(b.wrongCount||0)-(a.wrongCount||0)).slice(0,10);
       if (!filtered.length) filtered = items.slice(0,6);
     }
@@ -199,7 +317,7 @@
       <div class="wb-mini-card">
         <div class="wb-mini-meta">
           <span class="wb-mini-cat"><i class="fa-solid fa-tag"></i> ${escH(item.category||item.sourceBankTitle||'未知')}</span>
-          <span class="wb-mini-diff wb-diff-${item.difficulty||'medium'}">${{easy:'簡單',medium:'中等',hard:'困難'}[item.difficulty]||'中等'}</span>
+          <span class="wb-mini-diff wb-diff-${item.difficulty||'medium'}">${({easy:'簡單',medium:'中等',hard:'困難'}[item.difficulty])||'中等'}</span>
           <span class="wb-mini-wrong"><i class="fa-solid fa-xmark"></i> ${item.wrongCount||1}次</span>
         </div>
         <p class="wb-mini-q">${escH(item.content||item.title||'題目')}</p>
@@ -216,13 +334,13 @@
     });
   });
 
-  // Re-render tabs when wrong book loads
   const _origPatch = setInterval(() => {
     if (window._wrongBookItems !== undefined) {
       clearInterval(_origPatch);
       renderWbTab(_wbActiveTab);
     }
   }, 300);
+  window.__wbRefreshSmartTabs = () => renderWbTab(_wbActiveTab);
 
   // ── AI Study Advice ────────────────────────────────
   document.getElementById('getAiAdviceBtn')?.addEventListener('click', async function() {
@@ -282,7 +400,6 @@ ${summary}
       });
       const data = await res.json();
       let text = (data.content || []).map(c => c.text || '').join('');
-      // Convert markdown-ish to HTML
       text = text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');

@@ -158,3 +158,181 @@ body.dark-mode .wb-tab.active { background: linear-gradient(135deg,#7c3aed,#a855
 body.dark-mode .wb-mini-card { background: rgba(40,20,70,.55); border-color: rgba(147,51,234,.2); }
 body.dark-mode .wb-mini-q { color: #e8d8ff; }
 body.dark-mode .wb-mini-cat { background: rgba(147,51,234,.2); color: #c8a8ff; }
+
+/* ══════════════════════════════════════════════════
+   Wrong Book — 科目篩選列 / 排序下拉
+   ══════════════════════════════════════════════════ */
+.wb-filter-row {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0 8px;
+}
+.wb-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 99px;
+  border: 1.5px solid rgba(147,51,234,.18);
+  background: rgba(255,255,255,.7); backdrop-filter: blur(8px);
+  color: #7c3aed; font-size: .82rem; font-weight: 800;
+  cursor: pointer; transition: all .15s;
+}
+.wb-chip:hover {
+  background: rgba(147,51,234,.08);
+  border-color: rgba(147,51,234,.32);
+  transform: translateY(-1px);
+}
+.wb-chip.active {
+  background: linear-gradient(135deg,#9333ea,#c026d3);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 12px rgba(147,51,234,.28);
+}
+body.dark-mode .wb-chip {
+  background: rgba(40,20,70,.55);
+  color: #c8a8ff; border-color: rgba(147,51,234,.25);
+}
+body.dark-mode .wb-chip.active {
+  background: linear-gradient(135deg,#7c3aed,#a855f7);
+  color: #fff;
+}
+.wb-sort-label {
+  font-size: .82rem; font-weight: 700; color: #6d28d9; margin: 0;
+}
+.wb-sort-select {
+  background: rgba(255,255,255,.78);
+  border: 1.5px solid rgba(147,51,234,.22);
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: .82rem; font-weight: 700;
+  color: #4c1d95;
+  cursor: pointer;
+  outline: none;
+}
+.wb-sort-select:focus { border-color: #9333ea; }
+body.dark-mode .wb-sort-label { color: #c8a8ff; }
+body.dark-mode .wb-sort-select {
+  background: rgba(40,20,70,.55);
+  color: #e8d8ff;
+  border-color: rgba(147,51,234,.3);
+}
+.wb-filter-count {
+  margin-left: auto;
+  font-size: .78rem; font-weight: 700;
+  color: #94a3b8;
+}
+body.dark-mode .wb-filter-count { color: #a78bfa; }
+
+/* ══════════════════════════════════════════════════
+   Wrong Book — 完整複習清單滾動容器
+   ══════════════════════════════════════════════════ */
+.wb-scroll {
+  max-height: 680px;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-top: 10px;
+  /* 漂亮的捲軸 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(147,51,234,.4) transparent;
+}
+.wb-scroll::-webkit-scrollbar { width: 8px; }
+.wb-scroll::-webkit-scrollbar-track { background: transparent; }
+.wb-scroll::-webkit-scrollbar-thumb {
+  background: rgba(147,51,234,.32);
+  border-radius: 99px;
+}
+.wb-scroll::-webkit-scrollbar-thumb:hover { background: rgba(147,51,234,.55); }
+
+/* 保留卡片間距 */
+.wb-scroll .question-list {
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .wb-scroll { max-height: 560px; }
+}
+
+body.dark-mode .wb-scroll {
+  scrollbar-color: rgba(168,85,247,.5) transparent;
+}
+body.dark-mode .wb-scroll::-webkit-scrollbar-thumb {
+  background: rgba(168,85,247,.45);
+}
+
+/* ══════════════════════════════════════════════════
+   Wrong Book — 能力雷達圖控制列 / 空狀態 / Legend dots
+   ══════════════════════════════════════════════════ */
+.wb-radar-controls {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.wb-radar-label {
+  font-size: .85rem; font-weight: 700; color: #6d28d9; margin: 0;
+}
+.wb-radar-input {
+  flex: 1 1 200px;
+  min-width: 160px;
+  background: rgba(255,255,255,.78);
+  border: 1.5px solid rgba(147,51,234,.25);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: .9rem; color: #2d1550;
+  outline: none; transition: border-color .15s;
+}
+.wb-radar-input:focus { border-color: #9333ea; }
+body.dark-mode .wb-radar-label { color: #c8a8ff; }
+body.dark-mode .wb-radar-input {
+  background: rgba(40,20,70,.55);
+  color: #e8d8ff;
+  border-color: rgba(147,51,234,.3);
+}
+
+.wb-radar-legend-note {
+  display: flex; gap: 16px; align-items: center;
+  flex-wrap: wrap;
+  font-size: .82rem; font-weight: 700;
+  color: #6d28d9;
+  margin: 8px 0;
+}
+body.dark-mode .wb-radar-legend-note { color: #c8a8ff; }
+.wb-dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 99px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.wb-dot.self { background: #7c3aed; }
+.wb-dot.avg { background: #94a3b8; }
+.wb-dot.top { background: #fbbf24; }
+
+.wb-radar-wrap {
+  position: relative;
+  min-height: 280px;
+}
+.wb-radar-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 240px;
+  padding: 28px 18px;
+  border-radius: 18px;
+  background: rgba(147,51,234,.04);
+  border: 1.5px dashed rgba(147,51,234,.22);
+  text-align: center;
+}
+.wb-radar-empty i {
+  font-size: 2.4rem;
+  color: rgba(147,51,234,.5);
+  margin-bottom: 12px;
+}
+.wb-radar-empty p {
+  margin: 0;
+  font-size: .9rem;
+  font-weight: 700;
+  color: #6d28d9;
+  line-height: 1.6;
+}
+body.dark-mode .wb-radar-empty {
+  background: rgba(40,20,70,.4);
+  border-color: rgba(168,85,247,.3);
+}
+body.dark-mode .wb-radar-empty i { color: rgba(168,85,247,.55); }
+body.dark-mode .wb-radar-empty p { color: #c8a8ff; }

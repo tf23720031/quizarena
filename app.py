@@ -4221,6 +4221,113 @@ def wrong_book_summary_api():
     return jsonify(success=True, **build_wrong_book_detail(username))
 
 
+# ── /sync_wrong_book ───────────────────────────────────────────────
+# 將舊版 localStorage 內的錯題（quizarena_wrong_book / wrong_question_book）
+# 同步進後端 wrong_question_book table。
+# 前端：js/create_home.js  syncLegacyWrongBookToBackend()
+# Body: { username, questions: [...] }
+@app.route('/sync_wrong_book', methods=['POST'])
+def sync_wrong_book_api():
+    try:
+        data = request.get_json(silent=True) or {}
+        username = str(data.get('username') or '').strip()
+        questions = data.get('questions') or []
+        if not username:
+            return jsonify(success=False, message='缺少使用者帳號'), 400
+        if not isinstance(questions, list):
+            return jsonify(success=False, message='questions 格式錯誤，應為陣列'), 400
+
+        synced = 0
+        skipped = 0
+        for raw in questions:
+            if not isinstance(raw, dict):
+                skipped += 1
+                continue
+            content = str(raw.get('content') or raw.get('q') or '').strip()
+            title = str(raw.get('title') or content[:30] or '舊版錯題').strip()
+            if not content:
+                skipped += 1
+                continue
+
+            # 正規化選項
+            options = raw.get('options') or []
+            normalized_options = []
+            if isinstance(options, list):
+                answer_idx = int(raw.get('answer', 0) or 0)
+                for idx, option in enumerate(options):
+                    if isinstance(option, dict):
+                        text = str(option.get('text') or '').strip()
+                        correct = bool(option.get('correct')) or idx == answer_idx
+                    else:
+                        text = str(option or '').strip()
+                        correct = idx == answer_idx
+                    normalized_options.append({'text': text, 'correct': correct})
+
+            qid_seed = str(raw.get('id') or raw.get('questionId') or content)
+            source_bank_id = str(raw.get('sourceBankId') or raw.get('source_bank_id') or 'legacy_local').strip()
+            source_bank_title = str(raw.get('sourceBankTitle') or raw.get('source_bank_title')
+                                    or raw.get('source') or '舊版錯題本').strip()
+
+            row = {
+                'id': str(raw.get('questionId') or raw.get('id') or f'legacy_{hash_text(qid_seed)[:16]}'),
+                'question_id': str(raw.get('questionId') or raw.get('id') or f'legacy_{hash_text(qid_seed)[:16]}'),
+                'title': title,
+                'content': content,
+                'type': str(raw.get('type') or 'single').strip(),
+                'options_json': json.dumps(normalized_options, ensure_ascii=False),
+                'explanation': str(raw.get('explanation') or raw.get('scene') or '').strip(),
+                'image': str(raw.get('image') or '').strip(),
+                'category': raw.get('category'),
+                'difficulty': raw.get('difficulty'),
+            }
+            try:
+                save_wrong_question(username, source_bank_id, source_bank_title, row)
+                synced += 1
+            except Exception as e:
+                print(f'[sync_wrong_book] save error: {e}')
+                skipped += 1
+
+        return jsonify(success=True, message=f'已同步 {synced} 題舊錯題',
+                       synced=synced, skipped=skipped, total=len(questions))
+    except Exception as e:
+        return jsonify(success=False, message=f'同步失敗：{e}'), 500
+
+
+# ── /profile_summary ───────────────────────────────────────────────
+# 個人資料 modal 開啟時，前端需要一份整合資料：勝場 + 成就 + 好友數 + 錯題數
+# 直接組合 /api/profile、/achievements_summary、/wrong_book_summary 的結果。
+# 前端：js/quizarena_fix.js  profileModal show.bs.modal handler
+@app.route('/profile_summary')
+def profile_summary_api():
+    username = str(request.args.get('username', '')).strip()
+    if not username:
+        return jsonify(success=False, message='缺少使用者帳號'), 400
+    try:
+        profile = build_user_profile(username) or {}
+        achievements = build_achievement_summary(username) or {}
+        wrong_book = build_wrong_book_detail(username) or {'items': [], 'totalWrongCount': 0}
+        friends_overview = build_friends_overview(username) or {}
+        friend_count = len(friends_overview.get('friends') or [])
+
+        return jsonify(
+            success=True,
+            username=username,
+            displayName=profile.get('username') or username,
+            title=profile.get('displayTitle') or '新手挑戰者',
+            avatar=profile.get('avatar') or '',
+            wins=int(profile.get('wins') or 0),
+            winRate=profile.get('winRate') or {},
+            level=profile.get('level') or {},
+            unlockedCount=int(achievements.get('unlockedCount') or 0),
+            totalAchievementCount=int(achievements.get('totalCount') or 0),
+            friendCount=friend_count,
+            wrongBookCount=len(wrong_book.get('items') or []),
+            wrongBookTotalWrong=int(wrong_book.get('totalWrongCount') or 0),
+        )
+    except Exception as e:
+        return jsonify(success=False, message=f'資料載入失敗：{e}'), 500
+
+
 @app.route('/story_wrong_question', methods=['POST'])
 def story_wrong_question_api():
     try:
