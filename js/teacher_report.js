@@ -80,6 +80,16 @@ function selectedTextForRow(row = {}, report = latestReport) {
   const questions = report?.questions || [];
   const question = questions.find((item) => questionKey(item) === resultQuestionKey(row));
   const options = question?.options || [];
+  if ((question?.type || "").toLowerCase() === "matching") {
+    const parts = indexes.map((rightIdx, leftIdx) => {
+      const left = options[leftIdx] || {};
+      const right = options[rightIdx] || {};
+      const leftText = String(left.left || left.text || left.label || leftIdx + 1).trim();
+      const rightText = String(right.right || right.text || right.label || rightIdx + 1).trim();
+      return `${leftText} → ${rightText}`;
+    });
+    return parts.length ? parts.join("、") : "未選擇";
+  }
   const parts = indexes.map((idx) => {
     const option = options[idx] || {};
     const label = option.label || String.fromCharCode(65 + idx);
@@ -95,6 +105,14 @@ function correctTextForQuestion(question = {}, report = latestReport) {
   if (existing && !emptyTexts.has(existing)) return existing;
 
   const options = Array.isArray(question.options) ? question.options : [];
+  if ((question.type || "").toLowerCase() === "matching") {
+    const pairs = options.map((option, idx) => {
+      const left = String(option.left || option.text || option.label || idx + 1).trim();
+      const right = String(option.right || "").trim();
+      return right ? `${left} → ${right}` : left;
+    });
+    if (pairs.length) return pairs.join("、");
+  }
   const explicitIndexes = question.correctIndexes || question.correct_indexes || question.answerIndexes || question.answer_indexes;
   const indexes = Array.isArray(explicitIndexes)
     ? explicitIndexes.map((item) => Number(item)).filter(Number.isInteger)
@@ -202,7 +220,12 @@ function getReportAnalysis(report) {
     .slice(0, 6);
   const hardestQuestions = [...questions]
     .filter((question) => toNumber(question.answered) > 0)
-    .sort((a, b) => toNumber(a.accuracy) - toNumber(b.accuracy) || toNumber(a.seq) - toNumber(b.seq))
+    .map((question) => ({
+      ...question,
+      errorRate: question.answered ? round1(((toNumber(question.answered) - toNumber(question.correct)) / toNumber(question.answered)) * 100) : 0,
+      accuracy: question.answered ? round1(((toNumber(question.answered) - toNumber(question.correct)) / toNumber(question.answered)) * 100) : 0,
+    }))
+    .sort((a, b) => toNumber(b.errorRate) - toNumber(a.errorRate) || toNumber(a.seq) - toNumber(b.seq))
     .slice(0, 5);
   const easiestQuestions = [...questions]
     .filter((question) => toNumber(question.answered) > 0)
@@ -277,6 +300,8 @@ function renderHistory(reports) {
     btn.addEventListener("click", () => {
       $("reportPinInput").value = btn.dataset.pin || "";
       loadReport(btn.dataset.pin || "");
+      document.querySelectorAll("#reportHistoryList .history-button").forEach((item) => item.classList.remove("active"));
+      btn.classList.add("active");
     });
   });
 }
@@ -299,7 +324,9 @@ function barRows(items, options) {
     <div class="bar-list">
       ${items.map((item) => {
         const value = toNumber(options.value(item));
-        const width = safePercent((value / max) * 100);
+        const widthSource = options.widthValue ? toNumber(options.widthValue(item)) : value;
+        const widthMax = Math.max(1, toNumber(options.widthMax || max));
+        const width = safePercent((widthSource / widthMax) * 100);
         const warn = options.warn ? options.warn(item) : false;
         return `
           <div class="bar-row">
@@ -311,6 +338,79 @@ function barRows(items, options) {
       }).join("")}
     </div>
   `;
+}
+
+function questionErrorRows(items) {
+  if (!items.length) return `<p class="report-empty">尚無題目作答資料</p>`;
+  return `
+    <div class="bar-list">
+      ${items.map((question) => {
+        const errorRate = toNumber(question.errorRate);
+        const qid = escapeHtml(question.questionId || question.question_id || question.id || question.seq || "");
+        return `
+          <button class="bar-row question-detail-trigger" type="button" data-question-index="${qid}">
+            <span class="bar-label" title="${escapeHtml(question.title || question.content || "")}">Q${toNumber(question.seq) + 1} ${escapeHtml(question.title || question.content || "未命名題目")}</span>
+            <span class="bar-track"><span class="bar-fill warn" style="width:${safePercent(errorRate)}%"></span></span>
+            <span class="bar-value">${errorRate}% 錯題率</span>
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function ensureQuestionDetailModal() {
+  let modal = $("questionDetailModal");
+  if (modal) return modal;
+  modal = document.createElement("div");
+  modal.id = "questionDetailModal";
+  modal.className = "qa-modal-backdrop";
+  modal.style.display = "none";
+  modal.innerHTML = `
+    <div class="qa-modal-card">
+      <button class="qa-modal-close" type="button" aria-label="關閉">×</button>
+      <div id="questionDetailBody"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector(".qa-modal-close").addEventListener("click", () => { modal.style.display = "none"; });
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.style.display = "none";
+  });
+  return modal;
+}
+
+async function openQuestionDetail(questionIndex) {
+  const roomId = latestReport?.room?.pin || $("reportPinInput")?.value || "";
+  if (!roomId || questionIndex === "") return;
+  const modal = ensureQuestionDetailModal();
+  const body = $("questionDetailBody");
+  modal.style.display = "flex";
+  body.innerHTML = `<p class="report-empty">載入題目明細中...</p>`;
+  try {
+    const data = await api(`/api/teacher/question-detail/${encodeURIComponent(roomId)}/${encodeURIComponent(questionIndex)}`);
+    body.innerHTML = `
+      <h2>${escapeHtml(data.title || `Q${toNumber(data.question_index) + 1}`)}</h2>
+      <p>${escapeHtml(data.question_text || "")}</p>
+      <div class="report-correct-answer"><strong>正確答案</strong><span>${escapeHtml(data.correct_answer || "無")}</span></div>
+      <table class="report-table question-detail-table">
+        <thead><tr><th>學生</th><th>作答</th><th>結果</th><th>分數</th><th>作答時間</th></tr></thead>
+        <tbody>
+          ${(data.students || []).map((student) => `
+            <tr class="${student.is_correct ? "answer-ok" : "answer-wrong"}">
+              <td>${escapeHtml(student.name)}</td>
+              <td>${escapeHtml(student.answer_text || "未作答")}</td>
+              <td>${student.is_correct ? "答對" : "答錯"}</td>
+              <td>${toNumber(student.score)}</td>
+              <td>${student.time_used === null || student.time_used === undefined ? "無資料" : `${toNumber(student.time_used)} 秒`}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  } catch (error) {
+    body.innerHTML = `<p class="report-empty">題目明細載入失敗：${escapeHtml(error.message)}</p>`;
+  }
 }
 
 function renderAnalysis(data) {
@@ -351,6 +451,8 @@ function renderAnalysis(data) {
         label: (player) => player.playerName,
         value: (player) => player.totalScore,
         max: analysis.maxScore,
+        widthValue: (player) => player.accuracy,
+        widthMax: 100,
         format: (value, player) => `${value} 分 / ${toNumber(player.accuracy)}%`,
         empty: "目前沒有學生資料",
       })}
@@ -437,7 +539,7 @@ function renderReport(data) {
     const accuracy = Number(question.accuracy || 0);
     const status = toNumber(question.answered) === 0 ? "未作答" : accuracy < 60 ? "建議複習" : "掌握良好";
     return `
-      <article class="question-card">
+      <article class="question-card question-detail-trigger" role="button" tabindex="0" data-question-index="${escapeHtml(question.questionId || question.question_id || question.seq)}">
         <div class="question-meta-row">
           <h3>Q${Number(question.seq || 0)} ${escapeHtml(question.title || "未命名題目")}</h3>
           <span class="answer-pill">${accuracy}% · ${status}</span>
@@ -465,6 +567,11 @@ async function loadReport(pinOverride = "") {
   try {
     const data = await api(`/teacher_report?pin=${encodeURIComponent(pin)}`);
     renderReport(data);
+    if (window.analyticsLoadRoom) {
+      const select = document.getElementById("analytics-room-select");
+      if (select) select.value = pin;
+      window.analyticsLoadRoom(pin);
+    }
     loadHistory();
   } catch (error) {
     showToast(error.message);
@@ -855,6 +962,16 @@ $("refreshHistoryBtn")?.addEventListener("click", loadHistory);
 $("reportPinInput")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") loadReport();
 });
+document.addEventListener("click", (event) => {
+  const trigger = event.target.closest(".question-detail-trigger");
+  if (trigger) openQuestionDetail(trigger.dataset.questionIndex || "");
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const trigger = event.target.closest?.(".question-detail-trigger");
+  if (trigger) openQuestionDetail(trigger.dataset.questionIndex || "");
+});
+window.openTeacherQuestionDetail = openQuestionDetail;
 
 loadHistory();
 

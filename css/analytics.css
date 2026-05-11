@@ -256,3 +256,53 @@ body.dark-mode .analytics-empty {
 }
 body.dark-mode .analytics-empty i { color: rgba(168, 85, 247, 0.55); }
 body.dark-mode .analytics-empty p { color: #c8a8ff; }
+
+.qa-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, .58);
+}
+.qa-modal-card {
+  width: min(920px, 100%);
+  max-height: min(760px, 92vh);
+  overflow: auto;
+  position: relative;
+  background: #fff;
+  color: #1f2937;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .32);
+}
+.qa-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .08);
+  font-size: 22px;
+  line-height: 1;
+}
+.question-detail-table .answer-wrong {
+  background: rgba(248, 113, 113, .16);
+}
+.question-detail-table .answer-ok {
+  background: rgba(52, 211, 153, .12);
+}
+.question-detail-trigger {
+  cursor: pointer;
+}
+.question-detail-trigger:focus {
+  outline: 3px solid rgba(124, 123, 255, .35);
+  outline-offset: 2px;
+}
+body.dark-mode .qa-modal-card {
+  background: #171827;
+  color: #f8fafc;
+}

@@ -411,25 +411,21 @@ async function api(url, options = {}) {
 }
 
 function userKey() {
-  // Check all possible login keys (match wrong_book.js logic)
-  const keys = ["currentUser", "qa_current_user", "quizarena_user", "username", "playerName"];
-  for (const key of keys) {
-    const v = String(localStorage.getItem(key) || sessionStorage.getItem(key) || "").trim();
-    if (v && v !== "undefined" && v !== "null" && v !== "guest") return v;
-  }
-  const profileKeys = ["currentUserProfile", "qa_profile_cache", "roomPlayerProfile"];
+  const currentUser = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+  if (currentUser && currentUser !== "undefined" && currentUser !== "null" && currentUser !== "guest") return currentUser;
+  const profileKeys = ["currentUserProfile", "qa_profile_cache"];
   for (const key of profileKeys) {
     try {
-      const p = JSON.parse(localStorage.getItem(key) || "null");
+      const p = JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || "null");
       if (!p) continue;
-      const u = String(p.username || p.account || p.name || "").trim();
-      if (u && u !== "undefined" && u !== "null") {
+      const u = String(p.username || "").trim();
+      if (u && u !== "undefined" && u !== "null" && u !== "guest") {
         localStorage.setItem("currentUser", u);
         return u;
       }
     } catch {}
   }
-  return "guest";
+  return "";
 }
 
 function progressKey() {
@@ -1179,7 +1175,7 @@ function startMatchWhenReady(match, roleName = userKey()) {
   const myAvatar = mePlayer.avatar || "";
   const otherAvatar = otherPlayer.avatar || "";
   currentStoryMode = match.mode || currentStoryMode;
-  startDuelGame(me, other, currentStoryMode, match.stages || activeBranch().stages, myAvatar, otherAvatar);
+  startDuelGame(me, other, currentStoryMode, match.stages || activeBranch().stages, myAvatar, otherAvatar, match.token || "");
   return true;
 }
 
@@ -1210,7 +1206,7 @@ $("createChallengeBtn")?.addEventListener("click", async () => {
   const linkDisplay = $("storyLinkDisplay");
   const linkText = $("storyLinkText");
   const waitingMsg = $("storyWaitingMsg");
-  const hostName = userKey() === "guest" ? "玩家 1" : userKey();
+  const hostName = userKey() || "Player 1";
   try {
     // Get host avatar from profile
     const hostAvatarRaw = (() => {
@@ -1270,7 +1266,7 @@ $("joinChallengeBtn")?.addEventListener("click", async () => {
   if (parsed.branchId) state.branchId = parsed.branchId;
   const mode = parsed.mode || "pvp";
   currentStoryMode = mode;
-  const playerName = userKey() === "guest" ? "玩家 2" : userKey();
+  const playerName = userKey() || "Player 2";
   try {
     const joinAvatarRaw = getMyAvatar();
     const data = await api("/story_match_join", {
@@ -1350,6 +1346,9 @@ const duelState = {
   answered: false,     // 本題是否已有人送出（合作用）
   timerInterval: null,
   timeLeft: DUEL_TIME,
+  matchToken: "",
+  playerName: "",
+  opponentName: "",
 };
 
 function normalizeAvatarValue(value) {
@@ -1407,7 +1406,7 @@ function getMyAvatar() {
   return "";
 }
 
-function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRight) {
+function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRight, matchToken = "") {
   duelState.mode = mode;
   duelState.stages = stages.slice(0, DUEL_TOTAL);
   // 若題目不足 20 題，循環補足
@@ -1417,6 +1416,9 @@ function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRigh
   duelState.index = 0;
   duelState.scores = [0, 0];
   duelState.names = [nameLeft, nameRight];
+  duelState.playerName = nameLeft;
+  duelState.opponentName = nameRight;
+  duelState.matchToken = matchToken || "";
   duelState.avatarLeft = avatarLeft || "";
   duelState.avatarRight = avatarRight || "";
 
@@ -1481,6 +1483,7 @@ function startDuelTimer() {
       if (!duelState.answered) {
         // 超時：答錯，加入錯題本
         const stage = duelState.stages[duelState.index];
+        submitStoryMatchAnswer(duelState.index, -1, false, 0);
         // Write to DB via QA client (with chapter/level metadata)
     if (window.QA) {
       QA.addWrongAnswer(stage, activeSubject().title, {
@@ -1509,7 +1512,71 @@ function updateTimerUI() {
   }
 }
 
-function onDuelAnswer(idx) {
+async function submitStoryMatchAnswer(stageIndex, idx, isCorrect, points) {
+  if (!duelState.matchToken) return null;
+  try {
+    const data = await api("/story_match_answer", {
+      method: "POST",
+      body: JSON.stringify({
+        token: duelState.matchToken,
+        playerName: duelState.playerName || duelState.names[0],
+        stageIndex,
+        isCorrect,
+        points,
+        selectedIdx: idx,
+      }),
+    });
+    return data.match || null;
+  } catch (error) {
+    console.warn("[story_match_answer] failed:", error);
+    return null;
+  }
+}
+
+async function waitForOpponentAnswer(stageIndex) {
+  if (!duelState.matchToken || !duelState.opponentName) return null;
+  const statusEl = $("coopAnsweredMsg");
+  if (statusEl) {
+    statusEl.textContent = "對手作答中...";
+    statusEl.style.display = "";
+  }
+  for (let i = 0; i < 24; i++) {
+    try {
+      const data = await api(`/story_match_state/${encodeURIComponent(duelState.matchToken)}`);
+      const answer = data.match?.answers?.[String(stageIndex)]?.[duelState.opponentName];
+      if (answer) {
+        if (statusEl) statusEl.style.display = "none";
+        return answer;
+      }
+    } catch (error) {
+      console.warn("[story_match_state] failed:", error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  if (statusEl) {
+    statusEl.textContent = "尚未取得對手答案";
+    setTimeout(() => { statusEl.style.display = "none"; }, 1200);
+  }
+  return null;
+}
+
+async function finishStoryMatch() {
+  if (!duelState.matchToken) return;
+  try {
+    await api("/story_match_finish", {
+      method: "POST",
+      body: JSON.stringify({
+        token: duelState.matchToken,
+        playerName: duelState.playerName || duelState.names[0],
+        finalScore: duelState.scores[0],
+      }),
+    });
+  } catch (error) {
+    console.warn("[story_match_finish] failed:", error);
+  }
+}
+
+async function onDuelAnswer(idx) {
   if (duelState.answered) return;
   if (duelState.timeLeft <= 0) return;
   duelState.answered = true;
@@ -1526,15 +1593,18 @@ function onDuelAnswer(idx) {
     // PvP：玩家0（左）得分
     duelState.scores[0] += points;
     // 模擬對手（右）答題
-    const opponentCorrect = Math.random() > 0.45;
-    const opponentTime = Math.random() * DUEL_TIME;
-    const opponentPoints = opponentCorrect
-      ? Math.max(100, Math.round((opponentTime / DUEL_TIME) * MAX_SCORE_PER_Q))
-      : 0;
-    duelState.scores[1] += opponentPoints;
+    await submitStoryMatchAnswer(duelState.index, idx, isCorrect, points);
+    highlightDuelAnswer(idx, stage.answer);
+    const opponentAnswer = await waitForOpponentAnswer(duelState.index);
+    if (opponentAnswer) {
+      duelState.scores[1] += Number(opponentAnswer.points || 0);
+    }
   } else {
     // Coop：合併得分到左
     duelState.scores[0] += points;
+    await submitStoryMatchAnswer(duelState.index, idx, isCorrect, points);
+    const partnerAnswer = await waitForOpponentAnswer(duelState.index);
+    if (partnerAnswer) duelState.scores[1] += Number(partnerAnswer.points || 0);
     if ($("coopAnsweredMsg")) $("coopAnsweredMsg").style.display = "";
   }
 
@@ -1566,6 +1636,7 @@ function advanceDuel() {
 
 function endDuelGame() {
   clearInterval(duelState.timerInterval);
+  finishStoryMatch();
   const [s0, s1] = duelState.scores;
   const [n0, n1] = duelState.names;
   const isPvp = duelState.mode === "pvp";

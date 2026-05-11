@@ -15,6 +15,82 @@ function showToast(msg, delay = 2200) {
   showToast.timer = setTimeout(() => t.classList.remove("show"), delay);
 }
 
+function currentUserKey() {
+  const currentUser = String(localStorage.getItem("currentUser") || sessionStorage.getItem("currentUser") || "").trim();
+  if (currentUser && currentUser !== "undefined" && currentUser !== "null" && currentUser !== "guest") return currentUser;
+  for (const key of ["currentUserProfile", "qa_profile_cache"]) {
+    try {
+      const profile = JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || "null");
+      const username = String(profile?.username || "").trim();
+      if (username && username !== "undefined" && username !== "null" && username !== "guest") {
+        localStorage.setItem("currentUser", username);
+        return username;
+      }
+    } catch {}
+  }
+  return "";
+}
+
+function challengeWrongBookKey(username) {
+  return `quizarena_wrong_book_${username}`;
+}
+
+function normalizeWrongQuestion(q) {
+  const options = Array.isArray(q?.options) ? q.options : [];
+  return {
+    id: String(q?.id || q?.question_id || `challenge_${Date.now()}`),
+    title: String(q?.title || gameState.challengeData?.bankTitle || "Challenge"),
+    content: String(q?.content || q?.q || ""),
+    type: String(q?.type || "single"),
+    options,
+    explanation: String(q?.explanation || ""),
+    image: String(q?.image || ""),
+    category: String(q?.category || gameState.challengeData?.bankTitle || ""),
+    difficulty: String(q?.difficulty || "medium"),
+    wrongCount: 1,
+    lastWrongAt: Date.now(),
+  };
+}
+
+function saveWrongBookFallback(q) {
+  const username = currentUserKey();
+  if (!username || !q) return;
+  try {
+    const key = challengeWrongBookKey(username);
+    const item = normalizeWrongQuestion(q);
+    const book = JSON.parse(localStorage.getItem(key) || "[]");
+    const existing = book.findIndex((row) => String(row.content || row.q || "") === item.content);
+    if (existing >= 0) {
+      book[existing].wrongCount = Number(book[existing].wrongCount || 1) + 1;
+      book[existing].lastWrongAt = Date.now();
+    } else {
+      book.push(item);
+    }
+    localStorage.setItem(key, JSON.stringify(book));
+  } catch (error) {
+    console.warn("[challenge] wrong-book fallback failed:", error);
+  }
+}
+
+async function addChallengeWrongQuestion(q) {
+  const username = currentUserKey();
+  saveWrongBookFallback(q);
+  if (!username || !q) return;
+  try {
+    await fetch('/story_wrong_question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username,
+        sourceTitle: gameState.challengeData?.bankTitle || 'Challenge',
+        question: q,
+      }),
+    });
+  } catch (error) {
+    console.warn("[challenge] wrong-book sync failed:", error);
+  }
+}
+
 const gameState = {
   mode: null, // 'host' | 'guest'
   challengeData: null, // { hostName, bankTitle, questions, hostScores }
@@ -181,11 +257,12 @@ function renderQuestion() {
     });
   });
 
-  $("challengeCheckBtn").addEventListener("click", () => {
+  $("challengeCheckBtn").addEventListener("click", async () => {
     if (selected === null) return;
     const isCorrect = correctIdxs.includes(selected);
     if (isCorrect) gameState.score += Math.round(q.score || 1000);
     gameState.answers.push({ correct: isCorrect, selected });
+    if (!isCorrect) await addChallengeWrongQuestion(q);
     // reveal
     document.querySelectorAll(".challenge-opt-btn").forEach(btn => {
       const idx = parseInt(btn.dataset.index);

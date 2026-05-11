@@ -105,6 +105,7 @@ let currentQuestion      = null;
 let currentQuestionId    = null;
 let currentPhase         = 'question';
 let selected             = [];
+let matchingActiveLeft   = null;
 let shuffleMap           = [];
 let timerInterval        = null;
 let remainSeconds        = 0;
@@ -124,6 +125,15 @@ let appliedRoomTheme     = '';
 const getPlayerName = () => (playerProfile?.name || '').trim();
 
 /* ── helpers ── */
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function showToast(msg, delay = 2600) {
   toastEl.textContent = msg;
   toastEl.classList.add('show');
@@ -379,6 +389,64 @@ function buildShuffleMap(options, questionId) {
   if (isHost) return options.map((_, i) => i);
   const seed = strToSeed(getPlayerName() + '|' + questionId);
   return seededShuffle(options.map((_, i) => i), seed);
+}
+
+function updateMatchingSelectionUI() {
+  document.querySelectorAll('.matching-left-btn').forEach((btn) => {
+    const left = Number(btn.dataset.left);
+    btn.classList.toggle('active', matchingActiveLeft === left);
+    btn.classList.toggle('paired', selected[left] !== undefined && selected[left] !== null);
+  });
+  document.querySelectorAll('.matching-right-btn').forEach((btn) => {
+    const right = Number(btn.dataset.right);
+    const pairedLeft = selected.findIndex((value) => Number(value) === right);
+    btn.classList.toggle('paired', pairedLeft >= 0);
+    btn.dataset.pairedLeft = pairedLeft >= 0 ? String(pairedLeft) : '';
+  });
+}
+
+function renderMatchingQuestion(q) {
+  matchingActiveLeft = null;
+  selected = Array(q.options?.length || 0).fill(null);
+  const rights = buildShuffleMap(q.options || [], `${q.question_id}:matching`).map((origIdx) => ({
+    origIdx,
+    text: (q.options || [])[origIdx]?.right || (q.options || [])[origIdx]?.text || ''
+  }));
+  optionsList.innerHTML = `<div class="matching-click-grid">
+    <div class="matching-click-col">
+      ${(q.options || []).map((opt, leftIdx) => `
+        <button class="matching-left-btn" type="button" data-left="${leftIdx}">
+          <b>${leftIdx + 1}</b><span>${escapeHtml(opt.left || opt.text || '')}</span>
+        </button>
+      `).join('')}
+    </div>
+    <div class="matching-click-col">
+      ${rights.map((right, displayIdx) => `
+        <button class="matching-right-btn" type="button" data-right="${right.origIdx}">
+          <b>${String.fromCharCode(65 + displayIdx)}</b><span>${escapeHtml(right.text)}</span>
+        </button>
+      `).join('')}
+    </div>
+  </div>
+  <div class="matching-hint">先點左側，再點右側完成配對；已配對項目可重新選擇。</div>`;
+  document.querySelectorAll('.matching-left-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      matchingActiveLeft = Number(btn.dataset.left);
+      updateMatchingSelectionUI();
+    });
+  });
+  document.querySelectorAll('.matching-right-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const right = Number(btn.dataset.right);
+      const existingLeft = selected.findIndex((value) => Number(value) === right);
+      if (existingLeft >= 0) selected[existingLeft] = null;
+      if (matchingActiveLeft !== null) {
+        selected[matchingActiveLeft] = right;
+        matchingActiveLeft = null;
+      }
+      updateMatchingSelectionUI();
+    });
+  });
 }
 
 /* ── 倒數 ── */
@@ -638,6 +706,9 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
 
   if (q.type === 'matching') {
     if (fillAnswerWrap) fillAnswerWrap.style.display = 'none';
+    renderMatchingQuestion(q);
+    if (submitAnswerBtn) submitAnswerBtn.style.display = 'inline-block';
+    return;
     const rights = buildShuffleMap(q.options || [], `${q.question_id}:matching`).map((origIdx) => ({
       origIdx,
       text: (q.options || [])[origIdx]?.right || (q.options || [])[origIdx]?.text || ''
@@ -757,6 +828,15 @@ async function submitAnswer(isTimeout = false) {
   if (currentQuestion.type === 'fill') {
     if (!textAnswer && !isTimeout) { showToast('請先輸入答案'); return; }
   } else if (currentQuestion.type === 'matching') {
+    const complete = selected.length === (currentQuestion.options || []).length
+      && selected.every((value) => value !== null && value !== undefined);
+    if (!complete && !isTimeout) {
+      showToast('請完成全部配對');
+      return;
+    }
+    if (!complete && isTimeout) selected = Array(currentQuestion.options?.length || 0).fill(-1);
+  } else if (!selected.length && !isTimeout) { showToast('隢??豢?蝑?'); return; }
+  if (false && currentQuestion.type === 'matching') {
     const rawMatchVals = [...document.querySelectorAll('.matching-select')].map((item) => item.value);
     selected = rawMatchVals.map(Number);
     if ((!rawMatchVals.length || rawMatchVals.some((v) => v === '')) && !isTimeout) {
@@ -770,6 +850,7 @@ async function submitAnswer(isTimeout = false) {
   if (submitAnswerBtn) submitAnswerBtn.style.display = 'none';
   /* 鎖定選項 */
   document.querySelectorAll('#optionsList .option-btn').forEach(b => b.style.pointerEvents = 'none');
+  document.querySelectorAll('#optionsList .matching-left-btn,#optionsList .matching-right-btn').forEach(b => b.disabled = true);
   if (fillAnswerInput) fillAnswerInput.disabled = true;
 
   try {

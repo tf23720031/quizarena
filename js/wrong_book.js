@@ -598,7 +598,10 @@ function renderWrongListCards(items) {
   const countEl = $('wrongItemCount');
   const totalEl = $('wrongTotalCount');
   if (countEl) countEl.textContent = String(items.length);
-  if (totalEl) totalEl.textContent = String(items.reduce((s, i) => s + Number(i.wrongCount || 0), 0));
+  if (totalEl) {
+    const allItems = Array.isArray(window._wrongBookItemsAll) ? window._wrongBookItemsAll : items;
+    totalEl.textContent = String(allItems.reduce((s, i) => s + Number(i.wrongCount || 0), 0));
+  }
   const filterCount = $('wbFilterCount');
   if (filterCount) {
     const all = (window._wrongBookItemsAll || []).length;

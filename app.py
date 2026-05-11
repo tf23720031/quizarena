@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, request, jsonify
+﻿from flask import Flask, send_from_directory, request, jsonify
 import os, sqlite3, json, hashlib, random, time, threading, shutil, html, re
 from datetime import datetime, timezone, timedelta
 TZ_TAIPEI = timezone(timedelta(hours=8))  # Asia/Taipei UTC+8
@@ -47,6 +47,7 @@ def resolve_data_dir():
 
 
 DATA_DIR = resolve_data_dir()
+os.makedirs(DATA_DIR, exist_ok=True)
 USERS_DB_PATH = os.path.join(DATA_DIR, 'quizarena.db')
 ROOMS_DB_PATH = os.path.join(DATA_DIR, 'rooms.db')
 QUIZ_BANKS_PATH = os.path.join(DATA_DIR, 'quiz_banks.json')
@@ -55,7 +56,7 @@ DEFAULT_BANKS_PATH = os.path.join(BASE_DIR, 'default_quiz_banks.json')
 DEFAULT_CATEGORY = '綜合'
 DEFAULT_DIFFICULTY = 'medium'
 VALID_DIFFICULTIES = {'easy', 'medium', 'hard'}
-VALID_QUESTION_TYPES = {'single', 'multiple', 'tf', 'fill'}
+VALID_QUESTION_TYPES = {'single', 'multiple', 'tf', 'fill', 'matching'}
 VALID_LANGUAGES = {'zh', 'en', 'ja', 'ko', 'es'}
 OPENAI_API_URL = 'https://api.openai.com/v1/responses'
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-5')
@@ -276,6 +277,8 @@ def language_name(value):
 
 
 def normalize_options(question_type, options):
+    if question_type == 'matching' and not isinstance(options, list):
+        options = []
     if not isinstance(options, list):
         options = []
 
@@ -284,9 +287,9 @@ def normalize_options(question_type, options):
         normalized = []
         for opt in options:
             if isinstance(opt, dict):
-                left  = str(opt.get('left', opt.get('text', ''))).strip()
-                right = str(opt.get('right', '')).strip()
-                if left:
+                left  = str(opt.get('left', opt.get('prompt', opt.get('text', '')))).strip()
+                right = str(opt.get('right', opt.get('match', opt.get('answer', '')))).strip()
+                if left and right:
                     normalized.append({'left': left, 'right': right, 'text': left, 'correct': True})
             elif isinstance(opt, str):
                 # Fallback: split on → or |
@@ -324,9 +327,14 @@ def normalize_options(question_type, options):
 def normalize_question(raw_question):
     q = raw_question if isinstance(raw_question, dict) else {}
     question_type = str(q.get('type', 'single')).strip().lower()
+    if question_type in {'match', 'pair', 'pairs', 'left_right', 'left-right'}:
+        question_type = 'matching'
     if question_type not in VALID_QUESTION_TYPES:
         question_type = 'single'
-    options = normalize_options(question_type, q.get('options', []))
+    option_source = q.get('options', [])
+    if question_type == 'matching' and not option_source:
+        option_source = q.get('pairs') or q.get('matching') or q.get('matches') or []
+    options = normalize_options(question_type, option_source)
     if question_type == 'matching':
         # For matching: answer is list of right-side values in order
         answer_indexes = list(range(len(options)))
@@ -440,7 +448,7 @@ def get_wrong_book_owner(username, fallback_player_name=''):
     username = str(username or '').strip()
     if username:
         return username
-    return str(fallback_player_name or '').strip()
+    return ''
 
 
 def build_wrong_book_for_user(username):
@@ -1902,11 +1910,27 @@ def record_room_winner(conn, pin):
     ''', (pin, str(room.get('created_by') or '').strip())).fetchall()
     if not rankings:
         record_match_participants(room, participant_rows, '')
+        save_room_history({
+            'pin': pin,
+            'created_by': room.get('created_by'),
+            'room_name': room.get('room_name'),
+            'bank_id': room.get('bank_id'),
+            'bank_title': room.get('bank_title'),
+            'players': participant_rows,
+        }, status='ended')
         save_teacher_report_snapshot_for_pin(conn, pin)
         return
     winner = rankings[0]
     winner_name = str(winner.get('player_name') or '').strip()
     record_match_participants(room, participant_rows, winner_name)
+    save_room_history({
+        'pin': pin,
+        'created_by': room.get('created_by'),
+        'room_name': room.get('room_name'),
+        'bank_id': room.get('bank_id'),
+        'bank_title': room.get('bank_title'),
+        'players': participant_rows,
+    }, status='ended')
     if not get_user_exists(winner_name):
         save_teacher_report_snapshot_for_pin(conn, pin)
         return
@@ -2107,7 +2131,7 @@ def infer_answer_indexes(answer_json, options):
             indexes.append(ord(text.upper()) - 65)
             continue
         for idx, option in enumerate(options or []):
-            option_text = str((option or {}).get('text') or '').strip() if isinstance(option, dict) else str(option or '').strip()
+            option_text = str((option or {}).get('text') or (option or {}).get('right') or '').strip() if isinstance(option, dict) else str(option or '').strip()
             if text and option_text == text:
                 indexes.append(idx)
 
@@ -2122,6 +2146,53 @@ def infer_answer_indexes(answer_json, options):
             ):
                 indexes.append(idx)
     return sorted({idx for idx in indexes if isinstance(idx, int) and idx >= 0})
+
+
+def option_label(idx):
+    try:
+        idx = int(idx)
+    except Exception:
+        return str(idx or '')
+    return chr(65 + idx) if 0 <= idx < 26 else str(idx + 1)
+
+
+def format_answer_value(question_type, options, selected):
+    if not isinstance(selected, list):
+        selected = []
+    if question_type == 'matching':
+        pairs = []
+        for left_idx, right_idx in enumerate(selected):
+            try:
+                right_idx = int(right_idx)
+            except Exception:
+                continue
+            left = options[left_idx] if 0 <= left_idx < len(options) else {}
+            right = options[right_idx] if 0 <= right_idx < len(options) else {}
+            left_text = str((left or {}).get('left') or (left or {}).get('text') or option_label(left_idx)).strip()
+            right_text = str((right or {}).get('right') or (right or {}).get('text') or option_label(right_idx)).strip()
+            pairs.append(f'{left_text} → {right_text}')
+        return '、'.join(pairs) if pairs else '未選擇'
+    labels = []
+    for idx in selected:
+        try:
+            idx = int(idx)
+        except Exception:
+            continue
+        text = ''
+        if 0 <= idx < len(options):
+            text = str((options[idx] or {}).get('text') or '').strip()
+        label = option_label(idx)
+        labels.append(f'{label}. {text}' if text else label)
+    return '、'.join(labels) if labels else '未選擇'
+
+
+def format_correct_answer(question_type, options, answer_indexes):
+    if question_type == 'matching':
+        return '、'.join(
+            f"{str((opt or {}).get('left') or (opt or {}).get('text') or option_label(idx)).strip()} → {str((opt or {}).get('right') or '').strip()}"
+            for idx, opt in enumerate(options or [])
+        ) or '無'
+    return format_answer_value(question_type, options, answer_indexes).replace('未選擇', '無')
 
 
 def build_teacher_report_from_conn(conn, pin):
@@ -2177,25 +2248,22 @@ def build_teacher_report_from_conn(conn, pin):
             options = json.loads(q.get('options_json') or '[]')
         except Exception:
             options = []
+        q_type = str(q.get('type') or 'single')
         answer_indexes = infer_answer_indexes(q.get('answer_json'), options)
-        correct_parts = []
-        for idx in answer_indexes:
-            label = chr(65 + idx) if isinstance(idx, int) and idx >= 0 else str(idx)
-            text = ''
-            if isinstance(idx, int) and 0 <= idx < len(options):
-                text = str((options[idx] or {}).get('text') or '').strip()
-            correct_parts.append(f'{label}. {text}' if text else label)
         per_question[q['question_id']] = {
             'questionId': q['question_id'],
             'seq': int(q['seq'] or 0),
             'title': q['title'] or '',
             'content': q['content'] or '',
-            'correctAnswerText': '、'.join(correct_parts) or '無',
+            'type': q_type,
+            'correctAnswerText': format_correct_answer(q_type, options, answer_indexes),
             'correctIndexes': answer_indexes,
             'options': [
                 {
                     'label': chr(65 + idx),
                     'text': str((option or {}).get('text') or '').strip() if isinstance(option, dict) else str(option or '').strip(),
+                    'left': str((option or {}).get('left') or '').strip() if isinstance(option, dict) else '',
+                    'right': str((option or {}).get('right') or '').strip() if isinstance(option, dict) else '',
                 }
                 for idx, option in enumerate(options)
             ],
@@ -2231,19 +2299,10 @@ def build_teacher_report_from_conn(conn, pin):
             selected_indexes = []
         if not isinstance(selected_indexes, list):
             selected_indexes = []
-        selected_parts = []
         options = q_options.get(row['question_id']) or []
-        for idx in selected_indexes:
-            try:
-                idx = int(idx)
-            except Exception:
-                continue
-            label = chr(65 + idx) if idx >= 0 else str(idx)
-            text = ''
-            if 0 <= idx < len(options):
-                text = str((options[idx] or {}).get('text') or '').strip()
-            selected_parts.append(f'{label}. {text}' if text else label)
-        selected_text = '、'.join(selected_parts) if selected_parts else ('未選擇' if q_types.get(row['question_id']) != 'fill' else '填答內容未保存')
+        selected_text = format_answer_value(q_types.get(row['question_id'], 'single'), options, selected_indexes)
+        if q_types.get(row['question_id']) == 'fill' and not selected_indexes:
+            selected_text = '填答內容未保存'
         if is_correct and row['question_id'] in per_question and per_question[row['question_id']].get('correctAnswerText') in {'', '-', '無'}:
             per_question[row['question_id']]['correctAnswerText'] = selected_text
         enriched.append({
@@ -3499,20 +3558,21 @@ def api_rooms_history():
     return jsonify({'success': True, 'rooms': rows})
 
 
-def save_room_history(room):
+def save_room_history(room, status='ended'):
     """Called when a room ends to persist history."""
     try:
-        host = str(room.get('host_player_name') or room.get('host_username') or '').strip()
+        host = str(room.get('created_by') or room.get('host_player_name') or room.get('host_username') or '').strip()
         if not host:
             return
         ts  = now_ts()
         rid = str(room.get('pin') or uid('room'))
+        ended_at = ts if status == 'ended' else 0
         row = (
             rid, host, room.get('pin',''), room.get('room_name',''),
             room.get('bank_id',''), room.get('bank_title',''),
-            room.get('mode','individual'), 'ended',
+            room.get('mode','individual'), status,
             len(room.get('players', [])),
-            int(room.get('created_at', ts)), ts
+            int(room.get('created_at', ts)), ended_at
         )
         if use_postgres_user_store():
             with closing(get_pg_conn()) as conn:
@@ -3522,7 +3582,15 @@ def save_room_history(room):
                           (room_id, host_username, room_pin, room_name, quiz_bank_id, quiz_bank_title,
                            mode, status, player_count, created_at, ended_at)
                         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                        ON CONFLICT(room_id) DO UPDATE SET status='ended', ended_at=EXCLUDED.ended_at
+                        ON CONFLICT(room_id) DO UPDATE SET
+                            room_pin=EXCLUDED.room_pin,
+                            room_name=EXCLUDED.room_name,
+                            quiz_bank_id=EXCLUDED.quiz_bank_id,
+                            quiz_bank_title=EXCLUDED.quiz_bank_title,
+                            mode=EXCLUDED.mode,
+                            status=EXCLUDED.status,
+                            player_count=EXCLUDED.player_count,
+                            ended_at=EXCLUDED.ended_at
                     """, row)
                 conn.commit()
         else:
@@ -4053,9 +4121,11 @@ def load_quiz_banks_api():
     username = request.args.get('username', '').strip()
     if not username:
         return jsonify(success=False, message='缺少使用者帳號'), 400
+    quiz_banks = load_quiz_banks_for_user(username)
     return jsonify(
         success=True,
-        quizBanks=load_quiz_banks_for_user(username),
+        quizBanks=quiz_banks,
+        banks=quiz_banks,
         systemQuizBanks=load_default_quiz_banks(),
         wrongBook=None
     )
@@ -4066,7 +4136,9 @@ def save_quiz_banks_api():
     try:
         data = request.get_json() or {}
         username = str(data.get('username', '')).strip()
-        banks = data.get('quizBanks', [])
+        banks = data.get('quizBanks')
+        if banks is None:
+            banks = data.get('banks', [])
         if not username or not isinstance(banks, list):
             return jsonify(success=False, message='題庫格式錯誤'), 400
         save_quiz_banks_for_user(username, banks)
@@ -4410,6 +4482,7 @@ def _sm_cleanup():
     # started/ready rooms are kept for a while so both clients can poll and sync.
     ts = now_ts()
     with closing(sqlite3.connect(_sm_db_path())) as conn:
+        conn.row_factory = dict_factory
         _ensure_story_matches_table(conn)
         rows = conn.execute('SELECT token, data, created_at FROM story_matches').fetchall()
         for row in rows:
@@ -4448,6 +4521,9 @@ def story_match_create_api():
             'subjectTitle': str(data.get('subjectTitle') or '故事題庫').strip(),
             'stages': stages[:20],
             'players': [{'name': host_name, 'role': 'host', 'avatar': host_avatar, 'joinedAt': now_ts()}],
+            'answers': {},
+            'scores': {},
+            'finalScores': {},
             'status': 'waiting',
             'createdAt': now_ts(),
             'startedAt': 0,
@@ -4493,6 +4569,101 @@ def story_match_state_api(token):
     if not match:
         return jsonify(success=False, message='找不到故事邀請'), 404
     return jsonify(success=True, match=match)
+
+
+def _story_stage_wrong_row(stage, source_title):
+    stage = stage if isinstance(stage, dict) else {}
+    options = stage.get('options', [])
+    answer = int(stage.get('answer', 0) or 0)
+    normalized_options = []
+    if isinstance(options, list):
+        for idx, option in enumerate(options):
+            text = option.get('text') if isinstance(option, dict) else option
+            normalized_options.append({
+                'text': str(text or '').strip(),
+                'correct': idx == answer,
+            })
+    qid_seed = str(stage.get('id') or stage.get('q') or stage.get('content') or source_title or '')
+    return {
+        'id': str(stage.get('id') or f"story_{hash_text(qid_seed)[:16]}"),
+        'title': str(stage.get('title') or source_title or 'story').strip(),
+        'content': str(stage.get('q') or stage.get('content') or '').strip(),
+        'type': str(stage.get('type') or 'single').strip(),
+        'options_json': json.dumps(normalized_options, ensure_ascii=False),
+        'explanation': str(stage.get('explanation') or stage.get('scene') or '').strip(),
+        'image': str(stage.get('image') or '').strip(),
+        'category': str(source_title or stage.get('category') or '').strip(),
+        'difficulty': normalize_difficulty(stage.get('difficulty')),
+    }
+
+
+@app.route('/story_match_answer', methods=['POST'])
+def story_match_answer_api():
+    try:
+        data = request.get_json() or {}
+        token = str(data.get('token') or '').strip().upper()
+        player_name = str(data.get('playerName') or '').strip()
+        stage_index = int(data.get('stageIndex') or 0)
+        match = _sm_load(token)
+        if not match:
+            return jsonify(success=False, message='match not found'), 404
+        if not player_name:
+            return jsonify(success=False, message='missing playerName'), 400
+        if stage_index < 0 or stage_index >= len(match.get('stages') or []):
+            return jsonify(success=False, message='invalid stageIndex'), 400
+        match.setdefault('answers', {})
+        stage_answers = match['answers'].setdefault(str(stage_index), {})
+        stage_answers[player_name] = {
+            'isCorrect': bool(data.get('isCorrect')),
+            'points': int(data.get('points') or 0),
+            'selectedIdx': data.get('selectedIdx'),
+            'answeredAt': now_ts(),
+        }
+        match.setdefault('scores', {})
+        match['scores'][player_name] = int(match['scores'].get(player_name) or 0) + int(data.get('points') or 0)
+        if match.get('status') == 'waiting':
+            match['status'] = 'ready'
+        _sm_save(token, match)
+        return jsonify(success=True, match=match)
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+
+@app.route('/story_match_finish', methods=['POST'])
+def story_match_finish_api():
+    try:
+        data = request.get_json() or {}
+        token = str(data.get('token') or '').strip().upper()
+        player_name = str(data.get('playerName') or '').strip()
+        final_score = int(data.get('finalScore') or 0)
+        match = _sm_load(token)
+        if not match:
+            return jsonify(success=False, message='match not found'), 404
+        if not player_name:
+            return jsonify(success=False, message='missing playerName'), 400
+        match.setdefault('finalScores', {})[player_name] = final_score
+        match['status'] = 'finished'
+        match['finishedAt'] = now_ts()
+        if not match.get('wrongBookSaved'):
+            source_title = str(match.get('subjectTitle') or 'story match')
+            answers = match.get('answers') or {}
+            for stage_idx, stage_answers in answers.items():
+                if not isinstance(stage_answers, dict):
+                    continue
+                try:
+                    stage = (match.get('stages') or [])[int(stage_idx)]
+                except Exception:
+                    continue
+                for owner, answer in stage_answers.items():
+                    owner = str(owner or '').strip()
+                    if owner and isinstance(answer, dict) and answer.get('isCorrect') is False:
+                        save_wrong_question(owner, 'story_match', source_title,
+                                            _story_stage_wrong_row(stage, source_title))
+            match['wrongBookSaved'] = True
+        _sm_save(token, match)
+        return jsonify(success=True, match=match)
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
 
 
 @app.route('/ai_tutor', methods=['POST'])
@@ -4935,6 +5106,17 @@ def create_room():
                 VALUES (?, ?, 'images/face/face.png', 'images/hair/hair01.png', 'images/face/eyes01.png', 0, 1, 0, ?, ?)
             ''', (pin, f'__host_{created_by}__', now_ts(), now_ts()))
             conn.commit()
+
+        save_room_history({
+            'pin': pin,
+            'created_by': created_by,
+            'room_name': room_name,
+            'bank_id': bank_id,
+            'bank_title': bank_title,
+            'mode': 'team' if team_mode else 'individual',
+            'players': [],
+            'created_at': now_ts(),
+        }, status='waiting')
 
         return jsonify(success=True, message='房間建立成功', room=serialize_room(fetch_room(pin)))
     except Exception as e:
@@ -5468,7 +5650,7 @@ def player_game_state():
                     for i, opt in enumerate(options)
                 ]
                 ai = sorted(json.loads(current_q['answer_json'] or '[]'))
-                correct_answer_text = '、'.join(chr(65+i) for i in ai) or '無'
+                correct_answer_text = format_correct_answer(str(current_q.get('type') or 'single'), options, ai)
                 explanation_text = current_q.get('explanation') or ''
             elif is_team_mode:
                 # 團體模式也回傳玩家列表給前端右側名單使用
@@ -5485,7 +5667,8 @@ def player_game_state():
 
             if current_q and is_team_mode:
                 ai = sorted(json.loads(current_q['answer_json'] or '[]'))
-                correct_answer_text = '、'.join(chr(65+i) for i in ai) or '無'
+                current_options = json.loads(current_q.get('options_json') or '[]')
+                correct_answer_text = format_correct_answer(str(current_q.get('type') or 'single'), current_options, ai)
                 explanation_text = current_q.get('explanation') or ''
 
             team_question_status = []
@@ -5567,12 +5750,11 @@ def submit_answer():
         player_name = str(data.get('playerName', '')).strip()
         username = str(data.get('username', '')).strip()
         question_id = str(data.get('questionId', '')).strip()
-        selected = data.get('selected', [])
+        selected_raw = data.get('selected', [])
         text_answer = str(data.get('textAnswer', '')).strip()
         remain_sec = int(data.get('remainSeconds', 0) or 0)
-        if not isinstance(selected, list):
-            selected = []
-        selected = sorted([int(x) for x in selected])
+        if not isinstance(selected_raw, list):
+            selected_raw = []
 
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (pin,)).fetchone()
@@ -5611,9 +5793,17 @@ def submit_answer():
                 (pin, player_name, question_id)
             ).fetchone()
 
-            answer_indexes = sorted(json.loads(q['answer_json'] or '[]'))
             question_type = str(q.get('type') or 'single')
             options = json.loads(q.get('options_json') or '[]')
+            answer_indexes = [int(x) for x in json.loads(q['answer_json'] or '[]')]
+            selected = []
+            for x in selected_raw:
+                try:
+                    selected.append(int(x))
+                except Exception:
+                    pass
+            if question_type != 'matching':
+                selected = sorted(selected)
             option_labels = [chr(65+i) for i in answer_indexes]
             fill_answer = ''
             if question_type == 'fill' and options:
@@ -5629,13 +5819,15 @@ def submit_answer():
                                pointsEarned=int(existing['points_earned'] or 0),
                                correctIndexes=answer_indexes, correctLabels=option_labels,
                                explanation=q.get('explanation') or '',
-                               answerText=(fill_answer or '無') if question_type == 'fill' else ('、'.join(option_labels) or '無'),
+                               answerText=(fill_answer or '無') if question_type == 'fill' else format_correct_answer(question_type, options, answer_indexes),
                                totalScore=total_score)
 
             if question_type == 'fill':
                 normalized_input = ''.join(text_answer.lower().split())
                 normalized_answer = ''.join(fill_answer.lower().split())
                 is_correct = 1 if normalized_input and normalized_input == normalized_answer else 0
+            elif question_type == 'matching':
+                is_correct = 1 if selected == answer_indexes and len(selected) == len(answer_indexes) else 0
             else:
                 is_correct = 1 if selected == answer_indexes else 0
             answer_order = 0
@@ -5663,7 +5855,8 @@ def submit_answer():
 
             if not is_correct:
                 owner = get_wrong_book_owner(username, player_name)
-                save_wrong_question(owner, room.get('bank_id'), room.get('bank_title'), q)
+                if owner:
+                    save_wrong_question(owner, room.get('bank_id'), room.get('bank_title'), q)
 
             # ── 淘汰模式處理 ────────────────────────────
             # fake_answer=1 且答錯 → 把玩家標記為淘汰，積分歸零
@@ -5715,7 +5908,7 @@ def submit_answer():
                            answerOrder=answer_order,
                            correctIndexes=answer_indexes, correctLabels=option_labels,
                            explanation=q.get('explanation') or '',
-                           answerText=(fill_answer or '無') if question_type == 'fill' else ('、'.join(option_labels) or '無'),
+                           answerText=(fill_answer or '無') if question_type == 'fill' else format_correct_answer(question_type, options, answer_indexes),
                            totalScore=total_score, top5=top5, myRank=my_rank,
                            showExactRank=bool(my_rank and my_rank <= 5),
                            eliminated=newly_eliminated,
@@ -5860,6 +6053,81 @@ def teacher_report_api():
         return jsonify(success=False, message=f'讀取老師報表失敗：{e}'), 500
 
 
+@app.route('/api/teacher/question-detail/<room_id>/<question_index>')
+def api_teacher_question_detail(room_id, question_index):
+    try:
+        room_id = str(room_id or '').strip()
+        question_index = str(question_index or '').strip()
+        with closing(get_conn()) as conn:
+            room = conn.execute('SELECT * FROM rooms WHERE pin=?', (room_id,)).fetchone()
+            if not room:
+                return jsonify(success=False, message='找不到房間'), 404
+            questions = conn.execute(
+                'SELECT * FROM room_questions WHERE room_pin=? ORDER BY seq ASC,id ASC',
+                (room_id,)
+            ).fetchall()
+            target = None
+            for q in questions:
+                seq = int(q.get('seq') or 0)
+                if str(q.get('question_id')) == question_index or str(seq) == question_index or str(seq + 1) == question_index:
+                    target = q
+                    break
+            if not target:
+                return jsonify(success=False, message='找不到題目'), 404
+
+            teacher_name = str(room.get('created_by') or '').strip()
+            players = conn.execute('''
+                SELECT player_name
+                FROM room_players
+                WHERE room_pin=? AND COALESCE(is_host, 0)=0 AND LOWER(player_name) != LOWER(?)
+                ORDER BY joined_at ASC, id ASC
+            ''', (room_id, teacher_name)).fetchall()
+            result_rows = conn.execute('''
+                SELECT player_name, selected_json, is_correct, points_earned, remain_sec, answer_order, answered_at
+                FROM room_results
+                WHERE room_pin=? AND question_id=?
+            ''', (room_id, target['question_id'])).fetchall()
+
+        options = json.loads(target.get('options_json') or '[]')
+        answer_indexes = sorted(json.loads(target.get('answer_json') or '[]'))
+        question_type = str(target.get('type') or 'single')
+        result_by_player = {r['player_name']: r for r in result_rows}
+        time_limit = int(''.join(filter(str.isdigit, target.get('time_label') or '20')) or 20)
+        students = []
+        for p in players:
+            name = p['player_name']
+            row = result_by_player.get(name)
+            selected = []
+            if row:
+                try:
+                    selected = json.loads(row.get('selected_json') or '[]')
+                except Exception:
+                    selected = []
+            remain = int(row.get('remain_sec') or 0) if row else 0
+            students.append({
+                'name': name,
+                'answer': selected if question_type == 'matching' else ','.join(option_label(i) for i in selected),
+                'answer_text': format_answer_value(question_type, options, selected) if row else '未作答',
+                'is_correct': bool(row.get('is_correct')) if row else False,
+                'score': int(row.get('points_earned') or 0) if row else 0,
+                'time_used': max(0, time_limit - remain) if row else None,
+                'answered_at': int(row.get('answered_at') or 0) if row else 0,
+            })
+        return jsonify({
+            'success': True,
+            'room_id': room_id,
+            'question_index': int(target.get('seq') or 0),
+            'question_id': target.get('question_id'),
+            'question_text': target.get('content') or target.get('title') or '',
+            'title': target.get('title') or '',
+            'type': question_type,
+            'correct_answer': format_correct_answer(question_type, options, answer_indexes),
+            'students': students,
+        })
+    except Exception as e:
+        return jsonify(success=False, message=f'讀取題目明細失敗：{e}'), 500
+
+
 @app.route('/teacher_report_history')
 def teacher_report_history_api():
     try:
@@ -5903,7 +6171,67 @@ def _get_analytics_conn():
     analytics_path = _os.path.join(resolve_data_dir(), 'analytics.db')
     conn = sqlite3.connect(analytics_path)
     conn.row_factory = sqlite3.Row
+    _ensure_sqlite_analytics_tables(conn)
     return conn, False
+
+
+def _ensure_sqlite_analytics_tables(conn):
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS match_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_name TEXT,
+            room_id TEXT,
+            room_name TEXT,
+            quiz_bank_name TEXT,
+            total_score INTEGER DEFAULT 0,
+            rank INTEGER,
+            total_players INTEGER DEFAULT 0,
+            correct_count INTEGER DEFAULT 0,
+            wrong_count INTEGER DEFAULT 0,
+            avg_speed_sec REAL,
+            subject_scores TEXT,
+            raw_answers TEXT,
+            played_at INTEGER DEFAULT (strftime('%s','now'))
+        )
+    ''')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_match_history_player ON match_history(player_name)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_match_history_room ON match_history(room_id)')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS player_statistics (
+            player_name TEXT PRIMARY KEY,
+            total_games INTEGER DEFAULT 0,
+            total_wins INTEGER DEFAULT 0,
+            current_streak INTEGER DEFAULT 0,
+            best_streak INTEGER DEFAULT 0,
+            total_correct INTEGER DEFAULT 0,
+            total_questions INTEGER DEFAULT 0,
+            avg_score REAL DEFAULT 0,
+            avg_speed_sec REAL,
+            subject_avg TEXT DEFAULT '{}',
+            last_updated INTEGER DEFAULT (strftime('%s','now'))
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS student_analysis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id TEXT,
+            student_name TEXT,
+            weak_subjects TEXT,
+            ai_suggestion TEXT,
+            created_at INTEGER DEFAULT (strftime('%s','now'))
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS parent_reports (
+            report_token TEXT PRIMARY KEY,
+            student_name TEXT,
+            room_id TEXT,
+            generated_by TEXT,
+            report_data TEXT,
+            created_at INTEGER DEFAULT (strftime('%s','now'))
+        )
+    ''')
+    conn.commit()
 
 
 def _json_col(val, is_pg):
@@ -6166,6 +6494,12 @@ def _compute_radar(player_name, conn, is_pg):
     ph = '%s' if is_pg else '?'
     cur = conn.cursor()
 
+    cur.execute(f"SELECT COUNT(*) FROM match_history WHERE player_name={ph}", (player_name,))
+    count_row = cur.fetchone()
+    match_count = int((count_row or [0])[0] or 0)
+    if match_count <= 0:
+        return {'scores': [0, 0, 0, 0, 0, 0], 'match_count': 0, 'has_data': False}
+
     cur.execute(f"SELECT AVG(avg_speed_sec) FROM match_history WHERE player_name={ph}", (player_name,))
     speed_raw = (cur.fetchone() or [None])[0]
     speed_score = max(0, min(100, int(100 - ((speed_raw or 5) - 1) * 12))) if speed_raw else 50
@@ -6209,7 +6543,11 @@ def _compute_radar(player_name, conn, is_pg):
     reasoning = int(max(subj.values(), default=70)) if subj else 70
     overall_subject = int(sum(subj.values()) / len(subj)) if subj else 70
 
-    return [speed_score, accuracy, stability, memory, reasoning, overall_subject]
+    return {
+        'scores': [speed_score, accuracy, stability, memory, reasoning, overall_subject],
+        'match_count': match_count,
+        'has_data': True,
+    }
 
 
 @app.route('/api/radar/<player_name>')
@@ -6219,12 +6557,13 @@ def api_radar(player_name):
         conn, is_pg = _get_analytics_conn()
         cur = conn.cursor()
 
-        self_scores = _compute_radar(player_name, conn, is_pg)
+        self_radar = _compute_radar(player_name, conn, is_pg)
+        self_scores = self_radar['scores']
 
         cur.execute("SELECT DISTINCT player_name FROM match_history LIMIT 200")
         all_players = [r[0] for r in cur.fetchall()]
         if all_players:
-            all_scores = [_compute_radar(p, conn, is_pg) for p in all_players]
+            all_scores = [_compute_radar(p, conn, is_pg)['scores'] for p in all_players]
             avg_scores = [
                 int(sum(s[i] for s in all_scores) / len(all_scores))
                 for i in range(6)
@@ -6237,7 +6576,7 @@ def api_radar(player_name):
         )
         top_row = cur.fetchone()
         top_name = (top_row[0] if is_pg else top_row['player_name']) if top_row else player_name
-        top_scores = _compute_radar(top_name, conn, is_pg)
+        top_scores = _compute_radar(top_name, conn, is_pg)['scores']
 
         conn.close()
         return jsonify({
@@ -6246,6 +6585,8 @@ def api_radar(player_name):
             'average': avg_scores,
             'top': top_scores,
             'top_player': top_name,
+            'match_count': self_radar['match_count'],
+            'has_data': self_radar['has_data'],
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -6533,6 +6874,7 @@ def api_teacher_weak_questions(room_id):
             return jsonify({'questions': []})
 
         wrong_counts = {}
+        answered_counts = {}
         wrong_players = {}
         for r in rows:
             pname = r[0] if is_pg else r['player_name']
@@ -6540,17 +6882,22 @@ def api_teacher_weak_questions(room_id):
             answers = ans_raw if isinstance(ans_raw, list) else _parse_json(ans_raw)
             for a in (answers or []):
                 qid = a.get('q_id', '')
+                if not qid:
+                    continue
+                answered_counts[qid] = answered_counts.get(qid, 0) + 1
                 if not a.get('correct', True):
                     wrong_counts[qid] = wrong_counts.get(qid, 0) + 1
                     wrong_players.setdefault(qid, []).append(pname)
 
         questions = sorted([
             {
-                'q_id': qid, 'wrong_count': cnt,
-                'error_rate': round(cnt * 100 / total_players, 1),
+                'q_id': qid,
+                'answered_count': answered,
+                'wrong_count': wrong_counts.get(qid, 0),
+                'error_rate': round(wrong_counts.get(qid, 0) * 100 / answered, 1) if answered else 0,
                 'wrong_players': wrong_players.get(qid, []),
             }
-            for qid, cnt in wrong_counts.items()
+            for qid, answered in answered_counts.items()
         ], key=lambda x: -x['error_rate'])
 
         return jsonify({'room_id': room_id, 'total_players': total_players, 'questions': questions})

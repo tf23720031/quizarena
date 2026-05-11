@@ -20,7 +20,7 @@ function getStoredUser() {
     // Ignore broken local profile data and fall through to guest state.
   }
 
-  try {
+  if (false) try {
     const roomProfile = JSON.parse(localStorage.getItem('roomPlayerProfile') || 'null');
     const name = String(roomProfile?.username || roomProfile?.account || roomProfile?.name || '').trim();
     if (name) {
@@ -679,6 +679,13 @@ async function loadBanks() {
   const serverBanks = data.quizBanks || [];
   const effectiveBanks = serverBanks.length ? serverBanks : localDraftBanks;
   if (!serverBanks.length && localDraftBanks.length) {
+    await api('/save_quiz_banks', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: state.currentUser,
+        quizBanks: localDraftBanks
+      })
+    });
     showToast('已從瀏覽器草稿恢復你之前的題庫，記得按「儲存題庫」同步。', 3600);
   }
 

@@ -228,7 +228,7 @@
             return;
           }
           var selfArr = Array.isArray(data.self) ? data.self : [];
-          var hasData = selfArr.length > 0 && selfArr.some(function(v) { return Number(v) > 0; });
+          var hasData = data.has_data !== false && Number(data.match_count || 0) > 0;
           if (!hasData) {
             showRadarEmpty('目前沒有比賽紀錄，完成遊戲後會產生能力分析。');
             return;

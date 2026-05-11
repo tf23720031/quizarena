@@ -4498,3 +4498,36 @@ body:not(.dark-mode) .teacher-report-page .tool-card::after {
   .story-link-input,
   .story-link-value { min-width: 0 !important; width: 100% !important; }
 }
+
+.story-mode-tab {
+  display: grid !important;
+  grid-template-rows: auto auto auto !important;
+  justify-items: center !important;
+  align-content: start !important;
+  text-align: center !important;
+  gap: 8px !important;
+  min-height: 132px !important;
+  padding-top: 18px !important;
+}
+.story-mode-tab > i {
+  position: static !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 auto 2px !important;
+  line-height: 1 !important;
+  transform: none !important;
+}
+.story-mode-tab > strong,
+.story-mode-tab > span {
+  position: static !important;
+  display: block !important;
+  transform: none !important;
+}
+@media (max-width: 720px) {
+  .story-mode-tab {
+    min-height: 118px !important;
+    padding-top: 14px !important;
+  }
+}

@@ -5,6 +5,64 @@ let overviewData = null;
 let classDistChart = null;
 let weakBarChart = null;
 
+function escapeHtml(v) {
+  return String(v ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function cssEscapeValue(v) {
+  if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(String(v));
+  return String(v).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+}
+
+function syncReportPinAndLoad(roomId) {
+  const pinInput = document.getElementById('reportPinInput');
+  if (pinInput && /^\d{6}$/.test(roomId)) {
+    pinInput.value = roomId;
+    document.getElementById('loadReportBtn')?.click();
+  }
+}
+
+function bindAnalyticsEvents() {
+  const sel = document.getElementById('analytics-room-select');
+  if (sel && !sel.dataset.analyticsBound) {
+    sel.dataset.analyticsBound = '1';
+    sel.addEventListener('change', () => {
+      const roomId = sel.value || '';
+      document.querySelectorAll('.analytics-empty').forEach(e => e.style.display = roomId ? 'none' : '');
+      if (!roomId) return;
+      analyticsLoadRoom(roomId);
+      syncReportPinAndLoad(roomId);
+    });
+  }
+
+  if (!document.documentElement.dataset.analyticsDelegated) {
+    document.documentElement.dataset.analyticsDelegated = '1';
+    document.addEventListener('click', (event) => {
+      const studentTarget = event.target.closest('[data-analytics-student]');
+      if (studentTarget) {
+        showStudentDetail(studentTarget.dataset.analyticsStudent || '');
+        return;
+      }
+      const aiTarget = event.target.closest('[data-ai-student]');
+      if (aiTarget) {
+        fetchAiSuggestion(aiTarget.dataset.aiStudent || '', aiTarget);
+        return;
+      }
+      const copyTarget = event.target.closest('[data-copy-url]');
+      if (copyTarget) {
+        navigator.clipboard?.writeText(copyTarget.dataset.copyUrl || '').then(() => {
+          copyTarget.textContent = '已複製';
+        });
+      }
+    });
+  }
+}
+
 // ── 空狀態 / 錯誤狀態小工具 ──────────────────────────────────────────
 function _setAnalyticsEmpty(tab, show, msg) {
   const el = document.querySelector(`.analytics-empty[data-empty-for="${tab}"]`);
@@ -30,12 +88,21 @@ function _waitForChart(cb, maxTries) {
 }
 
 async function initRoomSelector() {
+  bindAnalyticsEvents();
   try {
     const res = await fetch('/api/recent-rooms');
     const data = await res.json();
     const sel = document.getElementById('analytics-room-select');
     if (!sel) return;
-    (data.rooms || []).forEach(r => {
+    const rooms = Array.isArray(data.rooms) ? data.rooms : [];
+    if (!rooms.length) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '沒有歷史房間，請用上方 PIN 載入';
+      opt.disabled = true;
+      sel.appendChild(opt);
+    }
+    rooms.forEach(r => {
       const opt = document.createElement('option');
       opt.value = r.room_id;
       opt.textContent = `${r.room_name || r.room_id} (${(r.played_at || '').slice(0, 10)})`;
@@ -143,12 +210,12 @@ function renderStudentGrid(data) {
   const students = data.students || [];
   el.innerHTML = students.map(s => {
     const color = s.status === 'good' ? '#34d399' : s.status === 'warning' ? '#fbbf24' : '#f87171';
-    return `<div onclick="showStudentDetail('${s.player_name}')" style="
+    return `<div data-analytics-student="${escapeHtml(s.player_name)}" style="
       background:rgba(139,92,246,0.08);border:1px solid ${color}40;border-radius:10px;
       padding:12px;text-align:center;cursor:pointer;transition:all 0.2s;
     " onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='${color}40'">
       <div style="font-size:24px;margin-bottom:4px;">🧝</div>
-      <div style="font-size:12px;font-weight:600;color:#e9d5ff;margin-bottom:4px;">${s.player_name}</div>
+      <div style="font-size:12px;font-weight:600;color:#e9d5ff;margin-bottom:4px;">${escapeHtml(s.player_name)}</div>
       <div style="font-size:11px;color:${color};">${s.accuracy}%</div>
     </div>`;
   }).join('');
@@ -161,9 +228,9 @@ function populateStudentLists(data) {
   if (listEl) {
     listEl.innerHTML = students.map(s => {
       const color = s.status === 'good' ? '#34d399' : s.status === 'warning' ? '#fbbf24' : '#f87171';
-      return `<div onclick="showStudentDetail('${s.player_name}')"
+      return `<div data-analytics-student="${escapeHtml(s.player_name)}"
         style="padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:4px;border-left:3px solid ${color};background:rgba(139,92,246,0.05);">
-        <div style="font-size:13px;">${s.player_name}</div>
+        <div style="font-size:13px;">${escapeHtml(s.player_name)}</div>
         <div style="font-size:11px;color:${color};">${s.accuracy}%</div>
       </div>`;
     }).join('');
@@ -187,15 +254,15 @@ function populateStudentLists(data) {
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <span style="font-size:20px;">🧝</span>
           <div>
-            <div style="font-size:14px;font-weight:600;">${s.player_name}</div>
+            <div style="font-size:14px;font-weight:600;">${escapeHtml(s.player_name)}</div>
             <div style="font-size:12px;color:#a78bfa;">正確率 ${s.accuracy}%</div>
           </div>
-          <button onclick="fetchAiSuggestion('${s.player_name}', this)"
+          <button data-ai-student="${escapeHtml(s.player_name)}"
             style="margin-left:auto;background:rgba(124,58,237,0.3);border:1px solid #7c3aed;color:#e9d5ff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;">
             生成建議
           </button>
         </div>
-        <div id="ai-result-${s.player_name}" style="font-size:13px;color:#a78bfa;white-space:pre-line;"></div>
+        <div data-ai-result="${escapeHtml(s.player_name)}" style="font-size:13px;color:#a78bfa;white-space:pre-line;"></div>
       </div>
     `).join('');
   }
@@ -301,14 +368,19 @@ async function loadWeakQuestions() {
     const listEl = document.getElementById('weak-detail-list');
     if (listEl) {
       listEl.innerHTML = questions.map(q => `
-        <div class="glass-card" style="margin-bottom:8px;">
+        <button class="glass-card" data-question-index="${escapeHtml(q.q_id)}" style="margin-bottom:8px;width:100%;text-align:left;cursor:pointer;">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
             <span style="font-size:13px;font-weight:600;">題目 ${q.q_id}</span>
             <span class="badge badge-red">${q.error_rate}% 錯誤</span>
           </div>
           <div style="color:#a78bfa;font-size:12px;">答錯的學生：${(q.wrong_players || []).join('、') || '無'}</div>
-        </div>
+        </button>
       `).join('');
+      listEl.querySelectorAll('[data-question-index]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (window.openTeacherQuestionDetail) window.openTeacherQuestionDetail(btn.dataset.questionIndex || '');
+        });
+      });
     }
   } catch (e) {
     console.error('[teacher] loadWeakQuestions error:', e);
@@ -319,7 +391,7 @@ async function loadWeakQuestions() {
 async function fetchAiSuggestion(playerName, btn) {
   btn.disabled = true;
   btn.textContent = '生成中...';
-  const resultEl = document.getElementById(`ai-result-${playerName}`);
+  const resultEl = document.querySelector(`[data-ai-result="${cssEscapeValue(playerName)}"]`);
   if (resultEl) resultEl.textContent = '🤖 AI 分析中...';
 
   try {
@@ -364,13 +436,13 @@ async function generateParentReport() {
         <div style="background:rgba(52,211,153,0.1);border:1px solid #34d399;border-radius:10px;padding:16px;">
           <div style="color:#34d399;font-weight:600;margin-bottom:8px;">✅ 報告已生成</div>
           <div style="font-size:13px;color:#a78bfa;margin-bottom:8px;">分享連結：</div>
-          <div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;font-size:12px;color:#e9d5ff;word-break:break-all;margin-bottom:12px;">${data.url}</div>
+          <div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;font-size:12px;color:#e9d5ff;word-break:break-all;margin-bottom:12px;">${escapeHtml(data.url)}</div>
           <div style="display:flex;gap:8px;">
-            <button onclick="navigator.clipboard.writeText('${data.url}').then(()=>this.textContent='已複製！')"
+            <button data-copy-url="${escapeHtml(data.url)}"
               style="background:rgba(139,92,246,0.3);border:1px solid #7c3aed;color:#e9d5ff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">
               複製連結
             </button>
-            <a href="${data.url}" target="_blank"
+            <a href="${escapeHtml(data.url)}" target="_blank"
               style="background:var(--purple-primary);color:#fff;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:12px;">
               預覽報告
             </a>
