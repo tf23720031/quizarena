@@ -1944,21 +1944,59 @@ def record_room_winner(conn, pin):
         _room_name = str(room.get('room_name') or pin)
         _bank_name = str(room.get('bank_title') or room.get('bank_id') or '')
         _total_players = len(rankings)
+        _question_rows = conn.execute(
+            'SELECT question_id, seq, title, content, type, options_json FROM room_questions WHERE room_pin=?',
+            (pin,)
+        ).fetchall()
+        q_options = {}
+        q_types = {}
+        q_order = {}
+        q_titles = {}
+        for _qr in _question_rows:
+            _qid = _qr['question_id']
+            try:
+                _opts = json.loads(_qr.get('options_json') or '[]')
+            except Exception:
+                _opts = []
+            q_options[_qid] = _opts if isinstance(_opts, list) else []
+            q_types[_qid] = str(_qr.get('type') or 'single')
+            q_order[_qid] = int(_qr.get('seq') or 0)
+            q_titles[_qid] = str(_qr.get('content') or _qr.get('title') or '')
         _hook_results = []
         for _rank_idx, _r in enumerate(rankings, 1):
             _pname = str(_r.get('player_name') or '')
             _score = int(_r.get('total_score') or 0)
             _qrows = conn.execute(
-                'SELECT question_id, is_correct FROM room_results'
+                'SELECT question_id, selected_json, is_correct, points_earned, remain_sec, answer_order FROM room_results'
                 ' WHERE room_pin=? AND player_name=?',
                 (pin, _pname)
             ).fetchall()
             _correct = sum(1 for q in _qrows if q['is_correct'])
             _wrong = len(_qrows) - _correct
-            _raw_answers = [
-                {'q_id': q['question_id'], 'correct': bool(q['is_correct']), 'speed_sec': None}
-                for q in _qrows
-            ]
+            _raw_answers = []
+            for q in _qrows:
+                try:
+                    _selected = json.loads(q.get('selected_json') or '[]')
+                except Exception:
+                    _selected = []
+                _qid = q['question_id']
+                _options = q_options.get(_qid) or []
+                _qtype = q_types.get(_qid, 'single')
+                _raw_answers.append({
+                    'q_id': _qid,
+                    'seq': q_order.get(_qid, 0),
+                    'title': q_titles.get(_qid, ''),
+                    'question_text': q_titles.get(_qid, ''),
+                    'type': _qtype,
+                    'selected': _selected,
+                    'answer_text': format_answer_value(_qtype, _options, _selected),
+                    'correct_answer': format_correct_answer(_qtype, _options, sorted([i for i, opt in enumerate(_options) if opt.get('correct')])),
+                    'correct': bool(q['is_correct']),
+                    'score': int(q.get('points_earned') or 0),
+                    'remain_sec': int(q.get('remain_sec') or 0),
+                    'answer_order': int(q.get('answer_order') or 0),
+                    'speed_sec': None,
+                })
             _hook_results.append({
                 'player_name': _pname,
                 'score': _score,
@@ -6061,7 +6099,10 @@ def api_teacher_question_detail(room_id, question_index):
         with closing(get_conn()) as conn:
             room = conn.execute('SELECT * FROM rooms WHERE pin=?', (room_id,)).fetchone()
             if not room:
-                return jsonify(success=False, message='找不到房間'), 404
+                fallback = _teacher_question_detail_from_analytics(room_id, question_index)
+                if fallback:
+                    return jsonify(fallback)
+                return jsonify(success=False, message='找不到房間或歷史題目資料'), 404
             questions = conn.execute(
                 'SELECT * FROM room_questions WHERE room_pin=? ORDER BY seq ASC,id ASC',
                 (room_id,)
@@ -6073,6 +6114,9 @@ def api_teacher_question_detail(room_id, question_index):
                     target = q
                     break
             if not target:
+                fallback = _teacher_question_detail_from_analytics(room_id, question_index)
+                if fallback:
+                    return jsonify(fallback)
                 return jsonify(success=False, message='找不到題目'), 404
 
             teacher_name = str(room.get('created_by') or '').strip()
@@ -6128,6 +6172,73 @@ def api_teacher_question_detail(room_id, question_index):
         return jsonify(success=False, message=f'讀取題目明細失敗：{e}'), 500
 
 
+def _teacher_question_detail_from_analytics(room_id, question_index):
+    """Fallback for historical rooms that only exist in match_history on Render."""
+    try:
+        conn, is_pg = _get_analytics_conn()
+        cur = conn.cursor()
+        ph = '%s' if is_pg else '?'
+        cur.execute(
+            f"SELECT player_name, raw_answers FROM match_history WHERE room_id={ph} ORDER BY rank ASC, player_name ASC",
+            (room_id,)
+        )
+        rows = cur.fetchall()
+        conn.close()
+    except Exception as e:
+        print(f'[Analytics] question detail fallback error: {e}')
+        return None
+    if not rows:
+        return None
+
+    wanted = str(question_index or '').strip()
+    target_meta = None
+    students = []
+    for row in rows:
+        player = row[0] if is_pg else row['player_name']
+        ans_raw = row[1] if is_pg else row['raw_answers']
+        answers = ans_raw if isinstance(ans_raw, list) else _parse_json(ans_raw)
+        if not isinstance(answers, list):
+            continue
+        found = None
+        for idx, answer in enumerate(answers):
+            if not isinstance(answer, dict):
+                continue
+            qid = str(answer.get('q_id') or answer.get('question_id') or '')
+            seq = answer.get('seq')
+            candidates = {qid, str(seq), str(idx), str(idx + 1)}
+            if wanted in candidates:
+                found = answer
+                break
+        if not found:
+            continue
+        if target_meta is None:
+            target_meta = found
+        students.append({
+            'name': player,
+            'answer': found.get('selected', found.get('answer', '')),
+            'answer_text': found.get('answer_text') or found.get('selectedAnswerText') or found.get('selected_text') or '未保存答案內容',
+            'is_correct': bool(found.get('correct') if 'correct' in found else found.get('is_correct')),
+            'score': int(found.get('score') or found.get('points') or found.get('pointsEarned') or 0),
+            'time_used': found.get('speed_sec') or found.get('time_used'),
+            'answered_at': int(found.get('answered_at') or 0),
+        })
+
+    if target_meta is None:
+        return None
+    return {
+        'success': True,
+        'room_id': room_id,
+        'question_index': target_meta.get('seq', question_index),
+        'question_id': target_meta.get('q_id') or target_meta.get('question_id') or question_index,
+        'question_text': target_meta.get('question_text') or target_meta.get('title') or f'題目 {question_index}',
+        'title': target_meta.get('title') or '',
+        'type': target_meta.get('type') or 'single',
+        'correct_answer': target_meta.get('correct_answer') or target_meta.get('correctAnswerText') or '歷史資料未保存正解內容',
+        'students': students,
+        'source': 'match_history',
+    }
+
+
 @app.route('/teacher_report_history')
 def teacher_report_history_api():
     try:
@@ -6165,14 +6276,123 @@ def _get_analytics_conn():
     if db_url and psycopg2:
         try:
             conn = psycopg2.connect(db_url)
+            _ensure_postgres_analytics_tables(conn)
             return conn, True
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'[Analytics] PostgreSQL connection/schema error: {e}')
     analytics_path = _os.path.join(resolve_data_dir(), 'analytics.db')
     conn = sqlite3.connect(analytics_path)
     conn.row_factory = sqlite3.Row
     _ensure_sqlite_analytics_tables(conn)
     return conn, False
+
+
+def _ensure_postgres_analytics_tables(conn):
+    with conn.cursor() as cur:
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS match_history (
+                id SERIAL PRIMARY KEY,
+                player_name TEXT,
+                room_id TEXT,
+                room_name TEXT,
+                quiz_bank_name TEXT,
+                total_score INTEGER DEFAULT 0,
+                rank INTEGER,
+                total_players INTEGER DEFAULT 0,
+                correct_count INTEGER DEFAULT 0,
+                wrong_count INTEGER DEFAULT 0,
+                avg_speed_sec DOUBLE PRECISION,
+                subject_scores JSONB DEFAULT '{}'::jsonb,
+                raw_answers JSONB DEFAULT '[]'::jsonb,
+                played_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+            )
+        ''')
+        for col, typ in [
+            ('player_name', 'TEXT'),
+            ('room_id', 'TEXT'),
+            ('room_name', 'TEXT'),
+            ('quiz_bank_name', 'TEXT'),
+            ('total_score', 'INTEGER DEFAULT 0'),
+            ('rank', 'INTEGER'),
+            ('total_players', 'INTEGER DEFAULT 0'),
+            ('correct_count', 'INTEGER DEFAULT 0'),
+            ('wrong_count', 'INTEGER DEFAULT 0'),
+            ('avg_speed_sec', 'DOUBLE PRECISION'),
+            ('subject_scores', "JSONB DEFAULT '{}'::jsonb"),
+            ('raw_answers', "JSONB DEFAULT '[]'::jsonb"),
+            ('played_at', "BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT"),
+        ]:
+            cur.execute(f'ALTER TABLE match_history ADD COLUMN IF NOT EXISTS {col} {typ}')
+        cur.execute('CREATE INDEX IF NOT EXISTS idx_match_history_player ON match_history(player_name)')
+        cur.execute('CREATE INDEX IF NOT EXISTS idx_match_history_room ON match_history(room_id)')
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS player_statistics (
+                player_name TEXT PRIMARY KEY,
+                total_games INTEGER DEFAULT 0,
+                total_wins INTEGER DEFAULT 0,
+                current_streak INTEGER DEFAULT 0,
+                best_streak INTEGER DEFAULT 0,
+                total_correct INTEGER DEFAULT 0,
+                total_questions INTEGER DEFAULT 0,
+                avg_score DOUBLE PRECISION DEFAULT 0,
+                avg_speed_sec DOUBLE PRECISION,
+                subject_avg JSONB DEFAULT '{}'::jsonb,
+                last_updated BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+            )
+        ''')
+        for col, typ in [
+            ('total_games', 'INTEGER DEFAULT 0'),
+            ('total_wins', 'INTEGER DEFAULT 0'),
+            ('current_streak', 'INTEGER DEFAULT 0'),
+            ('best_streak', 'INTEGER DEFAULT 0'),
+            ('total_correct', 'INTEGER DEFAULT 0'),
+            ('total_questions', 'INTEGER DEFAULT 0'),
+            ('avg_score', 'DOUBLE PRECISION DEFAULT 0'),
+            ('avg_speed_sec', 'DOUBLE PRECISION'),
+            ('subject_avg', "JSONB DEFAULT '{}'::jsonb"),
+            ('last_updated', "BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT"),
+        ]:
+            cur.execute(f'ALTER TABLE player_statistics ADD COLUMN IF NOT EXISTS {col} {typ}')
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS student_analysis (
+                id SERIAL PRIMARY KEY,
+                room_id TEXT,
+                student_name TEXT,
+                weak_subjects JSONB DEFAULT '[]'::jsonb,
+                ai_suggestion TEXT,
+                created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+            )
+        ''')
+        for col, typ in [
+            ('room_id', 'TEXT'),
+            ('student_name', 'TEXT'),
+            ('weak_subjects', "JSONB DEFAULT '[]'::jsonb"),
+            ('ai_suggestion', 'TEXT'),
+            ('created_at', "BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT"),
+        ]:
+            cur.execute(f'ALTER TABLE student_analysis ADD COLUMN IF NOT EXISTS {col} {typ}')
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS parent_reports (
+                report_token TEXT PRIMARY KEY,
+                student_name TEXT,
+                room_id TEXT,
+                generated_by TEXT,
+                report_data JSONB,
+                created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+            )
+        ''')
+        for col, typ in [
+            ('student_name', 'TEXT'),
+            ('room_id', 'TEXT'),
+            ('generated_by', 'TEXT'),
+            ('report_data', 'JSONB'),
+            ('created_at', "BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT"),
+        ]:
+            cur.execute(f'ALTER TABLE parent_reports ADD COLUMN IF NOT EXISTS {col} {typ}')
+    conn.commit()
 
 
 def _ensure_sqlite_analytics_tables(conn):
