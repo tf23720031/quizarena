@@ -1931,11 +1931,8 @@ def record_room_winner(conn, pin):
         'bank_title': room.get('bank_title'),
         'players': participant_rows,
     }, status='ended')
-    if not get_user_exists(winner_name):
-        save_teacher_report_snapshot_for_pin(conn, pin)
-        return
-
-    record_user_win(room, winner_name, int(winner.get('total_score') or 0))
+    if get_user_exists(winner_name):
+        record_user_win(room, winner_name, int(winner.get('total_score') or 0))
     save_teacher_report_snapshot_for_pin(conn, pin)
 
     # === Analytics hook: save match results ===
@@ -1967,10 +1964,15 @@ def record_room_winner(conn, pin):
             _pname = str(_r.get('player_name') or '')
             _score = int(_r.get('total_score') or 0)
             _qrows = conn.execute(
-                'SELECT question_id, selected_json, is_correct, points_earned, remain_sec, answer_order FROM room_results'
+                'SELECT question_id, username, selected_json, is_correct, points_earned, remain_sec, answer_order FROM room_results'
                 ' WHERE room_pin=? AND player_name=?',
                 (pin, _pname)
             ).fetchall()
+            _account_name = next(
+                (str(q.get('username') or '').strip() for q in _qrows if str(q.get('username') or '').strip()),
+                ''
+            )
+            _analytics_name = _account_name or _pname
             _correct = sum(1 for q in _qrows if q['is_correct'])
             _wrong = len(_qrows) - _correct
             _raw_answers = []
@@ -1998,7 +2000,8 @@ def record_room_winner(conn, pin):
                     'speed_sec': None,
                 })
             _hook_results.append({
-                'player_name': _pname,
+                'player_name': _analytics_name,
+                'display_name': _pname,
                 'score': _score,
                 'rank': _rank_idx,
                 'total_players': _total_players,
@@ -3946,7 +3949,11 @@ def init_rooms_db():
         ''')
         c.execute('PRAGMA table_info(room_results)')
         rcols = {row[1] for row in c.fetchall()}
-        for col, typ in [('answer_order', 'INTEGER DEFAULT 0'), ('remain_sec', 'INTEGER DEFAULT 0')]:
+        for col, typ in [
+            ('answer_order', 'INTEGER DEFAULT 0'),
+            ('remain_sec', 'INTEGER DEFAULT 0'),
+            ('username', 'TEXT')
+        ]:
             if col not in rcols:
                 c.execute(f'ALTER TABLE room_results ADD COLUMN {col} {typ}')
 
@@ -5886,9 +5893,9 @@ def submit_answer():
 
             conn.execute('''
                 INSERT INTO room_results
-                (room_pin,player_name,question_id,selected_json,is_correct,points_earned,answer_order,remain_sec,answered_at)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            ''', (pin, player_name, question_id, json.dumps(selected, ensure_ascii=False),
+                (room_pin,player_name,username,question_id,selected_json,is_correct,points_earned,answer_order,remain_sec,answered_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            ''', (pin, player_name, username, question_id, json.dumps(selected, ensure_ascii=False),
                   is_correct, points, answer_order, remain_sec, now_ts()))
 
             if not is_correct:

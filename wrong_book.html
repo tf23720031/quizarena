@@ -214,29 +214,36 @@
       }
 
       async function loadAbilityRadar(playerName) {
-        if (!playerName) { showRadarEmpty('請先輸入帳號或登入後再查詢能力雷達圖。'); return; }
+        playerName = (playerName || '').trim();
+        if (!playerName) {
+          showRadarEmpty('???????????????');
+          return;
+        }
         showRadarCanvas();
         try {
           const res = await fetch('/api/radar/' + encodeURIComponent(playerName));
           if (!res.ok) {
-            showRadarEmpty('能力雷達 API 回傳錯誤（HTTP ' + res.status + '），請稍後再試。');
+            showRadarEmpty('???????????HTTP ' + res.status + '??????????? Render ??????????');
             return;
           }
           const data = await res.json();
           if (data && data.error) {
-            showRadarEmpty('能力雷達載入失敗：' + data.error);
+            showRadarEmpty('?????????' + data.error);
             return;
           }
-          var selfArr = Array.isArray(data.self) ? data.self : [];
-          var hasData = data.has_data !== false && Number(data.match_count || 0) > 0;
+          var hasData = data && data.has_data !== false && Number(data.match_count || 0) > 0;
           if (!hasData) {
-            showRadarEmpty('目前沒有比賽紀錄，完成遊戲後會產生能力分析。');
+            showRadarEmpty('?????????????????????????????????????????????????');
+            return;
+          }
+          if (!window.RadarChart || typeof window.RadarChart.render !== 'function') {
+            showRadarEmpty('?????????????????????');
             return;
           }
           window.RadarChart.render('analytics-radar-canvas', data);
         } catch (err) {
           console.warn('[abilityRadar] load error', err);
-          showRadarEmpty('能力雷達載入失敗，請稍後再試。');
+          showRadarEmpty('???????????????');
         }
       }
 
