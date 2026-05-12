@@ -856,6 +856,26 @@ body.dark-mode .lang-select {
 @media (max-width: 720px) {
   .matching-click-grid { grid-template-columns: 1fr; }
 }
+.matching-left-btn.correct-reveal,
+.matching-right-btn.correct-reveal {
+  border-color: #3cbe7a !important;
+  background: rgba(200,255,218,.88) !important;
+}
+.matching-left-btn.wrong-reveal,
+.matching-right-btn.wrong-reveal {
+  border-color: #e05050 !important;
+  background: rgba(255,210,210,.88) !important;
+}
+body.dark-mode .matching-left-btn.correct-reveal,
+body.dark-mode .matching-right-btn.correct-reveal {
+  background: rgba(0,220,100,.18) !important;
+  border-color: #2de08a !important;
+}
+body.dark-mode .matching-left-btn.wrong-reveal,
+body.dark-mode .matching-right-btn.wrong-reveal {
+  background: rgba(255,60,60,.15) !important;
+  border-color: #ff4444 !important;
+}
 body[data-room-theme="ocean"] {
   background: linear-gradient(135deg, #e8fbff 0%, #d8ebff 45%, #f3f8ff 100%);
 }

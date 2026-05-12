@@ -170,28 +170,10 @@ function loadLocalDraft() {
   if (!state.currentUser) return [];
   try {
     const raw = JSON.parse(localStorage.getItem(getLocalDraftKey()) || 'null');
-    const banks = Array.isArray(raw?.quizBanks) ? raw.quizBanks : [];
-    if (banks.length) return banks;
+    return Array.isArray(raw?.quizBanks) ? raw.quizBanks : [];
   } catch {
-    // Try recovering from other local draft keys below.
+    return [];
   }
-
-  let bestDraft = null;
-  for (let idx = 0; idx < localStorage.length; idx += 1) {
-    const key = localStorage.key(idx) || '';
-    if (!key.startsWith('quizarena_draft_')) continue;
-    try {
-      const draft = JSON.parse(localStorage.getItem(key) || 'null');
-      const banks = Array.isArray(draft?.quizBanks) ? draft.quizBanks : [];
-      if (!banks.length) continue;
-      if (!bestDraft || Number(draft.savedAt || 0) > Number(bestDraft.savedAt || 0)) {
-        bestDraft = { savedAt: Number(draft.savedAt || 0), quizBanks: banks };
-      }
-    } catch {
-      // Skip broken draft records.
-    }
-  }
-  return bestDraft?.quizBanks || [];
 }
 function getCurrentBank() {
   return state.quizBanks[state.currentBankIndex] || null;
@@ -649,24 +631,26 @@ async function saveAllBanks() {
 
   if (bank && !isReadonlyBank(bank)) {
     const titleInput = $('quizBankTitle').value.trim();
-
-    if (titleInput) {
-      bank.title = titleInput;
-    }
-
+    if (titleInput) bank.title = titleInput;
     bank.gameMode = $('bankGameMode').value;
     bank.language = $('bankLanguage').value;
     bank.updatedAt = Math.floor(Date.now() / 1000);
   }
 
-  await api('/save_quiz_banks', {
-    method: 'POST',
-    body: JSON.stringify({
-      username: state.currentUser,
-      quizBanks: getMutableBanks()
-    })
-  });
   saveLocalDraft();
+
+  if (!state.currentUser) return;
+  try {
+    await api('/save_quiz_banks', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: state.currentUser,
+        quizBanks: getMutableBanks()
+      })
+    });
+  } catch (e) {
+    showToast(`雲端儲存失敗：${e.message}，資料已暫存瀏覽器。`, 3600);
+  }
 }
 
 async function loadBanks() {
@@ -679,14 +663,18 @@ async function loadBanks() {
   const serverBanks = data.quizBanks || [];
   const effectiveBanks = serverBanks.length ? serverBanks : localDraftBanks;
   if (!serverBanks.length && localDraftBanks.length) {
-    await api('/save_quiz_banks', {
-      method: 'POST',
-      body: JSON.stringify({
-        username: state.currentUser,
-        quizBanks: localDraftBanks
-      })
-    });
-    showToast('已從瀏覽器草稿恢復你之前的題庫，記得按「儲存題庫」同步。', 3600);
+    try {
+      await api('/save_quiz_banks', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: state.currentUser,
+          quizBanks: localDraftBanks
+        })
+      });
+      showToast('已從瀏覽器草稿恢復你之前的題庫。', 3600);
+    } catch (e) {
+      showToast(`草稿恢復失敗：${e.message}`, 3000);
+    }
   }
 
   state.quizBanks = mergeLoadedBanks(

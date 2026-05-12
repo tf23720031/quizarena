@@ -1,4 +1,4 @@
-// ── Taiwan Taipei Time Display ─────────────────────────────────────────
+﻿// ── Taiwan Taipei Time Display ─────────────────────────────────────────
 function toTaipeiTimeStr(ts) {
   if (!ts) return '';
   return new Date(Number(ts) * 1000).toLocaleString('zh-TW', {
@@ -592,7 +592,7 @@ async function loadTeamMessages() {
    ══════════════════════════════════════ */
 function renderHostQuestion(q, answeredCount, totalQuestions) {
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題`;
-  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : '單選題';
+  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : q.type === 'matching' ? '配對題' : '單選題';
   const isFake    = q.fake_answer ? ' ⚠️ 淘汰題' : '';
   hostQuestionKicker.textContent  = `${typeLabel} ・ ${q.time || '20 秒'} ・ ${q.score} 分${isFake}`;
   hostQuestionTitle.textContent   = q.title || `第 ${answeredCount + 1} 題`;
@@ -695,7 +695,7 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
   hasSubmitted    = false;
 
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題`;
-  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : '單選題';
+  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : q.type === 'matching' ? '配對題' : '單選題';
   const fakeBadge = q.fake_answer ? ' ⚠️ 淘汰題' : '';
   questionKicker.textContent  = `${typeLabel} ・ ${q.time || '20 秒'} ・ ${q.score} 分${fakeBadge}`;
   questionTitle.textContent   = q.title || `第 ${answeredCount + 1} 題`;
@@ -709,26 +709,6 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
     renderMatchingQuestion(q);
     if (submitAnswerBtn) submitAnswerBtn.style.display = 'inline-block';
     return;
-    const rights = buildShuffleMap(q.options || [], `${q.question_id}:matching`).map((origIdx) => ({
-      origIdx,
-      text: (q.options || [])[origIdx]?.right || (q.options || [])[origIdx]?.text || ''
-    }));
-    optionsList.innerHTML = `<div class="matching-play-grid">
-      ${(q.options || []).map((opt, leftIdx) => `
-        <label class="matching-play-row">
-          <span>${leftIdx + 1}. ${opt.left || opt.text || ''}</span>
-          <select class="form-select matching-select" data-left="${leftIdx}">
-            <option value="">選擇右側答案</option>
-            ${rights.map((right) => `<option value="${right.origIdx}">${right.text}</option>`).join('')}
-          </select>
-        </label>
-      `).join('')}
-    </div>`;
-    document.querySelectorAll('.matching-select').forEach((select) => {
-      select.addEventListener('change', () => {
-        selected = [...document.querySelectorAll('.matching-select')].map((item) => Number(item.value));
-      });
-    });
   } else if (q.type === 'fill') {
     optionsList.innerHTML = '';
     if (fillAnswerWrap) fillAnswerWrap.style.display = 'block';
@@ -759,7 +739,7 @@ function renderPlayerQuestion(q, answeredCount, totalQuestions) {
 function renderSpectatorQuestion(q, answeredCount, totalQuestions) {
   if (!spectatorQuestionBox) return;
   progressText.textContent = `第 ${answeredCount + 1} / ${totalQuestions} 題（觀戰）`;
-  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : '單選題';
+  const typeLabel = q.type === 'multiple' ? '多選題' : q.type === 'tf' ? '是非題' : q.type === 'fill' ? '填充題' : q.type === 'matching' ? '配對題' : '單選題';
   if (spectatorKicker)  spectatorKicker.textContent  = `${typeLabel} ・ ${q.time || '20 秒'}`;
   if (spectatorTitle)   spectatorTitle.textContent   = q.title || '';
   if (spectatorContent) spectatorContent.textContent = q.content || '';
@@ -768,12 +748,15 @@ function renderSpectatorQuestion(q, answeredCount, totalQuestions) {
     else { spectatorImage.style.display = 'none'; }
   }
   if (spectatorOptionsList) {
-    spectatorOptionsList.innerHTML = (q.options || []).map((opt, idx) =>
-      `<div class="option-btn">
+    spectatorOptionsList.innerHTML = (q.options || []).map((opt, idx) => {
+      const displayText = q.type === 'matching'
+        ? `${escapeHtml(opt.left || opt.text || '')} → ${escapeHtml(opt.right || '')}`
+        : escapeHtml(opt.text || '');
+      return `<div class="option-btn">
         <span class="option-letter">${String.fromCharCode(65 + idx)}</span>
-        <span>${opt.text}</span>
-      </div>`
-    ).join('');
+        <span>${displayText}</span>
+      </div>`;
+    }).join('');
   }
   spectatorQuestionBox.style.display = 'block';
 }
@@ -802,6 +785,27 @@ function revealOptions(correctIndexes, mySelected) {
       btn.classList.add('wrong-reveal');
     }
   });
+
+  if (currentQuestion?.type === 'matching') {
+    document.querySelectorAll('#optionsList .matching-left-btn').forEach(btn => {
+      const i = Number(btn.dataset.left);
+      const mine = Array.isArray(mySelected) ? mySelected[i] : undefined;
+      const correct = Array.isArray(correctIndexes) ? correctIndexes[i] : undefined;
+      btn.classList.add(
+        (mine !== null && mine !== undefined && mine >= 0 && mine === correct)
+          ? 'correct-reveal' : 'wrong-reveal'
+      );
+    });
+    document.querySelectorAll('#optionsList .matching-right-btn').forEach(btn => {
+      const j = Number(btn.dataset.right);
+      const pairedLeft = Array.isArray(mySelected) ? mySelected.findIndex(v => Number(v) === j) : -1;
+      if (pairedLeft >= 0) {
+        btn.classList.add(
+          Number(correctIndexes?.[pairedLeft]) === j ? 'correct-reveal' : 'wrong-reveal'
+        );
+      }
+    });
+  }
 }
 
 function openPlayerResult({ badge, points, answerText, explanation, top5, myRank, showExactRank, eliminated }) {
@@ -835,14 +839,6 @@ async function submitAnswer(isTimeout = false) {
       return;
     }
     if (!complete && isTimeout) selected = Array(currentQuestion.options?.length || 0).fill(-1);
-  } else if (!selected.length && !isTimeout) { showToast('隢??豢?蝑?'); return; }
-  if (false && currentQuestion.type === 'matching') {
-    const rawMatchVals = [...document.querySelectorAll('.matching-select')].map((item) => item.value);
-    selected = rawMatchVals.map(Number);
-    if ((!rawMatchVals.length || rawMatchVals.some((v) => v === '')) && !isTimeout) {
-      showToast('請完成所有左右配對');
-      return;
-    }
   } else if (!selected.length && !isTimeout) { showToast('請先選擇答案'); return; }
 
   hasSubmitted = true;

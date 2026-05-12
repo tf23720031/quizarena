@@ -465,7 +465,7 @@ function renderAnalysis(data) {
         value: (question) => question.accuracy,
         max: 100,
         format: (value, question) => `${value}%`,
-        warn: (question) => toNumber(question.accuracy) < 60,
+        warn: (question) => toNumber(question.accuracy) >= 40,
         empty: "目前沒有題目作答資料",
       })}
     </article>

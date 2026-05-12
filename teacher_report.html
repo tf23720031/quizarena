@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>?葦璅∪? - QuizArena</title>
+  <title>老師報表 - QuizArena</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/learning_tools.css">
@@ -20,99 +20,99 @@
       <a class="tool-back" href="index.html"><i class="fa-solid fa-chevron-left"></i></a>
       <div>
         <p class="tool-kicker teacher-subtitle" data-i18n="Teacher">TEACHER</p>
-        <h1 class="teacher-title" data-i18n="?葦璅∪?">?葦璅∪?</h1>
+        <h1 class="teacher-title" data-i18n="老師報表">老師報表</h1>
       </div>
     </header>
 
     <section class="tool-card report-search">
-      <label for="reportPinInput">頛詨?輸? PIN嚗?敺??孵遣?輻????/label>
+      <label for="reportPinInput">輸入房間 PIN 碼，查詢報表</label>
       <div class="report-search-row">
-        <input id="reportPinInput" maxlength="6" inputmode="numeric" placeholder="靘? 123456">
-        <button id="loadReportBtn" class="tool-btn primary"><i class="fa-solid fa-magnifying-glass-chart"></i> ?亦??梯”</button>
-        <button id="downloadCsvBtn" class="tool-btn" disabled><i class="fa-solid fa-file-csv"></i> ?臬 CSV</button>
-        <button id="downloadExcelReportBtn" class="tool-btn" disabled><i class="fa-solid fa-file-excel"></i> ?臬 Excel ?梯”</button>
-        <button id="downloadHtmlReportBtn" class="tool-btn" disabled><i class="fa-solid fa-chart-column"></i> ?臬???勗?</button>
+        <input id="reportPinInput" maxlength="6" inputmode="numeric" placeholder="例如 123456">
+        <button id="loadReportBtn" class="tool-btn primary"><i class="fa-solid fa-magnifying-glass-chart"></i> 查詢報表</button>
+        <button id="downloadCsvBtn" class="tool-btn" disabled><i class="fa-solid fa-file-csv"></i> 匯出 CSV</button>
+        <button id="downloadExcelReportBtn" class="tool-btn" disabled><i class="fa-solid fa-file-excel"></i> 匯出 Excel 報表</button>
+        <button id="downloadHtmlReportBtn" class="tool-btn" disabled><i class="fa-solid fa-chart-column"></i> 匯出報告頁面</button>
       </div>
     </section>
 
     <section class="tool-card">
       <div class="tool-card-head">
-        <h2>撱箸蝝??/h2>
-        <button id="refreshHistoryBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> ??渡?</button>
+        <h2>歷史報表</h2>
+        <button id="refreshHistoryBtn" class="tool-btn"><i class="fa-solid fa-rotate"></i> 重新整理</button>
       </div>
       <div id="reportHistoryList" class="history-list"></div>
     </section>
 
     <section class="summary-grid">
-      <article><span>?輸?</span><strong id="reportRoomName">-</strong></article>
-      <article><span>摮貊???/span><strong id="reportPlayerCount">0</strong></article>
-      <article><span>憿??/span><strong id="reportQuestionCount">0</strong></article>
-      <article><span>撟喳?甇?Ⅱ??/span><strong id="reportAverageAccuracy">0%</strong></article>
-      <article><span>撟喳??</span><strong id="reportAverageScore">0</strong></article>
-      <article><span>??釣摮貊?</span><strong id="reportNeedsHelp">0</strong></article>
+      <article><span>房間</span><strong id="reportRoomName">-</strong></article>
+      <article><span>學生數</span><strong id="reportPlayerCount">0</strong></article>
+      <article><span>題目數</span><strong id="reportQuestionCount">0</strong></article>
+      <article><span>平均正確率</span><strong id="reportAverageAccuracy">0%</strong></article>
+      <article><span>平均分數</span><strong id="reportAverageScore">0</strong></article>
+      <article><span>需關注學生</span><strong id="reportNeedsHelp">0</strong></article>
     </section>
 
     <section class="tool-card">
-      <div class="tool-card-head"><h2>?”??</h2></div>
+      <div class="tool-card-head"><h2>分析</h2></div>
       <div id="reportAnalysisPanel" class="analysis-panel"></div>
     </section>
 
     <section class="tool-card">
-      <div class="tool-card-head"><h2>摮貊?銵函</h2></div>
+      <div class="tool-card-head"><h2>學生詳情</h2></div>
       <div id="studentReportList" class="report-table-wrap"></div>
     </section>
 
     <section class="tool-card">
-      <div class="tool-card-head"><h2>憿蝑???/h2></div>
+      <div class="tool-card-head"><h2>題目成績</h2></div>
       <div id="questionReportList" class="question-list compact"></div>
     </section>
 
-    <!-- ?????????脤????銵冽嚗???tool-shell嚗?銝?銝?湛? ????????-->
+    <!-- 進階分析儀表板（在 tool-shell 內，不需 PIN 輸入） -->
     <section class="tool-card analytics-dashboard">
       <div class="tool-card-head">
-        <h2><i class="fa-solid fa-chart-pie"></i> ?脤????銵冽</h2>
+        <h2><i class="fa-solid fa-chart-pie"></i> 進階分析儀表板</h2>
         <div class="analytics-room-picker" style="display:none;">
-          <label for="analytics-room-select">?輸?嚗?/label>
+          <label for="analytics-room-select">房間：</label>
           <select id="analytics-room-select">
-            <option value="">隢??/option>
+            <option value="">請選</option>
           </select>
         </div>
       </div>
 
       <div class="tabs">
-        <button class="tab-btn active" data-tab="overview" type="button">?? ?剔?蝮質汗</button>
-        <button class="tab-btn" data-tab="student" type="button">? ?摮貊?</button>
-        <button class="tab-btn" data-tab="weak" type="button">?? 撘梢???</button>
-        <button class="tab-btn" data-tab="ai" type="button">?? AI 撱箄降</button>
-        <button class="tab-btn" data-tab="parent" type="button">?? 摰園?勗?</button>
+        <button class="tab-btn active" data-tab="overview" type="button">📊 班級總覽</button>
+        <button class="tab-btn" data-tab="student" type="button">👤 個別學生</button>
+        <button class="tab-btn" data-tab="weak" type="button">🎯 弱題分析</button>
+        <button class="tab-btn" data-tab="ai" type="button">🧠 AI 建議</button>
+        <button class="tab-btn" data-tab="parent" type="button">📄 家長報告</button>
       </div>
 
       <div id="tab-overview" class="tab-panel active">
         <div class="analytics-empty" data-empty-for="overview" style="display:none;">
           <i class="fa-solid fa-circle-info"></i>
-          <p>隢?敺??寥????瘥魚蝝???輸???/p>
+          <p>請選擇或搜尋一個房間以查看班級總覽</p>
         </div>
         <div class="stat-grid" id="class-stats-grid" style="margin-bottom:20px;"></div>
         <div class="glass-card" style="margin-bottom:16px;">
-          <h3 style="color:#c4b5fd;margin-bottom:12px;">?剔?甇?Ⅱ??撣?/h3>
+          <h3 style="color:#c4b5fd;margin-bottom:12px;">班級正確率分布</h3>
           <canvas id="class-dist-chart" height="80"></canvas>
         </div>
-        <h3 style="color:#c4b5fd;margin-bottom:12px;">摮貊????閬?/h3>
+        <h3 style="color:#c4b5fd;margin-bottom:12px;">學生分數一覽</h3>
         <div id="student-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
       </div>
 
       <div id="tab-student" class="tab-panel">
         <div class="analytics-empty" data-empty-for="student" style="display:none;">
           <i class="fa-solid fa-circle-info"></i>
-          <p>?詨末?輸?敺??ㄐ???箸?雿飛?銵函??/p>
+          <p>請選擇房間以查看個別學生詳情</p>
         </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;">
           <div id="student-list-panel" style="width:180px;flex-shrink:0;">
-            <h3 style="color:#c4b5fd;font-size:14px;margin-bottom:8px;">摮貊??”</h3>
+            <h3 style="color:#c4b5fd;font-size:14px;margin-bottom:8px;">學生名單</h3>
             <div id="student-list"></div>
           </div>
           <div id="student-detail-panel" class="glass-card" style="flex:1;min-width:200px;">
-            <p style="color:#6d28d9;text-align:center;padding:20px;">暺撌血摮貊??亦?閰單?</p>
+            <p style="color:#6d28d9;text-align:center;padding:20px;">點擊左側學生以查看詳情</p>
           </div>
         </div>
       </div>
@@ -120,10 +120,10 @@
       <div id="tab-weak" class="tab-panel">
         <div class="analytics-empty" data-empty-for="weak" style="display:none;">
           <i class="fa-solid fa-circle-info"></i>
-          <p>?詨末?輸?敺??ㄐ???箏?剔??舀?憭?憿??/p>
+          <p>請選擇房間以查看弱題分析</p>
         </div>
         <div class="glass-card" style="margin-bottom:16px;">
-          <h3 style="color:#c4b5fd;margin-bottom:12px;">???航炊??/h3>
+          <h3 style="color:#c4b5fd;margin-bottom:12px;">答題狀況概覽</h3>
           <canvas id="weak-bar-chart" height="120"></canvas>
         </div>
         <div id="weak-detail-list"></div>
@@ -132,27 +132,28 @@
       <div id="tab-ai" class="tab-panel">
         <div class="analytics-empty" data-empty-for="ai" style="display:none;">
           <i class="fa-solid fa-circle-info"></i>
-          <p>?詨末?輸?敺??ㄐ??曉?摮貊???AI ?犖?遣霅啜?/p>
+          <p>請選擇房間以查看各學生的 AI 學習建議</p>
         </div>
         <p style="color:#a78bfa;margin-bottom:16px;font-size:13px;">
-          暺????遣霅啜?飛???AI ?犖?飛蝧遣霅啜?        </p>
+          點擊每個學生可以看到 AI 幫他們分析的學習建議
+        </p>
         <div id="ai-cards-container"></div>
       </div>
 
       <div id="tab-parent" class="tab-panel">
         <div class="analytics-empty" data-empty-for="parent" style="display:none;">
           <i class="fa-solid fa-circle-info"></i>
-          <p>?詨末?輸?敺??臭誑?箏摮貊??Ｙ?摰園?勗???/p>
+          <p>請選擇房間後再選擇學生以生成家長報告</p>
         </div>
         <div class="glass-card">
-          <h3 style="color:#c4b5fd;margin-bottom:16px;">?? ??摰園?勗?</h3>
+          <h3 style="color:#c4b5fd;margin-bottom:16px;">📝 生成家長報告</h3>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-            <label style="color:#a78bfa;font-size:13px;">?豢?摮貊?嚗?/label>
+            <label style="color:#a78bfa;font-size:13px;">選擇學生：</label>
             <select id="parent-student-select">
-              <option value="">隢?飛??..</option>
+              <option value="">請選擇...</option>
             </select>
             <button id="parent-report-generate-btn" type="button" class="tool-btn primary">
-              ???勗?
+              生成報告
             </button>
           </div>
           <div id="parent-report-result"></div>
@@ -172,21 +173,6 @@
   <script>
     (function () {
       const select = document.getElementById('analytics-room-select');
-      if (false && select && typeof window.analyticsLoadRoom === 'function') {
-        select.addEventListener('change', () => {
-          const rid = select.value || '';
-          // ??????征???鞈?頛摰??迤蝣粹＊蝷綽?
-          document.querySelectorAll('.analytics-empty').forEach(e => e.style.display = rid ? 'none' : '');
-          if (!rid) return;
-          try { window.analyticsLoadRoom(rid); } catch (e) { console.warn('analyticsLoadRoom err', e); }
-          const pinInput = document.getElementById('reportPinInput');
-          if (pinInput && /^\d{6}$/.test(rid)) {
-            pinInput.value = rid;
-            const loadBtn = document.getElementById('loadReportBtn');
-            if (loadBtn) loadBtn.click();
-          }
-        });
-      }
 
       document.querySelectorAll('.analytics-dashboard .tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
