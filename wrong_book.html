@@ -216,34 +216,34 @@
       async function loadAbilityRadar(playerName) {
         playerName = (playerName || '').trim();
         if (!playerName) {
-          showRadarEmpty('???????????????');
+          showRadarEmpty('\u8acb\u5148\u767b\u5165\uff0c\u6216\u8f38\u5165\u8981\u67e5\u8a62\u7684\u5e33\u865f\u3002');
           return;
         }
         showRadarCanvas();
         try {
           const res = await fetch('/api/radar/' + encodeURIComponent(playerName));
           if (!res.ok) {
-            showRadarEmpty('???????????HTTP ' + res.status + '??????????? Render ??????????');
+            showRadarEmpty('\u80fd\u529b\u96f7\u9054\u66ab\u6642\u7121\u6cd5\u8f09\u5165\uff08HTTP ' + res.status + '\uff09\u3002\u8acb\u7a0d\u5f8c\u518d\u8a66\uff0c\u6216\u78ba\u8a8d Render \u8cc7\u6599\u5eab\u5df2\u5b8c\u6210\u521d\u59cb\u5316\u3002');
             return;
           }
           const data = await res.json();
           if (data && data.error) {
-            showRadarEmpty('?????????' + data.error);
+            showRadarEmpty('\u80fd\u529b\u96f7\u9054\u8f09\u5165\u5931\u6557\uff1a' + data.error);
             return;
           }
           var hasData = data && data.has_data !== false && Number(data.match_count || 0) > 0;
           if (!hasData) {
-            showRadarEmpty('?????????????????????????????????????????????????');
+            showRadarEmpty('\u76ee\u524d\u67e5\u4e0d\u5230\u9019\u500b\u5e33\u865f\u7684\u6bd4\u8cfd\u5206\u6790\u3002\u8acb\u78ba\u8a8d\u904a\u6232\u6642\u4f7f\u7528\u7684\u662f\u767b\u5165\u5e33\u865f\uff0c\u4e26\u5728\u5b8c\u6210\u4e00\u5834\u623f\u9593\u904a\u6232\u7d50\u7b97\u5f8c\u518d\u91cd\u65b0\u67e5\u8a62\u3002');
             return;
           }
           if (!window.RadarChart || typeof window.RadarChart.render !== 'function') {
-            showRadarEmpty('?????????????????????');
+            showRadarEmpty('\u80fd\u529b\u96f7\u9054\u5143\u4ef6\u5c1a\u672a\u8f09\u5165\u5b8c\u6210\uff0c\u8acb\u91cd\u65b0\u6574\u7406\u9801\u9762\u3002');
             return;
           }
           window.RadarChart.render('analytics-radar-canvas', data);
         } catch (err) {
           console.warn('[abilityRadar] load error', err);
-          showRadarEmpty('???????????????');
+          showRadarEmpty('\u80fd\u529b\u96f7\u9054\u8f09\u5165\u5931\u6557\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002');
         }
       }
 
@@ -251,6 +251,7 @@
         var input = document.getElementById('abilityRadarPlayerInput');
         var btn = document.getElementById('abilityRadarReloadBtn');
         // 使用登入帳號 currentUser，不再用 playerName 抓錯人
+        // Query the logged-in account, not the room nickname.
         var defaultUser = window.__wbUsername || '';
         if (input) input.value = defaultUser;
         loadAbilityRadar(defaultUser);
