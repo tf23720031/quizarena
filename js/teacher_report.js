@@ -223,7 +223,6 @@ function getReportAnalysis(report) {
     .map((question) => ({
       ...question,
       errorRate: question.answered ? round1(((toNumber(question.answered) - toNumber(question.correct)) / toNumber(question.answered)) * 100) : 0,
-      accuracy: question.answered ? round1(((toNumber(question.answered) - toNumber(question.correct)) / toNumber(question.answered)) * 100) : 0,
     }))
     .sort((a, b) => toNumber(b.errorRate) - toNumber(a.errorRate) || toNumber(a.seq) - toNumber(b.seq))
     .slice(0, 5);
@@ -298,10 +297,16 @@ function renderHistory(reports) {
 
   list.querySelectorAll("[data-pin]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      $("reportPinInput").value = btn.dataset.pin || "";
-      loadReport(btn.dataset.pin || "");
+      const pin = btn.dataset.pin || "";
+      $("reportPinInput").value = pin;
+      loadReport(pin);
       document.querySelectorAll("#reportHistoryList .history-button").forEach((item) => item.classList.remove("active"));
       btn.classList.add("active");
+      // Scroll to the analytics dashboard after a short delay to let it load
+      setTimeout(() => {
+        const dash = document.querySelector(".analytics-dashboard");
+        if (dash) dash.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 900);
     });
   });
 }
@@ -459,13 +464,13 @@ function renderAnalysis(data) {
     </article>
 
     <article class="analysis-card">
-      <h3>最需要複習的題目</h3>
+      <h3>最需要複習的題目 <small style="font-size:0.75em;color:#a78bfa;font-weight:normal;">（答錯率）</small></h3>
       ${barRows(analysis.hardestQuestions, {
-        label: (question) => `Q${toNumber(question.seq)} ${question.title || "未命名題目"}`,
-        value: (question) => question.accuracy,
+        label: (question) => `Q${toNumber(question.seq) + 1} ${question.title || "未命名題目"}`,
+        value: (question) => question.errorRate,
         max: 100,
-        format: (value, question) => `${value}%`,
-        warn: (question) => toNumber(question.accuracy) >= 40,
+        format: (value) => `${value}% 錯題率`,
+        warn: (question) => toNumber(question.errorRate) >= 40,
         empty: "目前沒有題目作答資料",
       })}
     </article>
@@ -541,7 +546,7 @@ function renderReport(data) {
     return `
       <article class="question-card question-detail-trigger" role="button" tabindex="0" data-question-index="${escapeHtml(question.questionId || question.question_id || question.seq)}">
         <div class="question-meta-row">
-          <h3>Q${Number(question.seq || 0)} ${escapeHtml(question.title || "未命名題目")}</h3>
+          <h3>Q${Number(question.seq || 0) + 1} ${escapeHtml(question.title || "未命名題目")}</h3>
           <span class="answer-pill">${accuracy}% · ${status}</span>
         </div>
         <p>${escapeHtml(question.content || "")}</p>
@@ -639,7 +644,7 @@ function downloadCsv() {
     ["題目分析"],
     ["題號", "題目", "內容", "正確答案", "解析", "作答人數", "答對", "答錯", "正確率", "判讀"],
     ...analysis.questions.map((question) => [
-      question.seq,
+      toNumber(question.seq) + 1,
       question.title,
       question.content,
       correctTextForQuestion(question, latestReport),
@@ -743,7 +748,7 @@ function buildExcelReport(report) {
     ${analysis.hardestQuestions.map((question) => `
       <tr>
         <td>難題正確率</td>
-        <td>Q${toNumber(question.seq)} ${escapeHtml(question.title || "未命名題目")}</td>
+        <td>Q${toNumber(question.seq) + 1} ${escapeHtml(question.title || "未命名題目")}</td>
         <td>${excelBar(toNumber(question.accuracy), 100, toNumber(question.accuracy) < 60)}%</td>
         <td>${escapeHtml(questionStatus(question))}</td>
       </tr>
@@ -792,7 +797,7 @@ function buildExcelReport(report) {
   <table>
     <tr><th>題號</th><th>題目</th><th>內容</th><th>正確答案</th><th>解析</th><th>作答</th><th>答對</th><th>答錯</th><th>正確率</th><th>判讀</th></tr>
     ${excelTableRows(analysis.questions, [
-      (question) => question.seq,
+      (question) => toNumber(question.seq) + 1,
       (question) => question.title,
       (question) => question.content,
       (question) => correctTextForQuestion(question, report),
@@ -888,7 +893,7 @@ function buildHtmlReport(report) {
       <article class="card">
         <h2>最需要複習的題目</h2>
         ${htmlBars(analysis.hardestQuestions, {
-          label: (question) => `Q${toNumber(question.seq)} ${question.title || "未命名題目"}`,
+          label: (question) => `Q${toNumber(question.seq) + 1} ${question.title || "未命名題目"}`,
           value: (question) => question.accuracy,
           max: 100,
           format: (value) => `${value}%`,
@@ -928,7 +933,7 @@ function buildHtmlReport(report) {
           ${analysis.questions.map((question) => {
             const accuracy = toNumber(question.accuracy);
             const status = toNumber(question.answered) === 0 ? "未作答" : accuracy < 60 ? "建議複習" : "掌握良好";
-            return `<tr><td>Q${toNumber(question.seq)}</td><td>${escapeHtml(question.title || question.content || "未命名題目")}</td><td>${escapeHtml(correctTextForQuestion(question, report))}</td><td>${toNumber(question.answered)}</td><td>${toNumber(question.correct)}</td><td>${accuracy}%</td><td><span class="tag">${status}</span></td></tr>`;
+            return `<tr><td>Q${toNumber(question.seq) + 1}</td><td>${escapeHtml(question.title || question.content || "未命名題目")}</td><td>${escapeHtml(correctTextForQuestion(question, report))}</td><td>${toNumber(question.answered)}</td><td>${toNumber(question.correct)}</td><td>${accuracy}%</td><td><span class="tag">${status}</span></td></tr>`;
           }).join("")}
         </tbody>
       </table>
@@ -939,7 +944,7 @@ function buildHtmlReport(report) {
       <table>
         <thead><tr><th>學生</th><th>題號</th><th>題目</th><th>學生選擇</th><th>結果</th><th>得分</th></tr></thead>
         <tbody>
-          ${(report.results || []).map((row) => `<tr><td>${escapeHtml(row.playerName)}</td><td>Q${toNumber(row.seq)}</td><td>${escapeHtml(row.title || "")}</td><td>${escapeHtml(selectedTextForRow(row, report))}</td><td><span class="tag">${row.isCorrect ? "答對" : "答錯"}</span></td><td>${toNumber(row.pointsEarned)}</td></tr>`).join("")}
+          ${(report.results || []).map((row) => `<tr><td>${escapeHtml(row.playerName)}</td><td>Q${toNumber(row.seq) + 1}</td><td>${escapeHtml(row.title || "")}</td><td>${escapeHtml(selectedTextForRow(row, report))}</td><td><span class="tag">${row.isCorrect ? "答對" : "答錯"}</span></td><td>${toNumber(row.pointsEarned)}</td></tr>`).join("")}
         </tbody>
       </table>
     </section>

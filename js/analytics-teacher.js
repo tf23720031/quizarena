@@ -125,7 +125,9 @@ async function analyticsLoadRoom(roomId) {
   if (!roomId) return;
   currentRoomId = roomId;
   _hideAllAnalyticsEmpty();
-  // 選了房間之後：班級總覽 + 預先載入弱題（一進去就要看得到圖）
+  // 切換到班級總覽頁籤
+  const overviewBtn = document.querySelector('.tab-btn[data-tab="overview"]') || document.querySelectorAll('.tab-btn')[0];
+  switchTeacherTab('overview', overviewBtn);
   await loadOverview();
   loadWeakQuestions();
 }
@@ -340,14 +342,15 @@ async function loadWeakQuestions() {
     if (canvas) {
       _waitForChart(() => {
         if (weakBarChart) weakBarChart.destroy();
+        const top10 = questions.slice(0, 10);
         weakBarChart = new Chart(canvas, {
           type: 'bar',
           data: {
-            labels: questions.slice(0, 10).map(q => `題目 ${q.q_id}`),
+            labels: top10.map(q => q.title ? `Q${(q.seq||0)+1} ${q.title}`.slice(0, 18) : `題目 ${q.q_id}`),
             datasets: [{
-              label: '錯誤率 %',
-              data: questions.slice(0, 10).map(q => q.error_rate),
-              backgroundColor: 'rgba(248,113,113,0.7)',
+              label: '錯題率 %',
+              data: top10.map(q => q.error_rate),
+              backgroundColor: top10.map(q => q.error_rate >= 50 ? 'rgba(239,68,68,0.75)' : 'rgba(248,113,113,0.7)'),
               borderColor: '#f87171',
               borderWidth: 1,
             }],
@@ -357,7 +360,7 @@ async function loadWeakQuestions() {
             animation: { duration: 600 },
             plugins: { legend: { display: false } },
             scales: {
-              x: { min: 0, max: 100, ticks: { color: '#a78bfa' }, grid: { color: 'rgba(139,92,246,0.1)' } },
+              x: { min: 0, max: 100, ticks: { color: '#a78bfa', callback: v => v + '%' }, grid: { color: 'rgba(139,92,246,0.1)' } },
               y: { ticks: { color: '#e9d5ff' }, grid: { display: false } },
             },
           },
@@ -367,15 +370,25 @@ async function loadWeakQuestions() {
 
     const listEl = document.getElementById('weak-detail-list');
     if (listEl) {
-      listEl.innerHTML = questions.map(q => `
-        <button class="glass-card" data-question-index="${escapeHtml(q.q_id)}" style="margin-bottom:8px;width:100%;text-align:left;cursor:pointer;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:13px;font-weight:600;">題目 ${q.q_id}</span>
-            <span class="badge badge-red">${q.error_rate}% 錯誤</span>
+      listEl.innerHTML = questions.map(q => {
+        const label = q.title ? `Q${(q.seq||0)+1} ${escapeHtml(q.title)}` : `題目 ${escapeHtml(q.q_id)}`;
+        const wrongCount = q.wrong_count || 0;
+        const answeredCount = q.answered_count || 0;
+        const errorRate = q.error_rate || 0;
+        return `
+        <button class="glass-card" data-question-index="${escapeHtml(q.q_id)}" style="margin-bottom:8px;width:100%;text-align:left;cursor:pointer;border:none;background:rgba(139,92,246,0.08);border-radius:10px;padding:12px 16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:600;color:#e9d5ff;">${label}</span>
+            <span class="badge badge-red" style="background:rgba(239,68,68,${errorRate>=50?'0.9':'0.7'});color:#fff;padding:2px 8px;border-radius:999px;font-size:11px;">${errorRate}% 錯題率</span>
           </div>
-          <div style="color:#a78bfa;font-size:12px;">答錯的學生：${(q.wrong_players || []).join('、') || '無'}</div>
-        </button>
-      `).join('');
+          <div style="margin-bottom:4px;">
+            <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${Math.min(100,errorRate)}%;background:linear-gradient(90deg,#f87171,#ef4444);border-radius:3px;"></div>
+            </div>
+          </div>
+          <div style="color:#a78bfa;font-size:12px;">答錯 ${wrongCount}/${answeredCount} 人${q.wrong_players?.length ? '：' + q.wrong_players.slice(0,5).join('、') + (q.wrong_players.length>5?'...':'') : ''}</div>
+        </button>`;
+      }).join('');
       listEl.querySelectorAll('[data-question-index]').forEach((btn) => {
         btn.addEventListener('click', () => {
           if (window.openTeacherQuestionDetail) window.openTeacherQuestionDetail(btn.dataset.questionIndex || '');

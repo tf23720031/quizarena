@@ -4505,10 +4505,9 @@ def _ensure_story_matches_table(conn):
 
 def _sm_load(token):
     with closing(sqlite3.connect(_sm_db_path())) as conn:
-        conn.row_factory = dict_factory
         _ensure_story_matches_table(conn)
         row = conn.execute('SELECT data FROM story_matches WHERE token=?', (token,)).fetchone()
-    return json.loads(row['data']) if row else None
+    return json.loads(row[0]) if row else None
 
 def _sm_save(token, match):
     ts = now_ts()
@@ -4526,23 +4525,31 @@ def _sm_cleanup():
     # Story invite rooms: waiting rooms expire after 10 minutes if not started;
     # started/ready rooms are kept for a while so both clients can poll and sync.
     ts = now_ts()
-    with closing(sqlite3.connect(_sm_db_path())) as conn:
-        conn.row_factory = dict_factory
-        _ensure_story_matches_table(conn)
-        rows = conn.execute('SELECT token, data, created_at FROM story_matches').fetchall()
-        for row in rows:
-            try:
-                match = json.loads(row['data'] or '{}')
-            except Exception:
-                conn.execute('DELETE FROM story_matches WHERE token=?', (row['token'],))
-                continue
-            created_at = int(row['created_at'] or match.get('createdAt') or 0)
-            status = str(match.get('status') or 'waiting')
-            if status == 'waiting' and created_at and created_at < ts - 600:
-                conn.execute('DELETE FROM story_matches WHERE token=?', (row['token'],))
-            elif created_at and created_at < ts - 10800:
-                conn.execute('DELETE FROM story_matches WHERE token=?', (row['token'],))
-        conn.commit()
+    try:
+        with closing(sqlite3.connect(_sm_db_path())) as conn:
+            _ensure_story_matches_table(conn)
+            rows = conn.execute('SELECT token, data, created_at FROM story_matches').fetchall()
+            to_delete = []
+            for row in rows:
+                token_val = row[0]
+                data_val = row[1]
+                created_at_val = row[2]
+                try:
+                    match = json.loads(data_val or '{}')
+                except Exception:
+                    to_delete.append(token_val)
+                    continue
+                created_at = int(created_at_val or match.get('createdAt') or 0)
+                status = str(match.get('status') or 'waiting')
+                if status == 'waiting' and created_at and created_at < ts - 600:
+                    to_delete.append(token_val)
+                elif created_at and created_at < ts - 10800:
+                    to_delete.append(token_val)
+            for token_val in to_delete:
+                conn.execute('DELETE FROM story_matches WHERE token=?', (token_val,))
+            conn.commit()
+    except Exception as _e:
+        print(f'[_sm_cleanup] error (non-fatal): {_e}')
 
 
 @app.route('/story_match_create', methods=['POST'])
@@ -6992,6 +6999,68 @@ def page_parent_report(token):
 
 # --- 教師 API ---
 
+def _teacher_overview_from_rooms_db(room_id):
+    """Build teacher overview data directly from rooms.db (fallback when analytics is empty)."""
+    with closing(get_conn()) as conn:
+        teacher_row = conn.execute('SELECT created_by FROM rooms WHERE pin=?', (room_id,)).fetchone()
+        if not teacher_row:
+            return None
+        teacher_name = str(teacher_row.get('created_by') or '').strip().lower()
+        p_rows = conn.execute(
+            'SELECT player_name FROM room_players WHERE room_pin=? AND COALESCE(is_host,0)=0 AND LOWER(player_name)!=?',
+            (room_id, teacher_name)
+        ).fetchall()
+        if not p_rows:
+            return None
+        r_rows = conn.execute(
+            'SELECT player_name, is_correct, points_earned, remain_sec, answered_at FROM room_results WHERE room_pin=?',
+            (room_id,)
+        ).fetchall()
+        q_count = conn.execute(
+            'SELECT COUNT(*) as c FROM room_questions WHERE room_pin=?', (room_id,)
+        ).fetchone()
+        total_q = int((q_count or {}).get('c') or 0)
+
+    per_player = {}
+    for p in p_rows:
+        per_player[p['player_name']] = {'correct': 0, 'wrong': 0, 'score': 0, 'times': []}
+    for r in r_rows:
+        pname = r['player_name']
+        if pname.lower() == teacher_name or pname not in per_player:
+            continue
+        if r['is_correct']:
+            per_player[pname]['correct'] += 1
+        else:
+            per_player[pname]['wrong'] += 1
+        per_player[pname]['score'] += int(r['points_earned'] or 0)
+        per_player[pname]['times'].append(int(r['remain_sec'] or 0))
+
+    students = []
+    for pname, d in per_player.items():
+        answered = d['correct'] + d['wrong']
+        accuracy = round(d['correct'] * 100 / max(answered, 1), 1)
+        avg_speed = round(sum(d['times']) / max(len(d['times']), 1), 1) if d['times'] else 0
+        students.append({
+            'player_name': pname, 'correct': d['correct'], 'wrong': d['wrong'],
+            'accuracy': accuracy, 'avg_speed_sec': avg_speed, 'rank': 0, 'score': d['score'],
+            'status': ('good' if accuracy >= 70 else 'warning' if accuracy >= 50 else 'needs_help'),
+        })
+    students.sort(key=lambda s: -s['score'])
+    for i, s in enumerate(students):
+        s['rank'] = i + 1
+
+    if not students:
+        return None
+    avg_accuracy = round(sum(s['accuracy'] for s in students) / len(students), 1)
+    needs_help = [s['player_name'] for s in students if s['status'] == 'needs_help']
+    avg_speed = round(sum(s['avg_speed_sec'] or 0 for s in students) / max(len(students), 1), 1)
+    return {
+        'room_id': room_id, 'total_students': len(students),
+        'avg_accuracy': avg_accuracy, 'avg_speed': avg_speed,
+        'needs_help': needs_help, 'students': students,
+    }
+
+
 @app.route('/api/teacher/overview/<room_id>')
 def api_teacher_overview(room_id):
     try:
@@ -7006,36 +7075,38 @@ def api_teacher_overview(room_id):
         rows = cur.fetchall()
         conn.close()
 
-        if not rows:
-            return jsonify({'total_students': 0, 'avg_accuracy': 0, 'needs_help': [], 'students': []})
-
-        students = []
-        for r in rows:
-            if is_pg:
-                name, correct, wrong, speed, rank = r
-            else:
-                name = r['player_name']; correct = r['correct_count']
-                wrong = r['wrong_count']; speed = r['avg_speed_sec']
-                rank = r['rank']
-            accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
-            students.append({
-                'player_name': name, 'correct': correct, 'wrong': wrong,
-                'accuracy': accuracy, 'avg_speed_sec': speed, 'rank': rank,
-                'status': ('good' if accuracy >= 70 else 'warning' if accuracy >= 50 else 'needs_help'),
+        if rows:
+            students = []
+            for r in rows:
+                if is_pg:
+                    name, correct, wrong, speed, rank = r
+                else:
+                    name = r['player_name']; correct = r['correct_count']
+                    wrong = r['wrong_count']; speed = r['avg_speed_sec']
+                    rank = r['rank']
+                accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+                students.append({
+                    'player_name': name, 'correct': correct, 'wrong': wrong,
+                    'accuracy': accuracy, 'avg_speed_sec': speed, 'rank': rank,
+                    'status': ('good' if accuracy >= 70 else 'warning' if accuracy >= 50 else 'needs_help'),
+                })
+            avg_accuracy = round(sum(s['accuracy'] for s in students) / len(students), 1)
+            needs_help = [s['player_name'] for s in students if s['status'] == 'needs_help']
+            avg_speed = round(sum(s['avg_speed_sec'] or 0 for s in students) / max(len(students), 1), 1)
+            return jsonify({
+                'room_id': room_id, 'total_students': len(students),
+                'avg_accuracy': avg_accuracy, 'avg_speed': avg_speed,
+                'needs_help': needs_help, 'students': students,
             })
+    except Exception as _ae:
+        print(f'[overview] analytics error (non-fatal): {_ae}')
 
-        avg_accuracy = round(sum(s['accuracy'] for s in students) / len(students), 1)
-        needs_help = [s['player_name'] for s in students if s['status'] == 'needs_help']
-        avg_speed = round(sum(s['avg_speed_sec'] or 0 for s in students) / max(len(students), 1), 1)
-
-        return jsonify({
-            'room_id': room_id,
-            'total_students': len(students),
-            'avg_accuracy': avg_accuracy,
-            'avg_speed': avg_speed,
-            'needs_help': needs_help,
-            'students': students,
-        })
+    # Fallback: rooms.db
+    try:
+        result = _teacher_overview_from_rooms_db(room_id)
+        if result:
+            return jsonify(result)
+        return jsonify({'total_students': 0, 'avg_accuracy': 0, 'needs_help': [], 'students': []})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -7055,29 +7126,49 @@ def api_teacher_student(room_id, student_name):
         row = cur.fetchone()
         conn.close()
 
-        if not row:
+        if row:
+            if is_pg:
+                correct, wrong, speed, score, rank, total, subj, answers = row
+            else:
+                correct = row['correct_count']; wrong = row['wrong_count']
+                speed = row['avg_speed_sec']; score = row['total_score']
+                rank = row['rank']; total = row['total_players']
+                subj = _parse_json(row['subject_scores'])
+                answers = _parse_json(row['raw_answers'])
+            accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+            subj_dict = subj if isinstance(subj, dict) else _parse_json(subj)
+            weak_subjects = [s for s, v in subj_dict.items() if v < 60]
+            return jsonify({
+                'student_name': student_name, 'room_id': room_id,
+                'score': score, 'rank': rank, 'total_players': total,
+                'correct_count': correct, 'wrong_count': wrong,
+                'accuracy': accuracy, 'avg_speed_sec': speed,
+                'subject_scores': subj_dict, 'weak_subjects': weak_subjects,
+                'raw_answers': answers if isinstance(answers, list) else _parse_json(answers),
+            })
+    except Exception as _ae:
+        print(f'[student] analytics error (non-fatal): {_ae}')
+
+    # Fallback: rooms.db
+    try:
+        overview = _teacher_overview_from_rooms_db(room_id)
+        if not overview:
             return jsonify({'error': 'Student not found'}), 404
-
-        if is_pg:
-            correct, wrong, speed, score, rank, total, subj, answers = row
-        else:
-            correct = row['correct_count']; wrong = row['wrong_count']
-            speed = row['avg_speed_sec']; score = row['total_score']
-            rank = row['rank']; total = row['total_players']
-            subj = _parse_json(row['subject_scores'])
-            answers = _parse_json(row['raw_answers'])
-
-        accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
-        subj_dict = subj if isinstance(subj, dict) else _parse_json(subj)
-        weak_subjects = [s for s, v in subj_dict.items() if v < 60]
-
+        students = overview.get('students', [])
+        total = len(students)
+        target = next((s for s in students if s['player_name'] == student_name), None)
+        if not target:
+            return jsonify({'error': 'Student not found'}), 404
+        rank = target.get('rank', 0)
+        accuracy = target.get('accuracy', 0)
+        score = target.get('score', 0)
         return jsonify({
             'student_name': student_name, 'room_id': room_id,
             'score': score, 'rank': rank, 'total_players': total,
-            'correct_count': correct, 'wrong_count': wrong,
-            'accuracy': accuracy, 'avg_speed_sec': speed,
-            'subject_scores': subj_dict, 'weak_subjects': weak_subjects,
-            'raw_answers': answers if isinstance(answers, list) else _parse_json(answers),
+            'correct_count': target.get('correct', 0), 'wrong_count': target.get('wrong', 0),
+            'accuracy': accuracy, 'avg_speed_sec': target.get('avg_speed_sec', 0),
+            'subject_scores': {}, 'weak_subjects': [],
+            'raw_answers': [],
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -7085,6 +7176,24 @@ def api_teacher_student(room_id, student_name):
 
 @app.route('/api/teacher/weak-questions/<room_id>')
 def api_teacher_weak_questions(room_id):
+    def _build_questions(wrong_counts, answered_counts, wrong_players_map, q_meta=None):
+        out = []
+        for qid, answered in answered_counts.items():
+            wrong = wrong_counts.get(qid, 0)
+            entry = {
+                'q_id': qid,
+                'answered_count': answered,
+                'wrong_count': wrong,
+                'error_rate': round(wrong * 100 / answered, 1) if answered else 0,
+                'wrong_players': wrong_players_map.get(qid, []),
+            }
+            if q_meta and qid in q_meta:
+                entry['title'] = q_meta[qid].get('title') or q_meta[qid].get('content') or ''
+                entry['seq'] = int(q_meta[qid].get('seq') or 0)
+            out.append(entry)
+        return sorted(out, key=lambda x: -x['error_rate'])
+
+    # Try analytics DB first
     try:
         conn, is_pg = _get_analytics_conn()
         cur = conn.cursor()
@@ -7095,38 +7204,64 @@ def api_teacher_weak_questions(room_id):
         )
         rows = cur.fetchall()
         conn.close()
-
         total_players = len(rows)
-        if not total_players:
-            return jsonify({'questions': []})
+        if total_players > 0:
+            wrong_counts = {}
+            answered_counts = {}
+            wrong_players = {}
+            for r in rows:
+                pname = r[0] if is_pg else r['player_name']
+                ans_raw = r[1] if is_pg else r['raw_answers']
+                answers = ans_raw if isinstance(ans_raw, list) else _parse_json(ans_raw)
+                for a in (answers or []):
+                    qid = str(a.get('q_id') or a.get('question_id') or '')
+                    if not qid:
+                        continue
+                    answered_counts[qid] = answered_counts.get(qid, 0) + 1
+                    if not a.get('correct', True):
+                        wrong_counts[qid] = wrong_counts.get(qid, 0) + 1
+                        wrong_players.setdefault(qid, []).append(pname)
+            questions = _build_questions(wrong_counts, answered_counts, wrong_players)
+            return jsonify({'room_id': room_id, 'total_players': total_players, 'questions': questions})
+    except Exception as _ae:
+        print(f'[weak-questions] analytics error (non-fatal): {_ae}')
 
+    # Fallback: compute directly from rooms.db room_results
+    try:
+        with closing(get_conn()) as rconn:
+            teacher_row = rconn.execute('SELECT created_by FROM rooms WHERE pin=?', (room_id,)).fetchone()
+            teacher_name = str((teacher_row or {}).get('created_by') or '').strip().lower()
+            q_rows = rconn.execute(
+                'SELECT question_id, seq, title, content FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
+                (room_id,)
+            ).fetchall()
+            if not q_rows:
+                return jsonify({'questions': []})
+            p_rows = rconn.execute(
+                'SELECT player_name FROM room_players WHERE room_pin=? AND COALESCE(is_host,0)=0 AND LOWER(player_name)!=?',
+                (room_id, teacher_name)
+            ).fetchall()
+            total_players = len(p_rows)
+            if not total_players:
+                return jsonify({'questions': []})
+            r_rows = rconn.execute(
+                'SELECT player_name, question_id, is_correct FROM room_results WHERE room_pin=?',
+                (room_id,)
+            ).fetchall()
+        q_meta = {q['question_id']: q for q in q_rows}
         wrong_counts = {}
         answered_counts = {}
-        wrong_players = {}
-        for r in rows:
-            pname = r[0] if is_pg else r['player_name']
-            ans_raw = r[1] if is_pg else r['raw_answers']
-            answers = ans_raw if isinstance(ans_raw, list) else _parse_json(ans_raw)
-            for a in (answers or []):
-                qid = a.get('q_id', '')
-                if not qid:
-                    continue
-                answered_counts[qid] = answered_counts.get(qid, 0) + 1
-                if not a.get('correct', True):
-                    wrong_counts[qid] = wrong_counts.get(qid, 0) + 1
-                    wrong_players.setdefault(qid, []).append(pname)
-
-        questions = sorted([
-            {
-                'q_id': qid,
-                'answered_count': answered,
-                'wrong_count': wrong_counts.get(qid, 0),
-                'error_rate': round(wrong_counts.get(qid, 0) * 100 / answered, 1) if answered else 0,
-                'wrong_players': wrong_players.get(qid, []),
-            }
-            for qid, answered in answered_counts.items()
-        ], key=lambda x: -x['error_rate'])
-
+        wrong_players_map = {}
+        for r in r_rows:
+            pname = str(r['player_name'] or '')
+            if pname.lower() == teacher_name:
+                continue
+            qid = str(r['question_id'] or '')
+            answered_counts[qid] = answered_counts.get(qid, 0) + 1
+            if not r['is_correct']:
+                wrong_counts[qid] = wrong_counts.get(qid, 0) + 1
+                wrong_players_map.setdefault(qid, []).append(pname)
+        questions = _build_questions(wrong_counts, answered_counts, wrong_players_map, q_meta)
         return jsonify({'room_id': room_id, 'total_players': total_players, 'questions': questions})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

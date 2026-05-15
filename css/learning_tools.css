@@ -421,10 +421,12 @@ body.dark-mode .tool-btn.primary {
 .bar-fill {
   display: block;
   width: 0;
+  max-width: 100%;
   height: 100%;
   min-width: 3px;
   border-radius: inherit;
   background: linear-gradient(90deg, #7c7bff, #48c0d8);
+  transition: width 0.6s ease;
 }
 
 .bar-fill.warn {
@@ -3162,9 +3164,11 @@ body:has(#profileAchievementsList) .tool-card {
 .story-mode-tab {
   min-height: 140px !important;
   padding: 24px 20px !important;
-  align-content: center;
-  justify-items: center;
-  gap: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
 }
 
 .story-mode-tab i {
@@ -3173,9 +3177,22 @@ body:has(#profileAchievementsList) .tool-card {
   display: grid !important;
   place-items: center;
   margin-bottom: 4px;
+  margin-top: 0 !important;
   border-radius: 18px;
   background: rgba(255,255,255,.68);
   box-shadow: 0 0 18px rgba(167,139,250,.20);
+  flex-shrink: 0 !important;
+  position: static !important;
+}
+
+.story-mode-tab strong {
+  display: block;
+  text-align: center;
+}
+
+.story-mode-tab > span {
+  display: block;
+  text-align: center;
 }
 
 .story-bank-tools-card {
