@@ -124,6 +124,7 @@ async function initRoomSelector() {
 async function analyticsLoadRoom(roomId) {
   if (!roomId) return;
   currentRoomId = roomId;
+  window.analyticsCurrentRoomId = roomId;
   _hideAllAnalyticsEmpty();
   // 切換到班級總覽頁籤
   const overviewBtn = document.querySelector('.tab-btn[data-tab="overview"]') || document.querySelectorAll('.tab-btn')[0];
@@ -280,6 +281,7 @@ async function showStudentDetail(playerName) {
   try {
     const res = await fetch(`/api/teacher/student/${currentRoomId}/${encodeURIComponent(playerName)}`);
     const s = await res.json();
+    if (!res.ok) throw new Error(s.error || `HTTP ${res.status}`);
 
     const weakHTML = s.weak_subjects?.length
       ? s.weak_subjects.map(w => `<span class="badge badge-red">${w}</span>`).join(' ')
@@ -414,6 +416,7 @@ async function fetchAiSuggestion(playerName, btn) {
       body: JSON.stringify({ student_name: playerName, room_id: currentRoomId }),
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     if (resultEl) resultEl.textContent = data.suggestion || '無法生成建議';
     btn.textContent = '已生成';
   } catch (e) {
@@ -444,6 +447,7 @@ async function generateParentReport() {
       }),
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     if (resultEl) {
       resultEl.innerHTML = `
         <div style="background:rgba(52,211,153,0.1);border:1px solid #34d399;border-radius:10px;padding:16px;">

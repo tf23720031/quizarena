@@ -6784,6 +6784,36 @@ def _compute_radar(player_name, conn, is_pg):
     }
 
 
+def _compute_radar_from_rooms_db(player_name):
+    """從 rooms.db 的 room_results 計算玩家基礎能力值（無 match_history 時備用）。"""
+    try:
+        with closing(get_conn()) as conn:
+            rows = conn.execute(
+                'SELECT is_correct, points_earned, remain_sec FROM room_results'
+                ' WHERE LOWER(player_name)=LOWER(?)',
+                (player_name,)
+            ).fetchall()
+        if not rows:
+            return None
+        total = len(rows)
+        correct = sum(1 for r in rows if r['is_correct'])
+        accuracy = int(correct * 100 / total) if total else 50
+        avg_remain = sum((r['remain_sec'] or 0) for r in rows) / total if total else 0
+        speed_score = max(0, min(100, int(50 + avg_remain * 2)))
+        total_score = sum((r['points_earned'] or 0) for r in rows)
+        stability = min(100, max(30, 70 - abs(accuracy - 60)))
+        memory = min(100, max(0, accuracy - 5))
+        reasoning = min(100, max(0, accuracy + 5))
+        subject_avg = accuracy
+        return {
+            'scores': [speed_score, accuracy, stability, memory, reasoning, subject_avg],
+            'match_count': total,
+            'has_data': True,
+        }
+    except Exception:
+        return None
+
+
 @app.route('/api/radar/<player_name>')
 def api_radar(player_name):
     labels = ['速度', '正確率', '穩定度', '記憶力', '推理能力', '各科綜合']
@@ -6792,6 +6822,13 @@ def api_radar(player_name):
         cur = conn.cursor()
 
         self_radar = _compute_radar(player_name, conn, is_pg)
+
+        # Fall back to rooms.db when analytics has no match_history for this player
+        if not self_radar['has_data']:
+            fallback = _compute_radar_from_rooms_db(player_name)
+            if fallback:
+                self_radar = fallback
+
         self_scores = self_radar['scores']
 
         cur.execute("SELECT DISTINCT player_name FROM match_history LIMIT 200")

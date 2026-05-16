@@ -386,7 +386,7 @@ function ensureQuestionDetailModal() {
 }
 
 async function openQuestionDetail(questionIndex) {
-  const roomId = latestReport?.room?.pin || $("reportPinInput")?.value || "";
+  const roomId = latestReport?.room?.pin || window.analyticsCurrentRoomId || $("reportPinInput")?.value || "";
   if (!roomId || questionIndex === "") return;
   const modal = ensureQuestionDetailModal();
   const body = $("questionDetailBody");
@@ -456,8 +456,6 @@ function renderAnalysis(data) {
         label: (player) => player.playerName,
         value: (player) => player.totalScore,
         max: analysis.maxScore,
-        widthValue: (player) => player.accuracy,
-        widthMax: 100,
         format: (value, player) => `${value} 分 / ${toNumber(player.accuracy)}%`,
         empty: "目前沒有學生資料",
       })}
@@ -584,7 +582,7 @@ async function loadReport(pinOverride = "") {
 }
 
 function csvEscape(value) {
-  const text = String(value ?? "");
+  const text = String(value ?? "").replaceAll("\r\n", " ").replaceAll("\r", " ").replaceAll("\n", " ");
   return `"${text.replaceAll('"', '""')}"`;
 }
 
@@ -597,7 +595,7 @@ function downloadBlob(content, type, filename) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 function downloadCsv() {
