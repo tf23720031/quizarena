@@ -7039,10 +7039,11 @@ def page_parent_report(token):
 def _teacher_overview_from_rooms_db(room_id):
     """Build teacher overview data directly from rooms.db (fallback when analytics is empty)."""
     with closing(get_conn()) as conn:
-        teacher_row = conn.execute('SELECT created_by FROM rooms WHERE pin=?', (room_id,)).fetchone()
-        if not teacher_row:
+        room_row = conn.execute('SELECT created_by, room_name FROM rooms WHERE pin=?', (room_id,)).fetchone()
+        if not room_row:
             return None
-        teacher_name = str(teacher_row.get('created_by') or '').strip().lower()
+        teacher_name = str(room_row.get('created_by') or '').strip().lower()
+        room_name = str(room_row.get('room_name') or room_id)
         p_rows = conn.execute(
             'SELECT player_name FROM room_players WHERE room_pin=? AND COALESCE(is_host,0)=0 AND LOWER(player_name)!=?',
             (room_id, teacher_name)
@@ -7050,13 +7051,16 @@ def _teacher_overview_from_rooms_db(room_id):
         if not p_rows:
             return None
         r_rows = conn.execute(
-            'SELECT player_name, is_correct, points_earned, remain_sec, answered_at FROM room_results WHERE room_pin=?',
+            'SELECT player_name, username, is_correct, points_earned, remain_sec FROM room_results WHERE room_pin=?',
             (room_id,)
         ).fetchall()
-        q_count = conn.execute(
-            'SELECT COUNT(*) as c FROM room_questions WHERE room_pin=?', (room_id,)
-        ).fetchone()
-        total_q = int((q_count or {}).get('c') or 0)
+
+    # Detect guest status: if any result row has a non-empty username, player is logged in
+    player_usernames = {}
+    for r in r_rows:
+        uname = str(r.get('username') or '').strip()
+        if uname:
+            player_usernames[r['player_name']] = uname
 
     per_player = {}
     for p in p_rows:
@@ -7070,17 +7074,21 @@ def _teacher_overview_from_rooms_db(room_id):
         else:
             per_player[pname]['wrong'] += 1
         per_player[pname]['score'] += int(r['points_earned'] or 0)
-        per_player[pname]['times'].append(int(r['remain_sec'] or 0))
+        if r['remain_sec'] is not None:
+            per_player[pname]['times'].append(int(r['remain_sec']))
 
     students = []
     for pname, d in per_player.items():
         answered = d['correct'] + d['wrong']
         accuracy = round(d['correct'] * 100 / max(answered, 1), 1)
         avg_speed = round(sum(d['times']) / max(len(d['times']), 1), 1) if d['times'] else 0
+        username = player_usernames.get(pname, '')
         students.append({
             'player_name': pname, 'correct': d['correct'], 'wrong': d['wrong'],
             'accuracy': accuracy, 'avg_speed_sec': avg_speed, 'rank': 0, 'score': d['score'],
             'status': ('good' if accuracy >= 70 else 'warning' if accuracy >= 50 else 'needs_help'),
+            'is_guest': not bool(username),
+            'username': username,
         })
     students.sort(key=lambda s: -s['score'])
     for i, s in enumerate(students):
@@ -7091,9 +7099,12 @@ def _teacher_overview_from_rooms_db(room_id):
     avg_accuracy = round(sum(s['accuracy'] for s in students) / len(students), 1)
     needs_help = [s['player_name'] for s in students if s['status'] == 'needs_help']
     avg_speed = round(sum(s['avg_speed_sec'] or 0 for s in students) / max(len(students), 1), 1)
+    scores = [s['score'] for s in students]
     return {
-        'room_id': room_id, 'total_students': len(students),
+        'room_id': room_id, 'room_name': room_name, 'total_students': len(students),
         'avg_accuracy': avg_accuracy, 'avg_speed': avg_speed,
+        'avg_score': round(sum(scores) / len(scores), 1),
+        'max_score': max(scores), 'min_score': min(scores),
         'needs_help': needs_help, 'students': students,
     }
 
@@ -7117,22 +7128,28 @@ def api_teacher_overview(room_id):
             for r in rows:
                 if is_pg:
                     name, correct, wrong, speed, rank = r
+                    score = 0
                 else:
                     name = r['player_name']; correct = r['correct_count']
                     wrong = r['wrong_count']; speed = r['avg_speed_sec']
-                    rank = r['rank']
+                    rank = r['rank']; score = 0
                 accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
                 students.append({
                     'player_name': name, 'correct': correct, 'wrong': wrong,
                     'accuracy': accuracy, 'avg_speed_sec': speed, 'rank': rank,
+                    'score': score, 'is_guest': False, 'username': name,
                     'status': ('good' if accuracy >= 70 else 'warning' if accuracy >= 50 else 'needs_help'),
                 })
             avg_accuracy = round(sum(s['accuracy'] for s in students) / len(students), 1)
             needs_help = [s['player_name'] for s in students if s['status'] == 'needs_help']
             avg_speed = round(sum(s['avg_speed_sec'] or 0 for s in students) / max(len(students), 1), 1)
+            scores = [s['score'] for s in students]
             return jsonify({
                 'room_id': room_id, 'total_students': len(students),
                 'avg_accuracy': avg_accuracy, 'avg_speed': avg_speed,
+                'avg_score': round(sum(scores) / len(scores), 1) if scores else 0,
+                'max_score': max(scores) if scores else 0,
+                'min_score': min(scores) if scores else 0,
                 'needs_help': needs_help, 'students': students,
             })
     except Exception as _ae:
@@ -7186,26 +7203,58 @@ def api_teacher_student(room_id, student_name):
     except Exception as _ae:
         print(f'[student] analytics error (non-fatal): {_ae}')
 
-    # Fallback: rooms.db
+    # Fallback: rooms.db (full per-question data)
     try:
-        overview = _teacher_overview_from_rooms_db(room_id)
-        if not overview:
+        with closing(get_conn()) as rconn:
+            room_row = rconn.execute('SELECT created_by FROM rooms WHERE pin=?', (room_id,)).fetchone()
+            teacher_name = str((room_row or {}).get('created_by') or '').strip().lower()
+            r_rows = rconn.execute(
+                'SELECT rr.question_id, rr.is_correct, rr.points_earned, rr.remain_sec, rr.username,'
+                ' rq.title, rq.content, rq.seq'
+                ' FROM room_results rr'
+                ' LEFT JOIN room_questions rq'
+                '   ON rq.room_pin=rr.room_pin AND rq.question_id=rr.question_id'
+                ' WHERE rr.room_pin=? AND rr.player_name=?'
+                ' ORDER BY rq.seq ASC',
+                (room_id, student_name)
+            ).fetchall()
+            # Scores for all players to compute rank
+            all_scores = rconn.execute(
+                'SELECT player_name, SUM(points_earned) as total FROM room_results'
+                ' WHERE room_pin=? GROUP BY player_name',
+                (room_id,)
+            ).fetchall()
+        if not r_rows:
             return jsonify({'error': 'Student not found'}), 404
-        students = overview.get('students', [])
-        total = len(students)
-        target = next((s for s in students if s['player_name'] == student_name), None)
-        if not target:
-            return jsonify({'error': 'Student not found'}), 404
-        rank = target.get('rank', 0)
-        accuracy = target.get('accuracy', 0)
-        score = target.get('score', 0)
+        correct = sum(1 for r in r_rows if r['is_correct'])
+        wrong = sum(1 for r in r_rows if not r['is_correct'])
+        score = sum(int(r['points_earned'] or 0) for r in r_rows)
+        times = [int(r['remain_sec']) for r in r_rows if r['remain_sec'] is not None]
+        avg_speed = round(sum(times) / max(len(times), 1), 1) if times else 0
+        accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+        username = next((str(r['username'] or '').strip() for r in r_rows if r.get('username')), '')
+        is_guest = not bool(username)
+        player_scores = {
+            r['player_name']: float(r['total'] or 0)
+            for r in all_scores if r['player_name'].lower() != teacher_name
+        }
+        sorted_players = sorted(player_scores.items(), key=lambda x: -x[1])
+        rank = next((i + 1 for i, (n, _) in enumerate(sorted_players) if n == student_name), 0)
+        total = len(sorted_players)
+        raw_answers = [{
+            'q_id': r['question_id'], 'seq': r['seq'],
+            'title': (r['title'] or r['content'] or '')[:80],
+            'correct': bool(r['is_correct']),
+            'score': int(r['points_earned'] or 0),
+        } for r in r_rows]
         return jsonify({
             'student_name': student_name, 'room_id': room_id,
             'score': score, 'rank': rank, 'total_players': total,
-            'correct_count': target.get('correct', 0), 'wrong_count': target.get('wrong', 0),
-            'accuracy': accuracy, 'avg_speed_sec': target.get('avg_speed_sec', 0),
+            'correct_count': correct, 'wrong_count': wrong,
+            'accuracy': accuracy, 'avg_speed_sec': avg_speed,
             'subject_scores': {}, 'weak_subjects': [],
-            'raw_answers': [],
+            'raw_answers': raw_answers,
+            'is_guest': is_guest, 'username': username,
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -7213,7 +7262,8 @@ def api_teacher_student(room_id, student_name):
 
 @app.route('/api/teacher/weak-questions/<room_id>')
 def api_teacher_weak_questions(room_id):
-    def _build_questions(wrong_counts, answered_counts, wrong_players_map, q_meta=None):
+    def _build_questions(wrong_counts, answered_counts, wrong_players_map, q_meta=None, wrong_opts=None):
+        from collections import Counter
         out = []
         for qid, answered in answered_counts.items():
             wrong = wrong_counts.get(qid, 0)
@@ -7227,6 +7277,8 @@ def api_teacher_weak_questions(room_id):
             if q_meta and qid in q_meta:
                 entry['title'] = q_meta[qid].get('title') or q_meta[qid].get('content') or ''
                 entry['seq'] = int(q_meta[qid].get('seq') or 0)
+            if wrong_opts and qid in wrong_opts and wrong_opts[qid]:
+                entry['wrong_option'] = Counter(wrong_opts[qid]).most_common(1)[0][0]
             out.append(entry)
         return sorted(out, key=lambda x: -x['error_rate'])
 
@@ -7282,13 +7334,14 @@ def api_teacher_weak_questions(room_id):
             if not total_players:
                 return jsonify({'questions': []})
             r_rows = rconn.execute(
-                'SELECT player_name, question_id, is_correct FROM room_results WHERE room_pin=?',
+                'SELECT player_name, question_id, is_correct, selected_json FROM room_results WHERE room_pin=?',
                 (room_id,)
             ).fetchall()
         q_meta = {q['question_id']: q for q in q_rows}
         wrong_counts = {}
         answered_counts = {}
         wrong_players_map = {}
+        wrong_opts = {}
         for r in r_rows:
             pname = str(r['player_name'] or '')
             if pname.lower() == teacher_name:
@@ -7298,7 +7351,15 @@ def api_teacher_weak_questions(room_id):
             if not r['is_correct']:
                 wrong_counts[qid] = wrong_counts.get(qid, 0) + 1
                 wrong_players_map.setdefault(qid, []).append(pname)
-        questions = _build_questions(wrong_counts, answered_counts, wrong_players_map, q_meta)
+                sel = r.get('selected_json')
+                if sel:
+                    try:
+                        parsed = json.loads(sel) if isinstance(sel, str) else sel
+                        opt = str(parsed[0] if isinstance(parsed, list) and parsed else parsed)
+                    except Exception:
+                        opt = str(sel)
+                    wrong_opts.setdefault(qid, []).append(opt)
+        questions = _build_questions(wrong_counts, answered_counts, wrong_players_map, q_meta, wrong_opts)
         return jsonify({'room_id': room_id, 'total_players': total_players, 'questions': questions})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -7327,18 +7388,42 @@ def api_teacher_ai_suggestion():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+    # Fallback: rooms.db
     if not row:
-        return jsonify({'error': 'Student data not found'}), 404
-
-    if is_pg:
-        correct, wrong, speed, subj_raw = row
+        try:
+            with closing(get_conn()) as rconn:
+                rr = rconn.execute(
+                    'SELECT rr.is_correct, rr.remain_sec, rq.title, rq.content, rq.category'
+                    ' FROM room_results rr'
+                    ' LEFT JOIN room_questions rq'
+                    '   ON rq.room_pin=rr.room_pin AND rq.question_id=rr.question_id'
+                    ' WHERE rr.room_pin=? AND rr.player_name=?',
+                    (room_id, student_name)
+                ).fetchall()
+            if not rr:
+                return jsonify({'error': 'Student data not found'}), 404
+            correct = sum(1 for r in rr if r['is_correct'])
+            wrong = sum(1 for r in rr if not r['is_correct'])
+            times = [int(r['remain_sec']) for r in rr if r['remain_sec'] is not None]
+            speed = round(sum(times) / max(len(times), 1), 1) if times else 0
+            accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+            wrong_qs = [(r['title'] or r['content'] or r['category'] or '') for r in rr if not r['is_correct']]
+            cats = [r['category'] or '未分類' for r in rr if not r['is_correct']]
+            from collections import Counter
+            weak_subjects = [c for c, _ in Counter(cats).most_common(3) if c != '未分類']
+        except Exception as e2:
+            return jsonify({'error': str(e2)}), 500
+        subj = {}
     else:
-        correct = row['correct_count']; wrong = row['wrong_count']
-        speed = row['avg_speed_sec']; subj_raw = row['subject_scores']
-
-    subj = subj_raw if isinstance(subj_raw, dict) else _parse_json(subj_raw)
-    accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
-    weak_subjects = [s for s, v in subj.items() if v < 60]
+        if is_pg:
+            correct, wrong, speed, subj_raw = row
+        else:
+            correct = row['correct_count']; wrong = row['wrong_count']
+            speed = row['avg_speed_sec']; subj_raw = row['subject_scores']
+        subj = subj_raw if isinstance(subj_raw, dict) else _parse_json(subj_raw)
+        accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+        weak_subjects = [s for s, v in subj.items() if v < 60]
+        wrong_qs = []
 
     hf_key = _os.environ.get('HF_API_KEY', '')
     hf_url = _os.environ.get('HF_API_URL', '')
@@ -7366,18 +7451,36 @@ def api_teacher_ai_suggestion():
 
     if not suggestion:
         parts = []
-        if accuracy < 50:
-            parts.append(f'建議 {student_name} 先複習基礎概念，正確率偏低（{accuracy}%）。')
-        elif accuracy < 70:
-            parts.append(f'{student_name} 的正確率有進步空間（{accuracy}%），建議多做練習題。')
+        # 1. 整體表現評估
+        if accuracy < 40:
+            parts.append(f'【整體表現】{student_name} 本次正確率為 {accuracy}%，建議先從基礎概念重新建立，逐步提升理解深度。')
+        elif accuracy < 60:
+            parts.append(f'【整體表現】{student_name} 正確率為 {accuracy}%，基礎尚可但仍有明顯進步空間，建議針對錯誤題型加強練習。')
+        elif accuracy < 80:
+            parts.append(f'【整體表現】{student_name} 正確率為 {accuracy}%，表現中等偏上，再多加練習即可大幅提升。')
         else:
-            parts.append(f'{student_name} 表現良好（{accuracy}%），可嘗試進階題庫。')
+            parts.append(f'【整體表現】{student_name} 正確率高達 {accuracy}%，表現優秀！建議挑戰進階題庫以持續成長。')
+        # 2. 弱點分析
         if weak_subjects:
-            parts.append(f'重點加強科目：{", ".join(weak_subjects)}。')
-        if speed and speed > 6:
-            parts.append('答題速度偏慢，建議計時練習以提升反應速度。')
+            parts.append(f'【弱點科目】需重點加強：{", ".join(weak_subjects)}。建議每科每天至少複習 10 分鐘。')
+        elif wrong_qs:
+            sample = [q for q in wrong_qs if q][:3]
+            if sample:
+                parts.append(f'【弱題分析】答錯的題目包括：{" / ".join(sample[:3])}，建議重新理解這些知識點。')
+        # 3. 速度建議
+        if speed and speed > 8:
+            parts.append('【答題速度】作答速度偏慢，建議平時做計時練習，熟悉題型後速度自然提升。')
         elif speed and speed < 2:
-            parts.append('答題速度很快，但請注意準確度比速度更重要。')
+            parts.append('【答題速度】作答速度非常快，請確認是認真思考後作答，而非隨意猜測。')
+        else:
+            parts.append('【答題速度】作答節奏適中，繼續保持。')
+        # 4. 複習方法
+        parts.append('【建議讀書方法】採用「錯題本」方式，每次作答後記錄錯誤原因，下次優先複習這些題目。')
+        # 5. 老師輔導建議
+        if accuracy < 60:
+            parts.append('【老師輔導】建議安排個別輔導時間，了解該生的思考盲點，給予針對性的解題指導。')
+        else:
+            parts.append('【老師輔導】該生表現良好，可引導其擔任小老師，帶動班上其他同學一起進步。')
         suggestion = '\n'.join(parts)
 
     try:
@@ -7519,8 +7622,128 @@ def api_get_parent_report(token):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/teacher/parent-report-inline', methods=['POST'])
+def api_teacher_parent_report_inline():
+    body = request.get_json() or {}
+    student_name = body.get('student_name', '')
+    room_id = body.get('room_id', '')
+    teacher_name_req = body.get('teacher_name', '')
+    if not student_name or not room_id:
+        return jsonify({'error': 'student_name and room_id required'}), 400
+    try:
+        with closing(get_conn()) as rconn:
+            room_row = rconn.execute('SELECT room_name, created_by FROM rooms WHERE pin=?', (room_id,)).fetchone()
+            room_name = str((room_row or {}).get('room_name') or room_id)
+            host_name = str((room_row or {}).get('created_by') or '').strip().lower()
+            # Student's own answers
+            r_rows = rconn.execute(
+                'SELECT rr.question_id, rr.is_correct, rr.points_earned, rr.remain_sec, rr.username,'
+                ' rq.title, rq.content, rq.seq, rq.category'
+                ' FROM room_results rr'
+                ' LEFT JOIN room_questions rq'
+                '   ON rq.room_pin=rr.room_pin AND rq.question_id=rr.question_id'
+                ' WHERE rr.room_pin=? AND rr.player_name=?'
+                ' ORDER BY rq.seq ASC',
+                (room_id, student_name)
+            ).fetchall()
+            if not r_rows:
+                return jsonify({'error': 'Student not found'}), 404
+            # All players for class stats
+            all_res = rconn.execute(
+                'SELECT player_name, SUM(points_earned) as total,'
+                ' SUM(is_correct) as correct_sum, COUNT(*) as total_q'
+                ' FROM room_results WHERE room_pin=? GROUP BY player_name',
+                (room_id,)
+            ).fetchall()
+            # Weak questions from the room
+            q_rows = rconn.execute(
+                'SELECT rr.question_id, rr.is_correct, rq.title, rq.content, rq.seq'
+                ' FROM room_results rr'
+                ' LEFT JOIN room_questions rq'
+                '   ON rq.room_pin=rr.room_pin AND rq.question_id=rr.question_id'
+                ' WHERE rr.room_pin=? AND rr.player_name=?',
+                (room_id, student_name)
+            ).fetchall()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    correct = sum(1 for r in r_rows if r['is_correct'])
+    wrong = sum(1 for r in r_rows if not r['is_correct'])
+    score = sum(int(r['points_earned'] or 0) for r in r_rows)
+    times = [int(r['remain_sec']) for r in r_rows if r['remain_sec'] is not None]
+    avg_speed = round(sum(times) / max(len(times), 1), 1) if times else 0
+    accuracy = round(correct * 100 / max(correct + wrong, 1), 1)
+    username = next((str(r['username'] or '').strip() for r in r_rows if r.get('username')), '')
+
+    player_scores = {
+        r['player_name']: float(r['total'] or 0)
+        for r in all_res if r['player_name'].lower() != host_name
+    }
+    sorted_pl = sorted(player_scores.items(), key=lambda x: -x[1])
+    rank = next((i + 1 for i, (n, _) in enumerate(sorted_pl) if n == student_name), 0)
+    total_players = len(sorted_pl)
+    scores_list = [v for _, v in sorted_pl]
+    class_stats = {
+        'avg_score': round(sum(scores_list) / max(len(scores_list), 1), 1) if scores_list else 0,
+        'max_score': int(max(scores_list)) if scores_list else 0,
+        'min_score': int(min(scores_list)) if scores_list else 0,
+        'avg_accuracy': round(
+            sum(float(r['correct_sum'] or 0) * 100 / max(int(r['total_q'] or 1), 1)
+                for r in all_res if r['player_name'].lower() != host_name) / max(total_players, 1), 1
+        ) if total_players else 0,
+        'total_players': total_players,
+    }
+
+    # Weak questions for this student
+    answered_counts, wrong_counts = {}, {}
+    for r in q_rows:
+        qid = str(r['question_id'] or '')
+        answered_counts[qid] = answered_counts.get(qid, 0) + 1
+        if not r['is_correct']:
+            wrong_counts[qid] = wrong_counts.get(qid, 0) + 1
+    weak_qs = [{
+        'q_id': qid,
+        'seq': next((r['seq'] for r in q_rows if str(r['question_id']) == qid), None),
+        'title': next((r['title'] or r['content'] or '' for r in q_rows if str(r['question_id']) == qid), ''),
+        'error_rate': round(wrong_counts.get(qid, 0) * 100 / max(answered_counts[qid], 1), 1),
+        'wrong_count': wrong_counts.get(qid, 0),
+    } for qid in wrong_counts if wrong_counts.get(qid, 0) > 0]
+    weak_qs.sort(key=lambda x: -x['error_rate'])
+
+    # AI suggestion from cache
+    ai_suggestion = ''
+    try:
+        conn2, is_pg2 = _get_analytics_conn()
+        ph = '%s' if is_pg2 else '?'
+        ai_r = conn2.cursor()
+        ai_r.execute(
+            f"SELECT ai_suggestion FROM student_analysis WHERE room_id={ph} AND student_name={ph}"
+            f" ORDER BY created_at DESC LIMIT 1",
+            (room_id, student_name)
+        )
+        row2 = ai_r.fetchone()
+        conn2.close()
+        if row2:
+            ai_suggestion = str(row2[0] if is_pg2 else row2['ai_suggestion'] or '')
+    except Exception:
+        pass
+
+    return jsonify({
+        'student_name': student_name, 'room_id': room_id, 'room_name': room_name,
+        'teacher_name': teacher_name_req,
+        'score': score, 'rank': rank, 'total_players': total_players,
+        'correct_count': correct, 'wrong_count': wrong,
+        'accuracy': accuracy, 'avg_speed_sec': avg_speed,
+        'is_guest': not bool(username), 'username': username,
+        'class_stats': class_stats,
+        'weak_questions': weak_qs[:8],
+        'ai_suggestion': ai_suggestion,
+    })
+
+
 @app.route('/api/recent-rooms')
 def api_recent_rooms():
+    rooms = []
     try:
         conn, is_pg = _get_analytics_conn()
         cur = conn.cursor()
@@ -7533,15 +7756,34 @@ def api_recent_rooms():
         """)
         rows = cur.fetchall()
         conn.close()
-        rooms = []
         for r in rows:
             if is_pg:
                 rooms.append({'room_id': r[0], 'room_name': r[1], 'played_at': str(r[2])})
             else:
                 rooms.append({'room_id': r['room_id'], 'room_name': r['room_name'], 'played_at': r['played_at']})
-        return jsonify({'rooms': rooms})
-    except Exception as e:
-        return jsonify({'rooms': [], 'error': str(e)})
+    except Exception:
+        pass
+    # Also include rooms from rooms.db that have results but no analytics record
+    try:
+        known = {r['room_id'] for r in rooms}
+        with closing(get_conn()) as rconn:
+            local_rooms = rconn.execute(
+                'SELECT pin, room_name, created_at FROM rooms ORDER BY created_at DESC LIMIT 60'
+            ).fetchall()
+            for lr in local_rooms:
+                pin = str(lr['pin'] or '')
+                if pin in known:
+                    continue
+                pc = rconn.execute(
+                    'SELECT COUNT(*) as c FROM room_results WHERE room_pin=?', (pin,)
+                ).fetchone()
+                if pc and int(pc.get('c') or 0) > 0:
+                    ts = str(lr.get('created_at') or '')
+                    rooms.append({'room_id': pin, 'room_name': lr.get('room_name') or pin, 'played_at': ts})
+    except Exception:
+        pass
+    rooms.sort(key=lambda r: r.get('played_at') or '', reverse=True)
+    return jsonify({'rooms': rooms[:50]})
 
 
 # === end ANALYTICS MODULE ===
