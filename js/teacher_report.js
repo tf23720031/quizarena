@@ -231,7 +231,11 @@ function getReportAnalysis(report) {
     .sort((a, b) => toNumber(b.accuracy) - toNumber(a.accuracy) || toNumber(a.seq) - toNumber(b.seq))
     .slice(0, 3);
   const unansweredQuestions = questions.filter((question) => toNumber(question.answered) === 0).length;
-  const maxScore = Math.max(1, ...players.map((player) => toNumber(player.totalScore)));
+  // Use sum of question max scores for bar denominator; fall back to highest player score
+  const maxPossibleScore = questions.length
+    ? Math.max(1, questions.reduce((sum, q) => sum + toNumber(q.score || 1000), 0))
+    : Math.max(1, ...players.map((player) => toNumber(player.totalScore)));
+  const maxScore = maxPossibleScore;
   const accuracyBands = [
     { label: "90-100%", count: players.filter((player) => toNumber(player.accuracy) >= 90).length },
     { label: "70-89%", count: players.filter((player) => toNumber(player.accuracy) >= 70 && toNumber(player.accuracy) < 90).length },

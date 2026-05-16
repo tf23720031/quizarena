@@ -2243,7 +2243,7 @@ def build_teacher_report_from_conn(conn, pin):
     teacher_name = str(room.get('created_by') or '').strip()
     teacher_key = teacher_name.lower()
     questions = conn.execute(
-        'SELECT question_id,seq,title,content,type,options_json,answer_json,explanation FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
+        'SELECT question_id,seq,title,content,type,options_json,answer_json,explanation,score FROM room_questions WHERE room_pin=? ORDER BY seq ASC',
         (pin,)
     ).fetchall()
     players = conn.execute('''
@@ -2309,6 +2309,7 @@ def build_teacher_report_from_conn(conn, pin):
                 for idx, option in enumerate(options)
             ],
             'explanation': q.get('explanation') or '',
+            'score': int(q.get('score') or 1000),
             'answered': 0,
             'correct': 0,
         }
@@ -6116,6 +6117,9 @@ def api_teacher_question_detail(room_id, question_index):
                 fallback = _teacher_question_detail_from_analytics(room_id, question_index)
                 if fallback:
                     return jsonify(fallback)
+                hist_fb = _teacher_question_detail_from_history(room_id, question_index)
+                if hist_fb:
+                    return jsonify(hist_fb)
                 return jsonify(success=False, message='找不到房間或歷史題目資料'), 404
             questions = conn.execute(
                 'SELECT * FROM room_questions WHERE room_pin=? ORDER BY seq ASC,id ASC',
@@ -6131,6 +6135,9 @@ def api_teacher_question_detail(room_id, question_index):
                 fallback = _teacher_question_detail_from_analytics(room_id, question_index)
                 if fallback:
                     return jsonify(fallback)
+                hist_fb = _teacher_question_detail_from_history(room_id, question_index)
+                if hist_fb:
+                    return jsonify(hist_fb)
                 return jsonify(success=False, message='找不到題目'), 404
 
             teacher_name = str(room.get('created_by') or '').strip()
@@ -6251,6 +6258,54 @@ def _teacher_question_detail_from_analytics(room_id, question_index):
         'students': students,
         'source': 'match_history',
     }
+
+
+def _teacher_question_detail_from_history(room_id, question_index):
+    """Fallback: read question detail from teacher_report_history snapshot."""
+    try:
+        report = load_teacher_report_snapshot(room_id)
+        if not report:
+            return None
+        wanted = str(question_index or '').strip()
+        questions = report.get('questions') or []
+        results = report.get('results') or []
+        target_q = None
+        for q in questions:
+            qid = str(q.get('questionId') or q.get('question_id') or '')
+            seq = q.get('seq')
+            if wanted in {qid, str(seq), str(int(seq or 0) + 1) if seq is not None else ''}:
+                target_q = q
+                break
+        if not target_q:
+            return None
+        matched_qid = target_q.get('questionId') or target_q.get('question_id') or ''
+        students = []
+        for r in results:
+            if str(r.get('questionId') or r.get('question_id') or '') != matched_qid:
+                continue
+            students.append({
+                'name': r.get('playerName') or r.get('player_name') or '',
+                'answer_text': r.get('selectedAnswerText') or r.get('selected_text') or '未保存答案內容',
+                'is_correct': bool(r.get('isCorrect') if 'isCorrect' in r else r.get('is_correct')),
+                'score': int(r.get('pointsEarned') or r.get('points_earned') or 0),
+                'time_used': None,
+                'answered_at': 0,
+            })
+        return {
+            'success': True,
+            'room_id': room_id,
+            'question_index': target_q.get('seq', question_index),
+            'question_id': matched_qid or question_index,
+            'question_text': target_q.get('content') or target_q.get('title') or f'題目 {question_index}',
+            'title': target_q.get('title') or '',
+            'type': target_q.get('type') or 'single',
+            'correct_answer': target_q.get('correctAnswerText') or '—',
+            'students': students,
+            'source': 'history_snapshot',
+        }
+    except Exception as e:
+        print(f'[_teacher_question_detail_from_history] error: {e}')
+        return None
 
 
 @app.route('/teacher_report_history')

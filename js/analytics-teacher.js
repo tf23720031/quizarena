@@ -132,6 +132,100 @@ async function analyticsLoadRoom(roomId) {
   loadWeakQuestions();
 }
 
+// ── Build analytics data from latestReport snapshot (works on Render) ───────
+function _buildOverviewFromReport(report) {
+  const players = (report.players || []).map(p => ({
+    player_name: p.playerName || '',
+    accuracy: Number(p.accuracy) || 0,
+    score: Number(p.totalScore) || 0,
+    correct: Number(p.correct) || 0,
+    wrong: Math.max(0, Number(p.answered || 0) - Number(p.correct || 0)),
+    avg_speed_sec: 0,
+    rank: 0,
+    status: Number(p.accuracy) >= 70 ? 'good' : Number(p.accuracy) >= 50 ? 'warning' : 'needs_help',
+    is_guest: false,
+    username: p.playerName || '',
+  }));
+  players.sort((a, b) => b.score - a.score);
+  players.forEach((p, i) => { p.rank = i + 1; });
+  const scores = players.map(p => p.score);
+  const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+  const avgAcc = players.length ? players.reduce((a, p) => a + p.accuracy, 0) / players.length : 0;
+  return {
+    room_id: currentRoomId,
+    total_students: players.length,
+    avg_accuracy: Math.round(avgAcc * 10) / 10,
+    avg_speed: 0,
+    avg_score: Math.round(avg),
+    max_score: scores.length ? Math.max(...scores) : 0,
+    min_score: scores.length ? Math.min(...scores) : 0,
+    needs_help: players.filter(p => p.status === 'needs_help').map(p => p.player_name),
+    students: players,
+  };
+}
+
+function _buildWeakQuestionsFromReport(report) {
+  const questions = report.questions || [];
+  const results = report.results || [];
+  const wrongCounts = {}, answeredCounts = {}, wrongPlayers = {};
+  results.forEach(r => {
+    const qid = r.questionId || '';
+    answeredCounts[qid] = (answeredCounts[qid] || 0) + 1;
+    if (!r.isCorrect) {
+      wrongCounts[qid] = (wrongCounts[qid] || 0) + 1;
+      (wrongPlayers[qid] = wrongPlayers[qid] || []).push(r.playerName || '');
+    }
+  });
+  const qMap = new Map(questions.map(q => [q.questionId || '', q]));
+  return Object.keys(answeredCounts).map(qid => {
+    const q = qMap.get(qid) || {};
+    const answered = answeredCounts[qid];
+    const wrong = wrongCounts[qid] || 0;
+    return {
+      q_id: qid,
+      title: q.title || q.content || '',
+      seq: q.seq != null ? q.seq : 0,
+      answered_count: answered,
+      wrong_count: wrong,
+      error_rate: Math.round(wrong * 1000 / Math.max(answered, 1)) / 10,
+      wrong_players: wrongPlayers[qid] || [],
+    };
+  }).filter(q => q.wrong_count > 0).sort((a, b) => b.error_rate - a.error_rate);
+}
+
+function _buildStudentDetailFromReport(report, playerName) {
+  const players = report.players || [];
+  const results = report.results || [];
+  const questions = report.questions || [];
+  const p = players.find(p => (p.playerName || '') === playerName);
+  if (!p) return null;
+  const qMap = new Map(questions.map(q => [q.questionId || '', q]));
+  const rawAnswers = results
+    .filter(r => (r.playerName || '') === playerName)
+    .map(r => {
+      const q = qMap.get(r.questionId || '') || {};
+      return { q_id: r.questionId, seq: q.seq ?? 0, title: (q.title || q.content || '').slice(0, 80), correct: !!r.isCorrect, score: Number(r.pointsEarned) || 0 };
+    }).sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  const sorted = [...players].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+  const rank = sorted.findIndex(pp => (pp.playerName || '') === playerName) + 1;
+  return {
+    student_name: playerName, room_id: currentRoomId,
+    score: Number(p.totalScore) || 0, rank, total_players: players.length,
+    correct_count: Number(p.correct) || 0,
+    wrong_count: Math.max(0, Number(p.answered || 0) - Number(p.correct || 0)),
+    accuracy: Number(p.accuracy) || 0, avg_speed_sec: 0,
+    subject_scores: {}, weak_subjects: [],
+    raw_answers: rawAnswers, is_guest: false, username: playerName,
+  };
+}
+
+function _getMatchingReport() {
+  const r = window.latestReport;
+  if (!r) return null;
+  const pin = r.room?.pin || r.room?.roomPin || '';
+  return pin === currentRoomId ? r : null;
+}
+
 async function loadOverview() {
   if (!currentRoomId) return;
   try {
@@ -140,6 +234,13 @@ async function loadOverview() {
     overviewData = await res.json();
     const students = overviewData?.students || [];
     if (!students.length) {
+      // Fall back to teacher report snapshot (solves Render ephemeral FS issue)
+      const rpt = _getMatchingReport();
+      if (rpt && (rpt.players || []).length) {
+        overviewData = _buildOverviewFromReport(rpt);
+      }
+    }
+    if (!(overviewData?.students || []).length) {
       ['overview','student','ai','parent'].forEach(t =>
         _setAnalyticsEmpty(t, true, '此房間尚無完整作答資料。'));
       return;
@@ -150,7 +251,17 @@ async function loadOverview() {
     populateStudentLists(overviewData);
   } catch (e) {
     console.error('[teacher] loadOverview error:', e);
-    _setAnalyticsEmpty('overview', true, '載入失敗：' + e.message);
+    // Final fallback: use latestReport
+    const rpt = _getMatchingReport();
+    if (rpt && (rpt.players || []).length) {
+      overviewData = _buildOverviewFromReport(rpt);
+      ['overview','student','ai','parent'].forEach(t => _setAnalyticsEmpty(t, false));
+      renderClassStats(overviewData);
+      renderStudentGrid(overviewData);
+      populateStudentLists(overviewData);
+    } else {
+      _setAnalyticsEmpty('overview', true, '載入失敗：' + e.message);
+    }
   }
 }
 
@@ -295,68 +406,78 @@ async function showStudentDetail(playerName) {
     const res = await fetch(`/api/teacher/student/${currentRoomId}/${encodeURIComponent(playerName)}`);
     const s = await res.json();
     if (!res.ok) throw new Error(s.error || `HTTP ${res.status}`);
-
-    const avatar = getAvatar(s.student_name);
-    const acc = Number(s.accuracy || 0);
-    const color = acc >= 70 ? '#34d399' : acc >= 50 ? '#fbbf24' : '#f87171';
-    const currentUser = localStorage.getItem('currentUser') || localStorage.getItem('playerName') || '';
-
-    let actionBtns = '';
-    if (s.is_guest) {
-      actionBtns = `<div style="margin-top:8px;"><span class="teacher-badge guest-badge" style="font-size:12px;padding:4px 12px;">👤 訪客玩家（未登入帳號）</span></div>`;
-    } else if (s.student_name !== currentUser) {
-      const uname = encodeURIComponent(s.username || s.student_name);
-      actionBtns = `<div class="sd-actions">
-        <a href="profile.html?user=${uname}" target="_blank" class="btn-action btn-profile">👤 查看個人資料</a>
-        <button class="btn-action btn-friend" onclick="window.sendFriendReq('${escapeHtml(s.username || s.student_name)}',this)">➕ 好友申請</button>
-      </div>`;
-    }
-
-    const answers = s.raw_answers || [];
-    const answersHtml = answers.length ? `
-      <div style="margin-top:16px;">
-        <div class="sd-section-title">📋 作答詳情</div>
-        <div style="overflow-x:auto;">
-          <table class="answer-detail-table">
-            <thead><tr><th>題號</th><th>題目</th><th>結果</th><th>得分</th></tr></thead>
-            <tbody>${answers.map(a => {
-              const ok = a.correct || a.is_correct;
-              const qLabel = a.seq != null ? `Q${Number(a.seq) + 1}` : (a.q_id || '?');
-              return `<tr class="${ok ? 'row-ok' : 'row-wrong'}">
-                <td>${qLabel}</td>
-                <td class="td-title">${escapeHtml((a.title || '').slice(0, 60))}</td>
-                <td>${ok ? '✅' : '❌'}</td>
-                <td>${a.score ?? a.points_earned ?? 0}</td>
-              </tr>`;
-            }).join('')}</tbody>
-          </table>
-        </div>
-      </div>` : '';
-
-    panel.innerHTML = `
-      <div class="student-detail-header">
-        <span class="sd-avatar">${avatar}</span>
-        <div style="flex:1;">
-          <div class="sd-name">${escapeHtml(s.student_name)}</div>
-          <div class="sd-rank">第 ${s.rank || '?'} 名 / 共 ${s.total_players || '?'} 人</div>
-          ${actionBtns}
-        </div>
-      </div>
-      <div class="stat-grid" style="margin:14px 0;">
-        <div class="stat-card"><div class="stat-value" style="color:${color};">${acc}%</div><div class="stat-label">答對率</div></div>
-        <div class="stat-card"><div class="stat-value" style="color:#60a5fa;">${Number(s.avg_speed_sec || 0).toFixed(1)}s</div><div class="stat-label">平均速度</div></div>
-        <div class="stat-card"><div class="stat-value" style="color:#f0abfc;">${s.score ?? 0}</div><div class="stat-label">本場分數</div></div>
-        <div class="stat-card"><div class="stat-value" style="color:#34d399;">${s.correct_count ?? 0}</div><div class="stat-label">答對題數</div></div>
-      </div>
-      ${(s.weak_subjects || []).length ? `
-        <div style="margin-bottom:10px;">
-          <span style="color:#a78bfa;font-size:12px;">弱點：</span>
-          ${s.weak_subjects.map(w => `<span class="badge badge-red">${escapeHtml(w)}</span>`).join(' ')}
-        </div>` : ''}
-      ${answersHtml}`;
+    _renderStudentDetail(panel, s);
   } catch (e) {
-    panel.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px;">載入失敗：${escapeHtml(e.message)}</p>`;
+    // Fall back to latestReport snapshot (solves Render ephemeral FS issue)
+    const rpt = _getMatchingReport();
+    const s = rpt ? _buildStudentDetailFromReport(rpt, playerName) : null;
+    if (s) {
+      _renderStudentDetail(panel, s);
+    } else {
+      panel.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px;">載入失敗：${escapeHtml(e.message)}</p>`;
+    }
   }
+}
+
+function _renderStudentDetail(panel, s) {
+  const avatar = getAvatar(s.student_name);
+  const acc = Number(s.accuracy || 0);
+  const color = acc >= 70 ? '#34d399' : acc >= 50 ? '#fbbf24' : '#f87171';
+  const currentUser = localStorage.getItem('currentUser') || localStorage.getItem('playerName') || '';
+
+  let actionBtns = '';
+  if (s.is_guest) {
+    actionBtns = `<div style="margin-top:8px;"><span class="teacher-badge guest-badge" style="font-size:12px;padding:4px 12px;">👤 訪客玩家（未登入帳號）</span></div>`;
+  } else if (s.student_name !== currentUser) {
+    const uname = encodeURIComponent(s.username || s.student_name);
+    actionBtns = `<div class="sd-actions">
+      <a href="profile.html?user=${uname}" target="_blank" class="btn-action btn-profile">👤 查看個人資料</a>
+      <button class="btn-action btn-friend" onclick="window.sendFriendReq('${escapeHtml(s.username || s.student_name)}',this)">➕ 好友申請</button>
+    </div>`;
+  }
+
+  const answers = s.raw_answers || [];
+  const answersHtml = answers.length ? `
+    <div style="margin-top:16px;">
+      <div class="sd-section-title">📋 作答詳情</div>
+      <div style="overflow-x:auto;">
+        <table class="answer-detail-table">
+          <thead><tr><th>題號</th><th>題目</th><th>結果</th><th>得分</th></tr></thead>
+          <tbody>${answers.map(a => {
+            const ok = a.correct || a.is_correct;
+            const qLabel = a.seq != null ? `Q${Number(a.seq) + 1}` : (a.q_id || '?');
+            return `<tr class="${ok ? 'row-ok' : 'row-wrong'}">
+              <td>${qLabel}</td>
+              <td class="td-title">${escapeHtml((a.title || '').slice(0, 60))}</td>
+              <td>${ok ? '✅' : '❌'}</td>
+              <td>${a.score ?? a.points_earned ?? 0}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>` : '';
+
+  panel.innerHTML = `
+    <div class="student-detail-header">
+      <span class="sd-avatar">${avatar}</span>
+      <div style="flex:1;">
+        <div class="sd-name">${escapeHtml(s.student_name)}</div>
+        <div class="sd-rank">第 ${s.rank || '?'} 名 / 共 ${s.total_players || '?'} 人</div>
+        ${actionBtns}
+      </div>
+    </div>
+    <div class="stat-grid" style="margin:14px 0;">
+      <div class="stat-card"><div class="stat-value" style="color:${color};">${acc}%</div><div class="stat-label">答對率</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:#60a5fa;">${Number(s.avg_speed_sec || 0).toFixed(1)}s</div><div class="stat-label">平均速度</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:#f0abfc;">${s.score ?? 0}</div><div class="stat-label">本場分數</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:#34d399;">${s.correct_count ?? 0}</div><div class="stat-label">答對題數</div></div>
+    </div>
+    ${(s.weak_subjects || []).length ? `
+      <div style="margin-bottom:10px;">
+        <span style="color:#a78bfa;font-size:12px;">弱點：</span>
+        ${s.weak_subjects.map(w => `<span class="badge badge-red">${escapeHtml(w)}</span>`).join(' ')}
+      </div>` : ''}
+    ${answersHtml}`;
 }
 
 window.sendFriendReq = async function(username, btn) {
@@ -383,81 +504,101 @@ async function loadWeakQuestions() {
     const questions = data.questions || [];
 
     if (!questions.length) {
-      _setAnalyticsEmpty('weak', true, '此房間尚無完整作答資料。');
-      const listEl = document.getElementById('weak-detail-list');
-      if (listEl) listEl.innerHTML = '';
-      if (weakBarChart) { weakBarChart.destroy(); weakBarChart = null; }
+      // Fall back to latestReport snapshot (solves Render ephemeral FS issue)
+      const rpt = _getMatchingReport();
+      const fallbackQs = rpt ? _buildWeakQuestionsFromReport(rpt) : [];
+      if (fallbackQs.length) {
+        _setAnalyticsEmpty('weak', false);
+        _renderWeakQuestions(fallbackQs);
+      } else {
+        _setAnalyticsEmpty('weak', true, '此房間尚無完整作答資料。');
+        const listEl = document.getElementById('weak-detail-list');
+        if (listEl) listEl.innerHTML = '';
+        if (weakBarChart) { weakBarChart.destroy(); weakBarChart = null; }
+      }
       return;
     }
     _setAnalyticsEmpty('weak', false);
 
-    const canvas = document.getElementById('weak-bar-chart');
-    if (canvas) {
-      _waitForChart(() => {
-        if (weakBarChart) weakBarChart.destroy();
-        const top10 = questions.slice(0, 10);
-        weakBarChart = new Chart(canvas, {
-          type: 'bar',
-          data: {
-            labels: top10.map(q => q.title ? `Q${(q.seq || 0) + 1} ${q.title}`.slice(0, 22) : `Q${(q.seq || 0) + 1}`),
-            datasets: [{
-              label: '錯誤率 %', borderWidth: 0, borderRadius: 4,
-              data: top10.map(q => q.error_rate),
-              backgroundColor: top10.map(q =>
-                q.error_rate >= 70 ? 'rgba(220,38,38,0.85)' :
-                q.error_rate >= 40 ? 'rgba(234,88,12,0.8)' : 'rgba(202,138,4,0.75)'),
-            }],
-          },
-          options: {
-            indexAxis: 'y', animation: { duration: 600 },
-            plugins: { legend: { display: false } },
-            scales: {
-              x: { min: 0, max: 100, ticks: { color: '#a78bfa', callback: v => v + '%' }, grid: { color: 'rgba(139,92,246,0.1)' } },
-              y: { ticks: { color: '#e9d5ff' }, grid: { display: false } },
-            },
-          },
-        });
-      });
-    }
-
-    const listEl = document.getElementById('weak-detail-list');
-    if (listEl) {
-      listEl.innerHTML = questions.map(q => {
-        const seq = q.seq != null ? `Q${Number(q.seq) + 1}` : '';
-        const label = q.title ? `${seq} ${escapeHtml(q.title)}` : `Q${(q.seq || 0) + 1} (${escapeHtml(q.q_id)})`;
-        const rate = q.error_rate || 0;
-        const wrongOpt = q.wrong_option
-          ? `<span class="wqc-wrong-opt">最多人選錯：<strong>${escapeHtml(q.wrong_option)}</strong></span>`
-          : '';
-        const wrongPpl = (q.wrong_players || []).length
-          ? `<span class="wqc-wrong-ppl">${q.wrong_players.slice(0, 4).map(p => escapeHtml(p)).join('、')}${q.wrong_players.length > 4 ? '…' : ''} 答錯</span>`
-          : '';
-        return `<div class="weak-q-card glass-card" data-question-index="${escapeHtml(String(q.q_id))}">
-          <div class="wqc-header">
-            <span class="wqc-label">${label}</span>
-            <span class="wqc-rate" style="background:${rate>=70?'rgba(220,38,38,0.85)':rate>=40?'rgba(234,88,12,0.75)':'rgba(202,138,4,0.7)'}">
-              ${rate}% 錯誤率
-            </span>
-          </div>
-          <div class="wqc-bar-wrap">
-            <div class="wqc-bar" style="width:${Math.min(100, rate)}%;background:${errorRateGrad(rate)};"></div>
-          </div>
-          <div class="wqc-footer">
-            <span>答錯 ${q.wrong_count || 0} / ${q.answered_count || 0} 人</span>
-            ${wrongOpt}${wrongPpl}
-          </div>
-        </div>`;
-      }).join('');
-      listEl.querySelectorAll('[data-question-index]').forEach(card => {
-        card.style.cursor = 'pointer';
-        card.addEventListener('click', () => {
-          if (window.openTeacherQuestionDetail) window.openTeacherQuestionDetail(card.dataset.questionIndex || '');
-        });
-      });
-    }
+    _renderWeakQuestions(questions);
   } catch (e) {
     console.error('[teacher] loadWeakQuestions error:', e);
-    _setAnalyticsEmpty('weak', true, '弱題分析載入失敗：' + e.message);
+    // Final fallback: use latestReport snapshot
+    const rpt = _getMatchingReport();
+    const fallbackQs = rpt ? _buildWeakQuestionsFromReport(rpt) : [];
+    if (fallbackQs.length) {
+      _setAnalyticsEmpty('weak', false);
+      _renderWeakQuestions(fallbackQs);
+    } else {
+      _setAnalyticsEmpty('weak', true, '弱題分析載入失敗：' + e.message);
+    }
+  }
+}
+
+function _renderWeakQuestions(questions) {
+  const canvas = document.getElementById('weak-bar-chart');
+  if (canvas) {
+    _waitForChart(() => {
+      if (weakBarChart) weakBarChart.destroy();
+      const top10 = questions.slice(0, 10);
+      weakBarChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: top10.map(q => q.title ? `Q${(q.seq || 0) + 1} ${q.title}`.slice(0, 22) : `Q${(q.seq || 0) + 1}`),
+          datasets: [{
+            label: '錯誤率 %', borderWidth: 0, borderRadius: 4,
+            data: top10.map(q => q.error_rate),
+            backgroundColor: top10.map(q =>
+              q.error_rate >= 70 ? 'rgba(220,38,38,0.85)' :
+              q.error_rate >= 40 ? 'rgba(234,88,12,0.8)' : 'rgba(202,138,4,0.75)'),
+          }],
+        },
+        options: {
+          indexAxis: 'y', animation: { duration: 600 },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { min: 0, max: 100, ticks: { color: '#a78bfa', callback: v => v + '%' }, grid: { color: 'rgba(139,92,246,0.1)' } },
+            y: { ticks: { color: '#e9d5ff' }, grid: { display: false } },
+          },
+        },
+      });
+    });
+  }
+
+  const listEl = document.getElementById('weak-detail-list');
+  if (listEl) {
+    listEl.innerHTML = questions.map(q => {
+      const seq = q.seq != null ? `Q${Number(q.seq) + 1}` : '';
+      const label = q.title ? `${seq} ${escapeHtml(q.title)}` : `Q${(q.seq || 0) + 1} (${escapeHtml(q.q_id)})`;
+      const rate = q.error_rate || 0;
+      const wrongOpt = q.wrong_option
+        ? `<span class="wqc-wrong-opt">最多人選錯：<strong>${escapeHtml(q.wrong_option)}</strong></span>`
+        : '';
+      const wrongPpl = (q.wrong_players || []).length
+        ? `<span class="wqc-wrong-ppl">${q.wrong_players.slice(0, 4).map(p => escapeHtml(p)).join('、')}${q.wrong_players.length > 4 ? '…' : ''} 答錯</span>`
+        : '';
+      return `<div class="weak-q-card glass-card" data-question-index="${escapeHtml(String(q.q_id))}">
+        <div class="wqc-header">
+          <span class="wqc-label">${label}</span>
+          <span class="wqc-rate" style="background:${rate>=70?'rgba(220,38,38,0.85)':rate>=40?'rgba(234,88,12,0.75)':'rgba(202,138,4,0.7)'}">
+            ${rate}% 錯誤率
+          </span>
+        </div>
+        <div class="wqc-bar-wrap">
+          <div class="wqc-bar" style="width:${Math.min(100, rate)}%;background:${errorRateGrad(rate)};"></div>
+        </div>
+        <div class="wqc-footer">
+          <span>答錯 ${q.wrong_count || 0} / ${q.answered_count || 0} 人</span>
+          ${wrongOpt}${wrongPpl}
+        </div>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('[data-question-index]').forEach(card => {
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => {
+        if (window.openTeacherQuestionDetail) window.openTeacherQuestionDetail(card.dataset.questionIndex || '');
+      });
+    });
   }
 }
 
