@@ -222,8 +222,9 @@ function _buildStudentDetailFromReport(report, playerName) {
 function _getMatchingReport() {
   const r = window.latestReport;
   if (!r) return null;
-  const pin = r.room?.pin || r.room?.roomPin || '';
-  return pin === currentRoomId ? r : null;
+  const pin = String(r.room?.pin || r.room?.roomPin || '').trim();
+  const cid = String(currentRoomId || '').trim();
+  return pin && cid && pin === cid ? r : null;
 }
 
 async function loadOverview() {
@@ -234,8 +235,21 @@ async function loadOverview() {
     overviewData = await res.json();
     const students = overviewData?.students || [];
     if (!students.length) {
-      // Fall back to teacher report snapshot (solves Render ephemeral FS issue)
-      const rpt = _getMatchingReport();
+      // Fallback 1: in-memory latestReport (fast — already loaded)
+      let rpt = _getMatchingReport();
+      // Fallback 2: fetch teacher report history from PostgreSQL (works on Render)
+      if (!rpt || !(rpt.players || []).length) {
+        try {
+          const rRes = await fetch(`/teacher_report?pin=${encodeURIComponent(currentRoomId)}`);
+          if (rRes.ok) {
+            const rData = await rRes.json();
+            if ((rData.players || []).length) {
+              rpt = rData;
+              if (!window.latestReport) window.latestReport = rData;
+            }
+          }
+        } catch {}
+      }
       if (rpt && (rpt.players || []).length) {
         overviewData = _buildOverviewFromReport(rpt);
       }
@@ -251,8 +265,16 @@ async function loadOverview() {
     populateStudentLists(overviewData);
   } catch (e) {
     console.error('[teacher] loadOverview error:', e);
-    // Final fallback: use latestReport
-    const rpt = _getMatchingReport();
+    let rpt = _getMatchingReport();
+    if (!rpt || !(rpt.players || []).length) {
+      try {
+        const rRes = await fetch(`/teacher_report?pin=${encodeURIComponent(currentRoomId)}`);
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if ((rData.players || []).length) { rpt = rData; if (!window.latestReport) window.latestReport = rData; }
+        }
+      } catch {}
+    }
     if (rpt && (rpt.players || []).length) {
       overviewData = _buildOverviewFromReport(rpt);
       ['overview','student','ai','parent'].forEach(t => _setAnalyticsEmpty(t, false));
@@ -408,8 +430,16 @@ async function showStudentDetail(playerName) {
     if (!res.ok) throw new Error(s.error || `HTTP ${res.status}`);
     _renderStudentDetail(panel, s);
   } catch (e) {
-    // Fall back to latestReport snapshot (solves Render ephemeral FS issue)
-    const rpt = _getMatchingReport();
+    let rpt = _getMatchingReport();
+    if (!rpt || !(rpt.players || []).length) {
+      try {
+        const rRes = await fetch(`/teacher_report?pin=${encodeURIComponent(currentRoomId)}`);
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if ((rData.players || []).length) { rpt = rData; if (!window.latestReport) window.latestReport = rData; }
+        }
+      } catch {}
+    }
     const s = rpt ? _buildStudentDetailFromReport(rpt, playerName) : null;
     if (s) {
       _renderStudentDetail(panel, s);
@@ -504,8 +534,16 @@ async function loadWeakQuestions() {
     const questions = data.questions || [];
 
     if (!questions.length) {
-      // Fall back to latestReport snapshot (solves Render ephemeral FS issue)
-      const rpt = _getMatchingReport();
+      let rpt = _getMatchingReport();
+      if (!rpt || !(rpt.questions || []).length) {
+        try {
+          const rRes = await fetch(`/teacher_report?pin=${encodeURIComponent(currentRoomId)}`);
+          if (rRes.ok) {
+            const rData = await rRes.json();
+            if ((rData.questions || []).length) { rpt = rData; if (!window.latestReport) window.latestReport = rData; }
+          }
+        } catch {}
+      }
       const fallbackQs = rpt ? _buildWeakQuestionsFromReport(rpt) : [];
       if (fallbackQs.length) {
         _setAnalyticsEmpty('weak', false);
@@ -523,8 +561,16 @@ async function loadWeakQuestions() {
     _renderWeakQuestions(questions);
   } catch (e) {
     console.error('[teacher] loadWeakQuestions error:', e);
-    // Final fallback: use latestReport snapshot
-    const rpt = _getMatchingReport();
+    let rpt = _getMatchingReport();
+    if (!rpt || !(rpt.questions || []).length) {
+      try {
+        const rRes = await fetch(`/teacher_report?pin=${encodeURIComponent(currentRoomId)}`);
+        if (rRes.ok) {
+          const rData = await rRes.json();
+          if ((rData.questions || []).length) { rpt = rData; if (!window.latestReport) window.latestReport = rData; }
+        }
+      } catch {}
+    }
     const fallbackQs = rpt ? _buildWeakQuestionsFromReport(rpt) : [];
     if (fallbackQs.length) {
       _setAnalyticsEmpty('weak', false);

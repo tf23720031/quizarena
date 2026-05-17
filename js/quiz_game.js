@@ -473,12 +473,14 @@ function getQuestionSeconds(q) {
 
 /* ── 排行榜 ── */
 function renderLeaderboard(items = []) {
+  if (!leaderboardList) return;
   const me = getPlayerName();
   leaderboardList.innerHTML = items.length
     ? items.map((it, i) => `
         <div class="leader-item ${it.player_name === me ? 'mine' : ''}">
-          <span>${i + 1}. ${it.player_name}</span>
-          <strong>${it.total_score}</strong>
+          <span class="leader-rank">${i + 1}</span>
+          <span class="leader-name">${it.player_name}</span>
+          <strong class="leader-score">${it.total_score}</strong>
         </div>`).join('')
     : '<div class="leader-item"><span>尚無資料</span><strong>0</strong></div>';
 }

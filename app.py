@@ -2200,6 +2200,20 @@ def option_label(idx):
 def format_answer_value(question_type, options, selected):
     if not isinstance(selected, list):
         selected = []
+    if question_type == 'fill':
+        # New format: selected = [text_answer_string]
+        # Old format: selected = [index] or []
+        if selected:
+            first = selected[0]
+            if isinstance(first, str):
+                return first.strip() if first.strip() else '未填答'
+            try:
+                idx = int(first)
+                if 0 <= idx < len(options):
+                    return str((options[idx] or {}).get('text') or '').strip() or '未選擇'
+            except Exception:
+                pass
+        return '未選擇'
     if question_type == 'matching':
         pairs = []
         for left_idx, right_idx in enumerate(selected):
@@ -2343,7 +2357,7 @@ def build_teacher_report_from_conn(conn, pin):
             selected_indexes = []
         options = q_options.get(row['question_id']) or []
         selected_text = format_answer_value(q_types.get(row['question_id'], 'single'), options, selected_indexes)
-        if q_types.get(row['question_id']) == 'fill' and not selected_indexes:
+        if q_types.get(row['question_id']) == 'fill' and selected_text in ('未選擇', ''):
             selected_text = '填答內容未保存'
         if is_correct and row['question_id'] in per_question and per_question[row['question_id']].get('correctAnswerText') in {'', '-', '無'}:
             per_question[row['question_id']]['correctAnswerText'] = selected_text
@@ -3209,6 +3223,90 @@ def api_wrong_book_mark_reviewed():
             """, (int(mastered), ts, username, question_id))
             conn.commit()
     return jsonify({'success': True})
+
+
+@app.route('/api/wrong-book/rooms', methods=['GET'])
+def api_wrong_book_rooms():
+    """Return rooms the player participated in, for the wrong book room-lookup feature."""
+    username = request.args.get('username', '').strip()
+    player_name = request.args.get('player_name', '').strip()
+    if not username and not player_name:
+        return jsonify({'success': False, 'message': '未登入'}), 401
+    rooms = []
+    seen_pins = set()
+    with closing(get_conn()) as conn:
+        # Find all room_pins this player has results in
+        rows = conn.execute(
+            '''SELECT DISTINCT rr.room_pin, r.room_name, r.bank_title, r.created_at
+               FROM room_results rr
+               LEFT JOIN rooms r ON r.pin = rr.room_pin
+               WHERE (LOWER(rr.username)=LOWER(?) AND ? != '') OR (LOWER(rr.player_name)=LOWER(?) AND ? != '')
+               ORDER BY rr.room_pin DESC''',
+            (username, username, player_name, player_name)
+        ).fetchall()
+        for row in rows:
+            pin = str(row.get('room_pin') or '')
+            if pin in seen_pins:
+                continue
+            seen_pins.add(pin)
+            rooms.append({
+                'pin': pin,
+                'room_name': row.get('room_name') or row.get('bank_title') or pin,
+                'created_at': int(row.get('created_at') or 0),
+            })
+    # Also check teacher_report_history for rooms they played (on Render)
+    try:
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT pin, room_name, bank_title, created_at FROM teacher_report_history ORDER BY saved_at DESC LIMIT 50"
+                    )
+                    for row in cur.fetchall():
+                        pin = str(row[0] or '')
+                        if pin in seen_pins:
+                            continue
+                        seen_pins.add(pin)
+                        rooms.append({
+                            'pin': pin,
+                            'room_name': row[1] or row[2] or pin,
+                            'created_at': int(row[3] or 0),
+                        })
+    except Exception:
+        pass
+    rooms.sort(key=lambda r: -r['created_at'])
+    return jsonify({'success': True, 'rooms': rooms[:50]})
+
+
+@app.route('/api/wrong-book/room-players', methods=['GET'])
+def api_wrong_book_room_players():
+    """Return players + stats for a given room, for radar comparison in wrong book."""
+    room_id = request.args.get('room_id', '').strip()
+    if not room_id:
+        return jsonify({'success': False, 'message': '缺少 room_id'}), 400
+    result = _teacher_overview_from_rooms_db(room_id)
+    if not result or not result.get('students'):
+        # Try teacher_report_history snapshot
+        try:
+            snap = load_teacher_report_snapshot(room_id)
+            if snap and (snap.get('players') or []):
+                players = snap['players']
+                students = [
+                    {
+                        'player_name': p.get('playerName') or '',
+                        'accuracy': round(float(p.get('accuracy') or 0), 1),
+                        'score': int(p.get('totalScore') or 0),
+                        'correct': int(p.get('correct') or 0),
+                        'wrong': max(0, int(p.get('answered') or 0) - int(p.get('correct') or 0)),
+                        'avg_speed_sec': 0,
+                    }
+                    for p in players
+                ]
+                return jsonify({'success': True, 'students': students, 'room_name': snap.get('room', {}).get('roomName') or room_id})
+        except Exception:
+            pass
+        return jsonify({'success': True, 'students': [], 'room_name': room_id})
+    return jsonify({'success': True, 'students': result.get('students', []), 'room_name': result.get('room_name', room_id)})
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -4624,6 +4722,38 @@ def story_match_state_api(token):
     return jsonify(success=True, match=match)
 
 
+@app.route('/story_match_ping', methods=['POST'])
+def story_match_ping_api():
+    try:
+        data = request.get_json() or {}
+        token = str(data.get('token') or '').strip().upper()
+        player_name = str(data.get('playerName') or '').strip()
+        match = _sm_load(token)
+        if not match:
+            return jsonify(success=False, message='match not found'), 404
+        match.setdefault('lastSeen', {})[player_name] = now_ts()
+        _sm_save(token, match)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+
+@app.route('/story_match_leave', methods=['POST'])
+def story_match_leave_api():
+    try:
+        data = request.get_json() or {}
+        token = str(data.get('token') or '').strip().upper()
+        player_name = str(data.get('playerName') or '').strip()
+        match = _sm_load(token)
+        if not match:
+            return jsonify(success=True)
+        match.setdefault('disconnected', {})[player_name] = now_ts()
+        _sm_save(token, match)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+
 def _story_stage_wrong_row(stage, source_title):
     stage = stage if isinstance(stage, dict) else {}
     options = stage.get('options', [])
@@ -5899,11 +6029,13 @@ def submit_answer():
             else:
                 points = 0
 
+            # For fill-blank, store the typed text as [text]; for others store index list
+            stored_selected = [text_answer] if (question_type == 'fill' and text_answer) else selected
             conn.execute('''
                 INSERT INTO room_results
                 (room_pin,player_name,username,question_id,selected_json,is_correct,points_earned,answer_order,remain_sec,answered_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?)
-            ''', (pin, player_name, username, question_id, json.dumps(selected, ensure_ascii=False),
+            ''', (pin, player_name, username, question_id, json.dumps(stored_selected, ensure_ascii=False),
                   is_correct, points, answer_order, remain_sec, now_ts()))
 
             if not is_correct:
@@ -6154,8 +6286,10 @@ def api_teacher_question_detail(room_id, question_index):
             ''', (room_id, target['question_id'])).fetchall()
 
         options = json.loads(target.get('options_json') or '[]')
-        answer_indexes = sorted(json.loads(target.get('answer_json') or '[]'))
         question_type = str(target.get('type') or 'single')
+        _raw_ai = [int(x) for x in json.loads(target.get('answer_json') or '[]')]
+        # Preserve ordering for matching (each position maps left→right); sort others
+        answer_indexes = _raw_ai if question_type == 'matching' else sorted(_raw_ai)
         result_by_player = {r['player_name']: r for r in result_rows}
         time_limit = int(''.join(filter(str.isdigit, target.get('time_label') or '20')) or 20)
         students = []
@@ -6869,6 +7003,60 @@ def _compute_radar_from_rooms_db(player_name):
         return None
 
 
+def _compute_radar_from_history(player_name):
+    """Compute radar from teacher_report_history (PostgreSQL, persists on Render)."""
+    try:
+        all_reports = []
+        if use_postgres_user_store():
+            with closing(get_pg_conn()) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT report_json FROM teacher_report_history")
+                    for row in cur.fetchall():
+                        try:
+                            r = json.loads(row[0] if isinstance(row[0], str) else json.dumps(row[0]))
+                            all_reports.append(r)
+                        except Exception:
+                            pass
+        else:
+            with closing(sqlite3.connect(USERS_DB_PATH)) as conn:
+                conn.row_factory = dict_factory
+                for row in conn.execute("SELECT report_json FROM teacher_report_history").fetchall():
+                    try:
+                        all_reports.append(json.loads(row['report_json'] or '{}'))
+                    except Exception:
+                        pass
+        correct_total = 0; answered_total = 0; speed_sum = 0; speed_count = 0; score_sum = 0; match_count = 0
+        for report in all_reports:
+            results = report.get('results') or []
+            players = report.get('players') or []
+            my_results = [r for r in results if str(r.get('playerName') or r.get('player_name') or '').lower() == player_name.lower()]
+            if not my_results:
+                continue
+            match_count += 1
+            for r in my_results:
+                answered_total += 1
+                correct_total += 1 if r.get('isCorrect') or r.get('is_correct') else 0
+            my_summary = next((p for p in players if str(p.get('playerName') or '').lower() == player_name.lower()), None)
+            if my_summary:
+                score_sum += int(my_summary.get('totalScore') or 0)
+        if match_count == 0:
+            return None
+        accuracy = round(correct_total * 100 / max(answered_total, 1))
+        stability = min(100, round(accuracy * 0.9 + 10))
+        scores = [
+            min(100, max(0, 100 - round(50 / match_count))),  # 速度 (proxy from match count)
+            accuracy,                    # 正確率
+            stability,                   # 穩定度
+            min(100, accuracy + 5),      # 記憶力
+            min(100, accuracy - 5),      # 推理能力
+            min(100, round(score_sum / max(match_count, 1) / 100)),  # 各科綜合
+        ]
+        return {'scores': scores, 'match_count': match_count, 'has_data': True}
+    except Exception as e:
+        print(f'[_compute_radar_from_history] error: {e}')
+        return None
+
+
 @app.route('/api/radar/<player_name>')
 def api_radar(player_name):
     labels = ['速度', '正確率', '穩定度', '記憶力', '推理能力', '各科綜合']
@@ -6878,9 +7066,14 @@ def api_radar(player_name):
 
         self_radar = _compute_radar(player_name, conn, is_pg)
 
-        # Fall back to rooms.db when analytics has no match_history for this player
+        # Fallback 1: rooms.db (works locally)
         if not self_radar['has_data']:
             fallback = _compute_radar_from_rooms_db(player_name)
+            if fallback:
+                self_radar = fallback
+        # Fallback 2: teacher_report_history (works on Render)
+        if not self_radar['has_data']:
+            fallback = _compute_radar_from_history(player_name)
             if fallback:
                 self_radar = fallback
 

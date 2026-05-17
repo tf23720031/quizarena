@@ -780,3 +780,181 @@ $('wbSortSelect')?.addEventListener('change', (e) => {
 
 // 初始載入
 loadWrongBook();
+
+// ── 查找房間 & 玩家雷達比較 ───────────────────────────────────────────
+let wbRoomPlayers = []; // cached players for selected room
+let wbRoomRadarChart = null;
+
+async function loadWbRooms() {
+  const username = getCurrentUser();
+  const sel = $('wbRoomSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">載入中...</option>';
+  try {
+    const playerName = localStorage.getItem('playerName') || '';
+    const q = `username=${encodeURIComponent(username)}&player_name=${encodeURIComponent(playerName)}`;
+    const res = await fetch(`/api/wrong-book/rooms?${q}`);
+    const d = await res.json();
+    const rooms = d.rooms || [];
+    sel.innerHTML = '<option value="">— 選擇房間 —</option>';
+    if (!rooms.length) {
+      sel.innerHTML += '<option disabled>沒有歷史房間紀錄</option>';
+      return;
+    }
+    rooms.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.pin;
+      opt.textContent = `${r.room_name} (PIN: ${r.pin})`;
+      sel.appendChild(opt);
+    });
+    showToast(`載入了 ${rooms.length} 個房間`);
+  } catch (e) {
+    sel.innerHTML = '<option value="">載入失敗</option>';
+    showToast('房間載入失敗：' + e.message);
+  }
+}
+
+async function loadWbRoomPlayers(pin) {
+  const wrap = $('wbRoomPlayerWrap');
+  const list = $('wbRoomPlayerList');
+  const cmpSel = $('wbComparePlayerSelect');
+  if (!pin || !wrap || !list || !cmpSel) return;
+  list.innerHTML = '<p style="color:#a78bfa;font-size:.85rem;">載入中...</p>';
+  wrap.style.display = '';
+  try {
+    const res = await fetch(`/api/wrong-book/room-players?room_id=${encodeURIComponent(pin)}`);
+    const d = await res.json();
+    wbRoomPlayers = d.students || [];
+    if (!wbRoomPlayers.length) {
+      list.innerHTML = '<p style="color:#aaa;font-size:.85rem;">此房間無玩家資料</p>';
+      cmpSel.innerHTML = '<option value="">— 無玩家 —</option>';
+      return;
+    }
+    // Sort by score
+    wbRoomPlayers.sort((a, b) => (b.score || 0) - (a.score || 0));
+    // Render mini player list
+    list.innerHTML = wbRoomPlayers.map((p, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:8px;background:rgba(124,58,237,0.07);margin-bottom:4px">
+        <span style="color:#a78bfa;font-weight:700;min-width:24px">#${i+1}</span>
+        <span style="flex:1">${escapeHtml(p.player_name)}</span>
+        <span style="color:#34d399">${p.score ?? 0} 分</span>
+        <span style="color:#60a5fa">${p.accuracy ?? 0}%</span>
+      </div>`).join('');
+    // Populate compare selector
+    const me = getCurrentUser();
+    cmpSel.innerHTML = wbRoomPlayers
+      .filter(p => (p.player_name || '').toLowerCase() !== me.toLowerCase())
+      .map(p => `<option value="${escapeHtml(p.player_name)}">${escapeHtml(p.player_name)} (${p.accuracy}% · ${p.score}分)</option>`)
+      .join('');
+  } catch (e) {
+    list.innerHTML = `<p style="color:#f87171;font-size:.85rem;">載入失敗：${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderWbRoomRadar(myName, opponentName) {
+  const canvas = $('wbRoomRadarCanvas');
+  const legend = $('wbRoomRadarLegend');
+  const wrap = $('wbRoomRadarWrap');
+  if (!canvas || !legend || !wrap) return;
+
+  const me = wbRoomPlayers.find(p => p.player_name.toLowerCase() === (myName || '').toLowerCase());
+  const opp = wbRoomPlayers.find(p => p.player_name === opponentName);
+  if (!me && !opp) { showToast('找不到玩家資料'); return; }
+
+  const maxScore = Math.max(1, ...wbRoomPlayers.map(p => p.score || 0));
+
+  function toRadarScores(p) {
+    if (!p) return [0, 0, 0, 0, 0, 0];
+    const acc = Number(p.accuracy || 0);
+    const scoreRatio = Math.round(Math.min(100, ((p.score || 0) / maxScore) * 100));
+    const rankRatio = Math.round(Math.max(0, 100 - ((p.rank || wbRoomPlayers.length) - 1) / Math.max(wbRoomPlayers.length - 1, 1) * 100));
+    return [
+      Math.round(acc * 0.8 + rankRatio * 0.2),  // 答題速度 (proxy)
+      acc,                                         // 正確率
+      Math.min(100, acc + 5),                     // 穩定度
+      scoreRatio,                                  // 積分表現
+      Math.min(100, Math.round(acc * 0.9)),        // 推理能力
+      rankRatio,                                   // 排名表現
+    ];
+  }
+
+  const labels = ['答題速度', '正確率', '穩定度', '積分表現', '推理能力', '排名表現'];
+  const myScores = toRadarScores(me);
+  const oppScores = toRadarScores(opp);
+
+  wrap.style.display = '';
+
+  if (typeof window.Chart === 'undefined') {
+    legend.textContent = '雷達圖元件未載入，請重新整理頁面。';
+    return;
+  }
+  if (wbRoomRadarChart) wbRoomRadarChart.destroy();
+  wbRoomRadarChart = new window.Chart(canvas, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: me ? me.player_name : '我',
+          data: myScores,
+          backgroundColor: 'rgba(124,58,237,0.22)',
+          borderColor: '#7c3aed',
+          borderWidth: 2,
+          pointBackgroundColor: '#7c3aed',
+          pointRadius: 4,
+        },
+        ...(opp ? [{
+          label: opp.player_name,
+          data: oppScores,
+          backgroundColor: 'rgba(251,191,36,0.18)',
+          borderColor: '#fbbf24',
+          borderWidth: 2,
+          pointBackgroundColor: '#fbbf24',
+          pointRadius: 4,
+        }] : []),
+      ],
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 900, easing: 'easeInOutQuart' },
+      plugins: { legend: { labels: { color: '#e9d5ff', font: { size: 12 } } } },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { color: '#6d28d9', backdropColor: 'transparent', stepSize: 20 },
+          grid: { color: 'rgba(139,92,246,0.2)' },
+          angleLines: { color: 'rgba(139,92,246,0.3)' },
+          pointLabels: { color: '#c4b5fd', font: { size: 12 } },
+        },
+      },
+    },
+  });
+
+  // Legend
+  legend.innerHTML = [
+    me ? `<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#7c3aed"></span> ${escapeHtml(me.player_name)}: 正確率 ${me.accuracy}% · ${me.score}分</span>` : '',
+    opp ? `<span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#fbbf24"></span> ${escapeHtml(opp.player_name)}: 正確率 ${opp.accuracy}% · ${opp.score}分</span>` : '',
+  ].filter(Boolean).join('');
+}
+
+// Bind room lookup events
+$('wbLoadRoomsBtn')?.addEventListener('click', loadWbRooms);
+$('wbRoomSelect')?.addEventListener('change', (e) => {
+  const pin = e.target.value;
+  if (pin) loadWbRoomPlayers(pin);
+  else {
+    const wrap = $('wbRoomPlayerWrap');
+    const radarWrap = $('wbRoomRadarWrap');
+    if (wrap) wrap.style.display = 'none';
+    if (radarWrap) radarWrap.style.display = 'none';
+  }
+});
+$('wbCompareRadarBtn')?.addEventListener('click', () => {
+  const opponentName = $('wbComparePlayerSelect')?.value || '';
+  const myName = getCurrentUser() || localStorage.getItem('playerName') || '';
+  renderWbRoomRadar(myName, opponentName);
+});
+// Auto-load rooms on page load if user is logged in
+setTimeout(() => {
+  if (getCurrentUser()) loadWbRooms();
+}, 1200);

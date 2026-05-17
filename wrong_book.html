@@ -146,6 +146,32 @@
       </div>
     </section>
 
+    <!-- 查找房間 & 玩家雷達比較 -->
+    <section class="tool-card" id="wbRoomLookupSection">
+      <div class="tool-card-head">
+        <h2><i class="fa-solid fa-magnifying-glass-chart"></i> 查找房間</h2>
+        <span class="tool-note">選擇歷史房間，與其他玩家比較能力</span>
+      </div>
+      <div class="wb-room-controls">
+        <select id="wbRoomSelect" class="wb-sort-select" style="flex:1;min-width:160px">
+          <option value="">— 選擇房間 —</option>
+        </select>
+        <button id="wbLoadRoomsBtn" class="tool-btn" type="button"><i class="fa-solid fa-rotate"></i> 載入房間</button>
+      </div>
+      <div id="wbRoomPlayerWrap" style="display:none;margin-top:12px;">
+        <div class="wb-filter-row" style="align-items:center;gap:8px;">
+          <label class="wb-radar-label">比較對象：</label>
+          <select id="wbComparePlayerSelect" class="wb-sort-select" style="flex:1"></select>
+          <button id="wbCompareRadarBtn" class="tool-btn" type="button"><i class="fa-solid fa-chart-radar"></i> 生成雷達圖</button>
+        </div>
+        <div id="wbRoomPlayerList" style="margin-top:8px;"></div>
+      </div>
+      <div id="wbRoomRadarWrap" style="display:none;margin-top:16px;">
+        <canvas id="wbRoomRadarCanvas" height="300" aria-label="房間能力比較雷達圖"></canvas>
+        <div id="wbRoomRadarLegend" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;font-size:.82rem;"></div>
+      </div>
+    </section>
+
     <!-- 能力雷達圖（對比全體與第一名） — 移回 tool-shell -->
     <section class="tool-card">
       <div class="tool-card-head">

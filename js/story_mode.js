@@ -1337,6 +1337,9 @@ const DUEL_TOTAL = 20;
 const DUEL_TIME = 10;
 const MAX_SCORE_PER_Q = 1000;
 
+const RECONNECT_TIMEOUT_MS = 60000;  // 60s reconnect window
+const OPPONENT_OFFLINE_THRESHOLD_MS = 20000; // treat as offline after 20s no heartbeat
+
 const duelState = {
   mode: "pvp",         // "pvp" | "coop"
   stages: [],
@@ -1345,16 +1348,20 @@ const duelState = {
   names: ["你", "對手"],
   answered: false,     // 本題是否已有人送出（合作用）
   timerInterval: null,
+  heartbeatInterval: null,
   timeLeft: DUEL_TIME,
   matchToken: "",
   playerName: "",
   opponentName: "",
+  disconnectTimer: null,   // countdown until opponent declared gone
+  opponentOfflineAt: 0,    // ts when opponent was first detected offline
 };
 
 function normalizeAvatarValue(value) {
   const avatar = String(value || "").trim();
   if (!avatar || avatar === "null" || avatar === "undefined") return "";
-  if (avatar.startsWith("data:") || avatar.startsWith("http") || avatar.startsWith("images/") || avatar.startsWith("/images/")) return avatar;
+  // Accept data URLs, absolute URLs, any server-relative paths (/...), local image paths
+  if (avatar.startsWith("data:") || avatar.startsWith("http") || avatar.startsWith("images/") || avatar.startsWith("/")) return avatar;
   if (avatar.startsWith("style:")) return avatar;
   return "";
 }
@@ -1391,20 +1398,122 @@ function getMyAvatar() {
   for (const key of keys) {
     try {
       const p = JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || "null");
-      const avatar = normalizeAvatarValue(p?.avatar || p?.avatarUrl || p?.photo || p?.face || p?.image);
-      if (avatar) return avatar;
-      if (p?.face || p?.hair || p?.eyes) {
-        return "style:" + JSON.stringify({
-          face: p.face || "images/face/face.png",
-          hair: p.hair || "images/hair/hair01.png",
-          eyes: p.eyes || "images/face/eyes01.png",
-          eyeOffset: Number(p.eyeOffset || p.eyesOffsetY || p.eyes_offset_y || 0),
-        });
+      if (!p) continue;
+      // If avatar_type is uploaded_image, only use the photo/avatar URL — never fall back to composite
+      const isUploaded = (p.avatar_type || '').toLowerCase().includes('upload');
+      const photoUrl = normalizeAvatarValue(p?.avatar || p?.avatarUrl || p?.photo || p?.image);
+      if (isUploaded && photoUrl) return photoUrl;
+      // For non-uploaded, try avatar URL first, then composite style
+      if (!isUploaded) {
+        const avatarUrl = normalizeAvatarValue(p?.avatar || p?.avatarUrl);
+        if (avatarUrl) return avatarUrl;
+        if (p?.face || p?.hair || p?.eyes) {
+          return "style:" + JSON.stringify({
+            face: p.face || "images/face/face.png",
+            hair: p.hair || "images/hair/hair01.png",
+            eyes: p.eyes || "images/face/eyes01.png",
+            eyeOffset: Number(p.eyeOffset || p.eyesOffsetY || p.eyes_offset_y || 0),
+          });
+        }
       }
     } catch {}
   }
   return "";
 }
+
+// ── Heartbeat ───────────────────────────────────────────────────────────────
+function startHeartbeat() {
+  stopHeartbeat();
+  if (!duelState.matchToken || !duelState.playerName) return;
+  const ping = () => {
+    if (!duelState.matchToken) return;
+    api("/story_match_ping", {
+      method: "POST",
+      body: JSON.stringify({ token: duelState.matchToken, playerName: duelState.playerName }),
+    }).catch(() => {});
+  };
+  ping(); // immediate first ping
+  duelState.heartbeatInterval = setInterval(ping, 10000);
+}
+
+function stopHeartbeat() {
+  if (duelState.heartbeatInterval) {
+    clearInterval(duelState.heartbeatInterval);
+    duelState.heartbeatInterval = null;
+  }
+}
+
+function sendLeave() {
+  if (!duelState.matchToken || !duelState.playerName) return;
+  const body = JSON.stringify({ token: duelState.matchToken, playerName: duelState.playerName });
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon("/story_match_leave", new Blob([body], { type: "application/json" }));
+  } else {
+    fetch("/story_match_leave", { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
+  }
+}
+
+// ── Opponent offline UI ──────────────────────────────────────────────────────
+function showOpponentOfflineOverlay(opponentName, secondsLeft, onExpire) {
+  let overlay = document.getElementById("storyDisconnectOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "storyDisconnectOverlay";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;font-family:inherit";
+    overlay.innerHTML = `
+      <div style="background:#1e1e2e;border-radius:16px;padding:32px 40px;text-align:center;max-width:360px;width:90%">
+        <div style="font-size:3rem;margin-bottom:12px">📡</div>
+        <h2 style="margin:0 0 8px;font-size:1.3rem" id="sdoTitle">對方暫時離線</h2>
+        <p style="margin:0 0 20px;color:#aaa;font-size:.95rem" id="sdoSubtitle">等待重新連線...</p>
+        <div style="font-size:2.2rem;font-weight:700;color:#a78bfa" id="sdoCountdown">${secondsLeft}</div>
+        <p style="margin:8px 0 0;color:#666;font-size:.85rem">秒後結束遊戲</p>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = "flex";
+  document.getElementById("sdoTitle").textContent = `${opponentName} 暫時離線`;
+
+  let remaining = secondsLeft;
+  const cdEl = document.getElementById("sdoCountdown");
+  if (cdEl) cdEl.textContent = remaining;
+
+  duelState.disconnectTimer = setInterval(() => {
+    remaining--;
+    if (cdEl) cdEl.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(duelState.disconnectTimer);
+      duelState.disconnectTimer = null;
+      hideOpponentOfflineOverlay();
+      onExpire();
+    }
+  }, 1000);
+}
+
+function hideOpponentOfflineOverlay() {
+  const overlay = document.getElementById("storyDisconnectOverlay");
+  if (overlay) overlay.style.display = "none";
+  if (duelState.disconnectTimer) {
+    clearInterval(duelState.disconnectTimer);
+    duelState.disconnectTimer = null;
+  }
+}
+
+// Returns true if opponent is considered offline based on lastSeen in match state
+function isOpponentOffline(matchData) {
+  const lastSeen = matchData?.lastSeen?.[duelState.opponentName];
+  if (!lastSeen) return false; // no heartbeat data yet — don't assume offline
+  return (Date.now() / 1000 - lastSeen) > (OPPONENT_OFFLINE_THRESHOLD_MS / 1000);
+}
+
+// ── Page leave handlers ──────────────────────────────────────────────────────
+window.addEventListener("beforeunload", () => {
+  stopHeartbeat();
+  sendLeave();
+});
+window.addEventListener("pagehide", () => {
+  stopHeartbeat();
+  sendLeave();
+});
 
 function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRight, matchToken = "") {
   duelState.mode = mode;
@@ -1421,6 +1530,8 @@ function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRigh
   duelState.matchToken = matchToken || "";
   duelState.avatarLeft = avatarLeft || "";
   duelState.avatarRight = avatarRight || "";
+  duelState.opponentOfflineAt = 0;
+  hideOpponentOfflineOverlay();
 
   // 顯示雙人區塊，隱藏單人
   $("storySoloSection").style.display = "none";
@@ -1436,6 +1547,7 @@ function startDuelGame(nameLeft, nameRight, mode, stages, avatarLeft, avatarRigh
   renderDuelAvatar($("duelAvatarLeft"), avatarLeft || getMyAvatar(), "🧑");
   renderDuelAvatar($("duelAvatarRight"), avatarRight || "", "🧑");
 
+  startHeartbeat();
   renderDuelQuestion();
 }
 
@@ -1540,19 +1652,45 @@ async function waitForOpponentAnswer(stageIndex) {
     statusEl.textContent = "對手作答中...";
     statusEl.style.display = "";
   }
-  for (let i = 0; i < 24; i++) {
+
+  const deadline = Date.now() + RECONNECT_TIMEOUT_MS + 5000; // wait up to 65s total
+  let disconnectShown = false;
+
+  while (Date.now() < deadline) {
     try {
       const data = await api(`/story_match_state/${encodeURIComponent(duelState.matchToken)}`);
-      const answer = data.match?.answers?.[String(stageIndex)]?.[duelState.opponentName];
+      const matchData = data.match;
+      const answer = matchData?.answers?.[String(stageIndex)]?.[duelState.opponentName];
       if (answer) {
         if (statusEl) statusEl.style.display = "none";
+        if (disconnectShown) hideOpponentOfflineOverlay();
         return answer;
+      }
+
+      // Detect if opponent has gone offline (no heartbeat recently)
+      if (isOpponentOffline(matchData) && !disconnectShown && !duelState.disconnectTimer) {
+        disconnectShown = true;
+        duelState.opponentOfflineAt = Date.now();
+        const secLeft = Math.floor(RECONNECT_TIMEOUT_MS / 1000);
+        showOpponentOfflineOverlay(duelState.opponentName, secLeft, () => {
+          // 60s expired — end the game
+          if (statusEl) statusEl.style.display = "none";
+          endDuelGame();
+        });
+      }
+
+      // If opponent reconnected (no longer offline), hide the overlay
+      if (disconnectShown && !isOpponentOffline(matchData)) {
+        hideOpponentOfflineOverlay();
+        disconnectShown = false;
+        if (statusEl) { statusEl.textContent = "對手重新連線，等待作答..."; statusEl.style.display = ""; }
       }
     } catch (error) {
       console.warn("[story_match_state] failed:", error);
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
   }
+
   if (statusEl) {
     statusEl.textContent = "尚未取得對手答案";
     setTimeout(() => { statusEl.style.display = "none"; }, 1200);
@@ -1636,6 +1774,8 @@ function advanceDuel() {
 
 function endDuelGame() {
   clearInterval(duelState.timerInterval);
+  stopHeartbeat();
+  hideOpponentOfflineOverlay();
   finishStoryMatch();
   const [s0, s1] = duelState.scores;
   const [n0, n1] = duelState.names;
@@ -1668,6 +1808,9 @@ $("duelPlayAgainBtn")?.addEventListener("click", () => {
 
 $("duelBackBtn")?.addEventListener("click", () => {
   clearInterval(duelState.timerInterval);
+  stopHeartbeat();
+  hideOpponentOfflineOverlay();
+  sendLeave();
   $("storyDuelSection").style.display = "none";
   $("storySoloSection").style.display = "";
   setStoryMode("solo");
